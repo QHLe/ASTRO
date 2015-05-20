@@ -1,4 +1,8 @@
 
+
+#define N_NODES		30
+
+
 #include "OCP.hpp"
 #include "cpp_example.hpp"
 
@@ -24,7 +28,7 @@ template<class T> T endpoint_cost (	const double* ini_states,
 int main(int argv, char* argc[])
 {
 	OCP problem;
-	problem.n_nodes 		= 30;
+	problem.n_nodes 		= N_NODES;
 	problem.n_states 		= 2;
 	problem.n_controls		= 1;
 	problem.n_param			= 0;
@@ -36,7 +40,7 @@ int main(int argv, char* argc[])
 
 	ApplicationReturnStatus status;
 
-	status = problem.NLP_initialization();
+	status = problem.set_OCP_structure();
 
 	problem.lb_states[0]	= - 2.0;
 	problem.lb_states[1]	= -10.0;
@@ -46,6 +50,9 @@ int main(int argv, char* argc[])
 
 	problem.lb_controls[0]	= -1;
 	problem.ub_controls[0]	=  1;
+
+	problem.lb_t0 			= 0.0;
+	problem.ub_t0 			= 0.0;
 
 	problem.lb_tf			= 0.1;
 	problem.ub_tf			= 10;
@@ -59,6 +66,32 @@ int main(int argv, char* argc[])
 	problem.lb_events[3]	= 0.0;
 	problem.ub_events[3]	= 0.0;
 
+	SVector guess_nodes		= linspace(0,2,N_NODES);
+	SVector guess_x			= linspace(0,1,N_NODES);
+	SVector guess_v			= linspace(0,1,N_NODES);
+	SVector guess_u			= linspace(1,-1,N_NODES);
+	double xi=0, vi=0, ui=1, delta = 2/((double)(N_NODES - 1));
+	guess_u.setelement(1,ui);
+	guess_v.setelement(1,vi);
+	guess_x.setelement(1,xi);
+	for (uint i = 2; i <= N_NODES; i++) {
+		if (i < N_NODES/2) {
+			ui = 1;
+		}
+		else {
+			ui = -1;
+		}
+		vi = vi + ui*delta;
+		xi = xi + vi*delta + ui/2*delta*delta;
+		guess_u.setelement(i,ui);
+		guess_v.setelement(i,vi);
+		guess_x.setelement(i,xi);
+	}
+/*
+	problem.guess.nodes		= guess_nodes;
+	problem.guess.x			= (guess_x,guess_v);
+	problem.guess.u			= guess_u;
+*/
 	status = problem.NLP_solve();
 
 	return (int) status;

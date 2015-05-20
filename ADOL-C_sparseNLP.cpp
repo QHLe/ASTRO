@@ -34,16 +34,23 @@ template<class T> bool  MyADOLC_sparseNLP::eval_obj(Index n, const T *x, T& obj_
 //	Index n_path		= OCP_structure[6];
 //	Index n_linkages	= OCP_structure[7];
 
-	T *ini_states			= new T [n_states];
-	T *fin_states			= new T [n_states];
+	T *ini_states	= new T [n_states];
+	T *fin_states	= new T [n_states];
 	T **states 		= new T *[n_nodes];
 	T **controls 	= new T *[n_nodes];
 	T *param		= new T [n_param];
-//	double delta	= (double)1/(n_nodes-1);
+	T *delta	 	= new T [n_nodes - 1];
+	T *t 			= new T [n_nodes];
 
 	T tf 			= x[n-1];
-	T t0			= 0;
-	T delta			= (tf-t0)/((double)n_nodes - 1);
+	T t0			= x[n-2];
+
+	t[0]			= t0;
+	for (Index i 	= 0; i < n_nodes - 1; i++) {
+		delta[i]	= (tf-t0)*node_str[i];
+		t[i+1]		= t[i] + delta[i];
+	}
+
 	for (Index i = 0; i < n_nodes; i += 1) {
 		states[i]	= new T [n_states];
 		controls[i]	= new T [n_controls];
@@ -75,7 +82,7 @@ template<class T> bool  MyADOLC_sparseNLP::eval_obj(Index n, const T *x, T& obj_
 	}
 	obj_value = 0.0;
 	for (Index i = 0; i<n_nodes-1; i++)
-		obj_value += (Lagrange_Cost(states[i], controls[i], param) + Lagrange_Cost(states[i+1], controls[i+1], param))*delta*0.5;
+		obj_value += (Lagrange_Cost(states[i], controls[i], param) + Lagrange_Cost(states[i+1], controls[i+1], param))*delta[i]*0.5;
 
 	obj_value += endpoint_cost (ini_states, fin_states, param, t0, tf, 1);
 
@@ -88,6 +95,8 @@ template<class T> bool  MyADOLC_sparseNLP::eval_obj(Index n, const T *x, T& obj_
 	delete[] ini_states;
 	delete[] fin_states;
 	delete[] param;
+   	delete[] delta;
+	delete[] t;
 
 	return true;
 }
@@ -111,9 +120,18 @@ template<class T> bool  MyADOLC_sparseNLP::eval_constraints(Index n, const T *x,
 	T **path				= new T *[n_nodes];
 	T *param				= new T [n_param];
 	T *e					= new T [n_events];
-//	double delta			= (double)1/(n_nodes-1);
-	T tf 					= x[n - 1];
-	T delta 				= x[n - 1]/((double)n_nodes-1);
+
+	T *delta	 	= new T [n_nodes - 1];
+	T *t	 		= new T [n_nodes];
+
+	T tf 			= x[n-1];
+	T t0			= x[n-2];
+
+	t[0]			= t0;
+	for (Index i = 0; i < n_nodes - 1; i++) {
+		delta[i]	= (tf-t0)*node_str[i];
+		t[i+1]		= t[i] + delta[i];
+	}
 
 	for (Index i = 0; i < n_nodes; i += 1) {
 		states[i]			= new T [n_states];
@@ -142,9 +160,6 @@ template<class T> bool  MyADOLC_sparseNLP::eval_constraints(Index n, const T *x,
 			param[i]			= x[idx];
 			idx++;
 		}
-		//tf 	= x[idx];
-		//idx++;
-
 	}
 
 	for (Index i = 0; i < n_states; i += 1)
@@ -166,7 +181,7 @@ template<class T> bool  MyADOLC_sparseNLP::eval_constraints(Index n, const T *x,
 			}
 			for (Index j = 0; j < n_states; j += 1) {
 				if(i < n_nodes - 1) {
-					g[idx]	= 	states[i+1][j] - states[i][j] - delta/2.0*(states_dot[i][j] + states_dot[i+1][j]);
+					g[idx]	= 	states[i+1][j] - states[i][j] - delta[i]/2.0*(states_dot[i][j] + states_dot[i+1][j]);
 					idx++;
 				}
 			}
@@ -193,9 +208,9 @@ template<class T> bool  MyADOLC_sparseNLP::eval_constraints(Index n, const T *x,
    	delete[] fin_states;
    	delete[] param;
    	delete[] e;
-#ifdef DISPLAY_ON
-   	cout<<"end of eval constraints\n";
-#endif
+   	delete[] delta;
+  	delete[] t;
+
 	return true;
 }
 
@@ -236,34 +251,15 @@ bool MyADOLC_sparseNLP::get_starting_point(Index n, bool init_x, Number* x,
                                Index m, bool init_lambda,
                                Number* lambda)
 {
-  // Here, we assume we only have starting values for x, if you code
-  // your own NLP, you can provide starting values for the others if
-  // you wish.
+
 	assert(init_x == true);
 	assert(init_z == false);
 	assert(init_lambda == false);
 	cout<<"get starting point\n";
-  // set all y's to the perfect match with y_d
-/*		x[0] 	= 0.0;
-		x[1] 	= 1.0;
-		x[2]	= -2.0;
 
-		x[3]	= 0.5;
-		x[4]	= 0.0;
-		x[5]	= -2.0;
-
-		x[6]	= 0.0;
-		x[7]	= -1.0;
-		x[8]	= -2.0;
-*/
 	for (Index i = 0; i < n; i += 1) {
-		x[i]	= 1.0;
+		x[i]	= guess[i];
 	}
-
-//	x[n-1]		= 1.0;
-/*	for(Index i = 0;i<n ; i++) {
-		printf("x[%d] = %f\n",i,x[i]);
-	}*/
 	cout<<"end of getting starting point\n";
 	return true;
 }
@@ -405,7 +401,7 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 			      const IpoptData* ip_data,
 			      IpoptCalculatedQuantities* ip_cq)
 {
-	cout<<"finalizing solution\n";
+
 // memory deallocation of ADOL-C variables
 /*//	Index n_phases		= OCP_structure[0];
 	Index n_nodes 		= OCP_structure[1];
@@ -492,6 +488,8 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 	delete[] NLP_x_ub;
 	delete[] NLP_g_lb;
 	delete[] NLP_g_ub;
+	delete[] guess;
+	delete[] node_str;
 	//  free(rind_L);
 	//  free(cind_L);
 	//  free(hessval);
@@ -502,6 +500,7 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 
 
 }
+
 
 void MyADOLC_sparseNLP::generate_tapes(Index n, Index m, Index& nnz_jac_g, Index& nnz_h_lag)
 {

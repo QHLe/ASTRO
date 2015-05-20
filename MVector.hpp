@@ -24,14 +24,18 @@ public:
 	void 	Print 		()											const;
 	void 	Print		(string line) 								const;
 	void 	resize		(uint v_length, uint v_num);
-	SVector 	getSVector	(uint num)									const;
-	SVector 	getRow		(uint num)									const;
+	SVector 	getSVector	(uint num)								const;
+	uint 	getRowDim	()	const	{return vector_length;}
+	uint 	getColDim	()	const 	{return vector_num;}
+	SVector 	getRow		(uint num)								const;
 	void 	load		(const char* filename);
 	void 	save		(const char* filename)						const;
+	MVector truncate	(uint l_limit, uint u_limit);
 	const MVector& operator= (const MVector& rhs);
 	const MVector& operator= (const SVector& rhs);
-	MVector operator() 	(uint l_limit, uint u_limit)				const;
-	MVector	operator,	(const SVector& rhs)							const;
+	double operator() 	(uint l_limit, uint u_limit)				const;
+
+	MVector	operator,	(const SVector& rhs)						const;
 	MVector	operator,	(const MVector& rhs)						const;
 private:
 	uint vector_num;

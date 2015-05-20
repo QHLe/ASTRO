@@ -79,7 +79,7 @@ public:
 					uint phase);
 
 	void auto_guess_gen();
-	ApplicationReturnStatus NLP_initialization();
+	ApplicationReturnStatus set_OCP_structure();
 	ApplicationReturnStatus NLP_solve();
 private:
 	void OCPBounds2NLPBounds();

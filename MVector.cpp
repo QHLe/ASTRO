@@ -140,20 +140,20 @@ MVector MVector::operator, (const MVector& rhs) const{
 }
 
 
-MVector MVector::operator()	(uint l_limit, uint u_limit) const {
+MVector MVector::truncate	(uint l_limit, uint u_limit) {
 	if (l_limit > u_limit){
-		cout<<"===== Truncating SVector elements =====\n"
-			  "=====       invalid range        =====\n";
+		cout<<"===== Truncating MVector =====\n"
+			  "=====   invalid range    =====\n";
 		exit(1);
 	}
 	if (u_limit > vector_num) {
-		cout<<"===== Truncating SVector elements =====\n"
-			  "=====       invalid range        =====\n";
+		cout<<"===== Truncating MVector =====\n"
+			  "=====   invalid range    =====\n";
 		exit(1);
 	}
 	if (l_limit < 1) {
-		cout<<"===== Truncating SVector elements =====\n"
-			  "=====    Index starts from 1     =====\n";
+		cout<<"===== Truncating MVector =====\n"
+			  "===== Index starts from 1 =====\n";
 		exit(1);
 	}
 	MVector temp(u_limit - l_limit + 1,vector_length);
@@ -163,6 +163,20 @@ MVector MVector::operator()	(uint l_limit, uint u_limit) const {
 		}
 	}
 	return temp;
+}
+
+double MVector::operator ()(uint row, uint col) const {
+	if (col > vector_num || row > vector_length) {
+		cout<<"===== Overloading operator (row, col) =====\n"
+			  "=====          invalid range          =====\n";
+		exit(1);
+	}
+	if (col < 1 || row < 1) {
+		cout<<"===== Overloading operator (row, col) =====\n"
+			  "=====       Index starts from 1       =====\n";
+		exit(1);
+	}
+	return mvector[col-1].values[row-1];
 }
 
 const MVector& MVector::operator= (const MVector& rhs) {
@@ -175,6 +189,7 @@ const MVector& MVector::operator= (const MVector& rhs) {
 	}
 	return *this;
 }
+
 
 const MVector& MVector::operator= (const SVector& rhs) {
 	vector_num = 1;

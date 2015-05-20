@@ -6,6 +6,7 @@
  */
 
 
+
 #include "IpIpoptApplication.hpp"
 #include "IpSolveStatistics.hpp"
 #include "OCP.hpp"
@@ -101,8 +102,8 @@ OCP::~OCP() {
 
 }
 
-ApplicationReturnStatus OCP::NLP_initialization() {
-	Index NLP_n = (n_states + n_controls)*n_nodes + n_param + 1;
+ApplicationReturnStatus OCP::set_OCP_structure() {
+	Index NLP_n = (n_states + n_controls)*n_nodes + n_param + 2;
 //	Index NLP_n = (n_states + n_controls)*n_nodes + n_param;
 	Index NLP_m = ((n_nodes - 1)*n_states + n_events + n_path*n_nodes);
 	Index* structure = new Index[8];
@@ -168,12 +169,28 @@ ApplicationReturnStatus OCP::NLP_solve() {
 }
 
 void OCP::OCPBounds2NLPBounds() {
-	Index NLP_n = myadolc_nlp->getNLP_n();
-	Index NLP_m = myadolc_nlp->getNLP_m();
-	Number* x_l = new Number[NLP_n];
-	Number* x_u = new Number[NLP_n];
-	Number* g_l = new Number[NLP_m];
-	Number* g_u = new Number[NLP_m];
+	Index NLP_n 		= myadolc_nlp->getNLP_n();
+	Index NLP_m 		= myadolc_nlp->getNLP_m();
+	Number* x_l 		= new Number[NLP_n];
+	Number* x_u 		= new Number[NLP_n];
+	Number* g_l 		= new Number[NLP_m];
+	Number* g_u 		= new Number[NLP_m];
+	Number* x_guess 	= new Number[NLP_n];
+	Number* node_str 	= new Number[n_nodes - 1];
+
+	if ((guess.nodes.getsize() != (uint)n_nodes) 	||
+		(guess.param.getsize() != (uint)n_param) 	||
+		(guess.u.getColDim() != (uint)n_controls)	||
+		(guess.x.getColDim() != (uint)n_states)	||
+		(guess.u.getRowDim() != (uint)n_nodes)	||
+		(guess.x.getRowDim() != (uint)n_nodes)	) {
+
+		cout<<"===== No guess provided or guess invalid =====\n"
+			  "=====  Generating guess based on Bounds  =====";
+		auto_guess_gen();
+	}
+
+
 
 	// structure of x
 	// [..x_1(t_k),..x_n(t_k), u_1(t_k)..u_m(t_k), x_1(t_k+1), ..x_n(t_k+1), u_1(t_k+1), ..u_m(t_k+1), p_1,..p_nparam..]
@@ -183,26 +200,39 @@ void OCP::OCPBounds2NLPBounds() {
 	{
 		for (Index j = 0; j < n_states; j += 1)
 		{
-			x_l[idx]	= lb_states[j];
-			x_u[idx]	= ub_states[j];
+			x_l[idx]		= lb_states[j];
+			x_u[idx]		= ub_states[j];
+			x_guess[idx]	= guess.x(i+1,j+1);
 			idx++;
 		}
 		for (Index j = 0; j < n_controls; j += 1)
 		{
-			x_l[idx]	= lb_controls[j];
-			x_u[idx]	= ub_controls[j];
+			x_l[idx]		= lb_controls[j];
+			x_u[idx]		= ub_controls[j];
+			x_guess[idx]	= guess.u(i+1,j+1);
 			idx++;
 		}
 	}
 	for (Index i = 0; i < n_param; i += 1)
 	{
-		x_l[idx]	= lb_param[i];
-		x_u[idx]	= ub_param[i];
+		x_l[idx]		= lb_param[i];
+		x_u[idx]		= ub_param[i];
+		x_guess[idx]	= guess.param(i+1);
 		idx++;
 	}
+	x_l[idx]		= lb_t0;
+	x_u[idx]		= ub_t0;
+	x_guess[idx]	= guess.nodes(1);
+	idx++;
 
 	x_l[idx]		= lb_tf;
 	x_u[idx]		= ub_tf;
+	x_guess[idx]	= guess.nodes(n_nodes);
+
+	double delta_t 	= guess.nodes(n_nodes) - guess.nodes(1);
+	for (Index i = 0; i < n_nodes - 1; i++) {
+		node_str[i]	= (guess.nodes(i+2) - guess.nodes(i+1))/delta_t;
+	}
 
   	// structure of g
   	// [..defect(t_k), h1(t_k), .. h_npath(t_k), defect(t_k+1), h1(t_k+1), ..h_npath(t_k+1), events_1, ..events_nevents,..]
@@ -231,21 +261,13 @@ void OCP::OCPBounds2NLPBounds() {
 		idx++;
 	}
 
-/*
-	for (Index i = 0; i < NLP_n; i += 1)
-	{
-		printf("x_l[%d] = %f\tx_u[%d] = %f\n",i,x_l[i],i,x_u[i]);
-	}
-	for (Index i = 0; i < NLP_m; i += 1)
-	{
-		printf("g_l[%d] = %f\tg_u[%d] = %f\n",i,g_l[i],i,g_u[i]);
-	}
-*/
 	myadolc_nlp->setBounds(x_l, x_u, g_l, g_u);
+	myadolc_nlp->setguess(x_guess);
+	myadolc_nlp->setnodestr(node_str);
 }
 
 void OCP::auto_guess_gen() {
-	SVector nodes = linspace(lb_t0,ub_tf,n_nodes);
+	SVector nodes = linspace((lb_t0+ub_t0)/2,(lb_tf+ub_tf)/2,n_nodes);
 	guess.nodes = nodes;
 
 	SVector* states = new SVector[n_states];
@@ -259,9 +281,9 @@ void OCP::auto_guess_gen() {
 
 	SVector* controls = NULL;
 	if (n_controls > 0) {
-		SVector* controls = new SVector[n_controls];
+		controls = new SVector[n_controls];
 		for (Index i = 0; i < n_controls; i++) {
-			states[i] = linspace(lb_controls[i], ub_controls[i],n_nodes);
+			controls[i] = linspace(lb_controls[i], ub_controls[i],n_nodes);
 		}
 		guess.u		= controls[0];
 		for (Index i = 1; i < n_controls; i++) {
@@ -281,9 +303,6 @@ void OCP::auto_guess_gen() {
 		}
 	}
 	guess.param = param;
-
-
-
 
 	delete[] states;
 	if (controls != NULL) {

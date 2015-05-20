@@ -106,6 +106,7 @@ public:
 	Index 	getNLP_m	() 				{ return NLP_m;}
 	void 	setBounds	(	Number* x_lb, Number* x_ub, Number* g_lb, Number* g_ub);
 	void 	setguess	(	Number* x_guess)	{guess = x_guess;}
+	void	setnodestr	(	Number* str) 		{node_str = str;}
 
 private:
   /**@name Methods to block default compiler methods.
@@ -153,6 +154,7 @@ private:
 	Number* NLP_g_lb;
 	Number* NLP_g_ub;
 	Number* guess;
+	Number* node_str;
 	Index* OCP_structure;
 };
 
