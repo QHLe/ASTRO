@@ -4,5 +4,7 @@ test.cpp
 *.dat
 *.*~
 .*~
+.*
 .m
 .mat
+examples/
