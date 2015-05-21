@@ -318,7 +318,19 @@ double SVector::operator() (uint num) const {
 	return values[num - 1];
 }
 
-SVector SVector::operator() (uint l_limit, uint u_limit) const {
+double& SVector::operator() (uint num) {
+	if (num > n) {
+		cout<<"===== getting SVector element =====\n===== invalid element number =====\n\n";
+		exit(1);
+	}
+	if (num < 1) {
+		cout<<"===== Index starts from 1 =====\n";
+		exit(1);
+	}
+	return values[num - 1];
+}
+
+SVector SVector::truncate (uint l_limit, uint u_limit) const {
 	if (l_limit > u_limit){
 		cout<<"===== Truncating SVector elements =====\n"
 			  "=====       invalid range        =====\n";

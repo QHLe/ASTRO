@@ -1,5 +1,3 @@
-
-
 #include <cassert>
 #include "ADOL-C_sparseNLP.hpp"
 
@@ -275,16 +273,24 @@ template<class T> T endpoint_cost (	const T* ini_states, const T* fin_states, co
 
 template<class T> void derivatives(const T *states, const T *controls, const T *param, T *states_dot) {
 	
-	states_dot[0] 	= states[1];
-	states_dot[1]	= controls[0];
+//	T x = states[0];
+//	T y = states[1];
+	T v = states[2];
+
+	T u = controls[0];
+
+	states_dot[0] 	= v*sin(u);
+	states_dot[1]	= v*cos(u);
+	states_dot[2]	= 9.8*cos(u);
 
 }
 
 template<class T> void events(const T *ini_states, const T *fin_states, const T *param, T *events){ 
 	events [0]	= ini_states[0];
 	events [1]	= ini_states[1];
-	events [2]	= fin_states[0];
-	events [3]	= fin_states[1];
+	events [2]	= ini_states[2];
+	events [3]	= fin_states[0];
+	events [4]	= fin_states[1];
 	
 }
 

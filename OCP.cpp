@@ -7,6 +7,7 @@
 
 
 
+
 #include "IpIpoptApplication.hpp"
 #include "IpSolveStatistics.hpp"
 #include "OCP.hpp"
@@ -186,7 +187,7 @@ void OCP::OCPBounds2NLPBounds() {
 		(guess.x.getRowDim() != (uint)n_nodes)	) {
 
 		cout<<"===== No guess provided or guess invalid =====\n"
-			  "=====  Generating guess based on Bounds  =====";
+			  "=====  Generating guess based on Bounds  =====\n\n";
 		auto_guess_gen();
 	}
 

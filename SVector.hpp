@@ -29,13 +29,14 @@ public:
 	void 	Print		() 									const;
 	void 	Print		(string line) 						const;
 
+	SVector truncate	(uint l_limit, uint u_limit)		const;
 	double 	enorm		();
 	void 	load		(const char* filename);
 	void 	save		(const char* filename)				const;
 
 	const SVector& operator= (const SVector& rhs);
 	double operator() (uint num)						const;
-	SVector operator() (uint l_limit, uint u_limit)		const;
+	double& operator() (uint num);
 
 	/* elementary operations */
 	SVector 		operator+ 	(const SVector& rhs) 			const;
