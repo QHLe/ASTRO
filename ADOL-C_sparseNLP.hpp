@@ -161,7 +161,7 @@ private:
 };
 
 #endif
-template<class T> T Lagrange_Cost(const T *states, const T *controls, const T *param);
+template<class T> T lagrange_cost(const T *states, const T *controls, const T *param, const T&time, uint phase);
 template<class T> T endpoint_cost (	const T* ini_states, const T* fin_states, const T* param, const T& t0, const T& tf, uint phase);
-template<class T> void derivatives(const T *states, const T *controls, const T *param, T *states_dot);
-template<class T> void events(const T *ini_states, const T *fin_states, const T *param, T *events);
+template<class T> void derivatives(T *states_dot, const T *states, const T *controls, const T *param, const T &time, uint phase);
+template<class T> void events(T *events, const T *ini_states, const T *fin_states, const T *param, const T &t0, const T &tf, uint phase);

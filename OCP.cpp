@@ -6,8 +6,6 @@
  */
 
 
-
-
 #include "IpIpoptApplication.hpp"
 #include "IpSolveStatistics.hpp"
 #include "OCP.hpp"
@@ -47,10 +45,6 @@ OCP::OCP() {
 	lb_tf			= 0;
 	ub_tf			= 0;
 
-	lagrange_cost 	= NULL;
-	endpoint_cost 	= NULL;
-	dynamics		= NULL;
-	events			= NULL;
 }
 
 /*
@@ -225,8 +219,8 @@ void OCP::OCPBounds2NLPBounds() {
 	Number* x_guess 	= new Number[NLP_n];
 	Number* node_str 	= new Number[n_nodes - 1];
 
-	if ((guess.nodes.getsize() != (uint)n_nodes) 	||
-		(guess.param.getsize() != (uint)n_param) 	||
+	if ((guess.nodes.getRowDim() != (uint)n_nodes) 	||
+		(guess.param.getRowDim() != (uint)n_param) 	||
 		(guess.u.getColDim() != (uint)n_controls)	||
 		(guess.x.getColDim() != (uint)n_states)	||
 		(guess.u.getRowDim() != (uint)n_nodes)	||
@@ -236,8 +230,6 @@ void OCP::OCPBounds2NLPBounds() {
 			  "=====  Generating guess based on Bounds  =====\n\n";
 		auto_guess_gen();
 	}
-
-
 
 	// structure of x
 	// [..x_1(t_k),..x_n(t_k), u_1(t_k)..u_m(t_k), x_1(t_k+1), ..x_n(t_k+1), u_1(t_k+1), ..u_m(t_k+1), p_1,..p_nparam..]
@@ -260,25 +252,29 @@ void OCP::OCPBounds2NLPBounds() {
 			idx++;
 		}
 	}
+
+	cout<<"here?\n";
 	for (Index i = 0; i < n_param; i += 1)
 	{
 		x_l[idx]		= lb_param[i];
 		x_u[idx]		= ub_param[i];
-		x_guess[idx]	= guess.param(i+1);
+		x_guess[idx]	= guess.param(1,i+1);
 		idx++;
 	}
+
 	x_l[idx]		= lb_t0;
 	x_u[idx]		= ub_t0;
-	x_guess[idx]	= guess.nodes(1);
+	x_guess[idx]	= guess.nodes(1,1);
 	idx++;
 
 	x_l[idx]		= lb_tf;
 	x_u[idx]		= ub_tf;
-	x_guess[idx]	= guess.nodes(n_nodes);
+	x_guess[idx]	= guess.nodes(n_nodes,1);
 
-	double delta_t 	= guess.nodes(n_nodes) - guess.nodes(1);
+	double delta_t 	= guess.nodes(n_nodes,1) - guess.nodes(1,1);
+
 	for (Index i = 0; i < n_nodes - 1; i++) {
-		node_str[i]	= (guess.nodes(i+2) - guess.nodes(i+1))/delta_t;
+		node_str[i]	= (guess.nodes(i+2,1) - guess.nodes(i+1,1))/delta_t;
 	}
 
   	// structure of g
@@ -307,10 +303,10 @@ void OCP::OCPBounds2NLPBounds() {
 		g_u[idx]	= ub_events[i];
 		idx++;
 	}
-
 	myadolc_nlp->setBounds(x_l, x_u, g_l, g_u);
 	myadolc_nlp->setguess(x_guess);
 	myadolc_nlp->setnodestr(node_str);
+
 }
 
 void OCP::auto_guess_gen() {

@@ -19,10 +19,10 @@ class Guess {
 public:
 	Guess();
 	~Guess();
-	SVector nodes;
+	MVector nodes;
 	MVector x;
 	MVector u;
-	SVector param;
+	MVector param;
 };
 
 class Config {
@@ -57,7 +57,7 @@ public:
 	MVector x_opt;
 	MVector u_opt;
 	MVector param_opt;
-
+/*
 	double (*lagrange_cost)(const double* states,
 							const double* controls,
 							const double* param,
@@ -83,7 +83,7 @@ public:
 					const double& t0,
 					const double& tf,
 					uint phase);
-
+*/
 	void auto_guess_gen();
 	ApplicationReturnStatus set_OCP_structure();
 	ApplicationReturnStatus NLP_solve();

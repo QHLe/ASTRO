@@ -1,5 +1,6 @@
 #include <cassert>
 #include "ADOL-C_sparseNLP.hpp"
+#include "cpp_example.hpp"
 
 using namespace Ipopt;
 
@@ -82,7 +83,8 @@ template<class T> bool  MyADOLC_sparseNLP::eval_obj(Index n, const T *x, T& obj_
 	}
 	obj_value = 0.0;
 	for (Index i = 0; i<n_nodes-1; i++)
-		obj_value += (Lagrange_Cost(states[i], controls[i], param) + Lagrange_Cost(states[i+1], controls[i+1], param))*delta[i]*0.5;
+		obj_value += (lagrange_cost(states[i], controls[i], param, t[i], 1)
+					+ lagrange_cost(states[i+1], controls[i+1], param, t[i+1], 1))*delta[i]*0.5;
 
 	obj_value += endpoint_cost (ini_states, fin_states, param, t0, tf, 1);
 
@@ -151,9 +153,7 @@ template<class T> bool  MyADOLC_sparseNLP::eval_constraints(Index n, const T *x,
 				controls[i][j] 	= x[idx];
 				idx++;
 			}
-			derivatives(states[i], controls[i], param, states_dot[i]);
-			//euler(states[i],states_dot[i],delta,states_approx[i]);
-			//trapezoidal(states[i],states_dot[i],states_dot[i+1],delta,states_approx[i]);
+			derivatives(states_dot[i], states[i], controls[i], param, t[i], 1);
 		}
 		for (Index i = 0; i < n_param; i += 1)
 		{
@@ -167,7 +167,7 @@ template<class T> bool  MyADOLC_sparseNLP::eval_constraints(Index n, const T *x,
 		ini_states[i] 		= states[0][i];
 		fin_states[i]		= states[n_nodes - 1][i];
 	}
-	events(ini_states,fin_states,param,e);
+	events(e, ini_states,fin_states,param, t0, tf, 1);
 
 	idx = 0;
 	while( idx < m) {
@@ -262,38 +262,6 @@ bool MyADOLC_sparseNLP::get_starting_point(Index n, bool init_x, Number* x,
 	}
 	cout<<"end of getting starting point\n";
 	return true;
-}
-
-template<class T> T Lagrange_Cost(const T *states, const T *controls, const T *param) {
-	return 0;
-//	return controls[0]*controls[0]*0.5;
-}
-template<class T> T endpoint_cost (	const T* ini_states, const T* fin_states, const T* param, const T& t0, const T& tf, uint phase) {
-
-	return tf;
-}
-
-template<class T> void derivatives(const T *states, const T *controls, const T *param, T *states_dot) {
-	
-//	T x = states[0];
-//	T y = states[1];
-	T v = states[2];
-
-	T u = controls[0];
-
-	states_dot[0] 	= v*sin(u);
-	states_dot[1]	= v*cos(u);
-	states_dot[2]	= 9.8*cos(u);
-
-}
-
-template<class T> void events(const T *ini_states, const T *fin_states, const T *param, T *events){ 
-	events [0]	= ini_states[0];
-	events [1]	= ini_states[1];
-	events [2]	= ini_states[2];
-	events [3]	= fin_states[0];
-	events [4]	= fin_states[1];
-	
 }
 
 void 	MyADOLC_sparseNLP::setNLP_structure(Index n, Index m, Index* structure) {
