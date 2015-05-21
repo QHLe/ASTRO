@@ -104,6 +104,7 @@ public:
 
 	Index 	getNLP_n	() 				{ return NLP_n;}
 	Index 	getNLP_m	() 				{ return NLP_m;}
+	Number* getx_opt	()				{ return NLP_x_opt;}
 	void 	setBounds	(	Number* x_lb, Number* x_ub, Number* g_lb, Number* g_ub);
 	void 	setguess	(	Number* x_guess)	{guess = x_guess;}
 	void	setnodestr	(	Number* str) 		{node_str = str;}
@@ -156,6 +157,7 @@ private:
 	Number* guess;
 	Number* node_str;
 	Index* OCP_structure;
+	Number* NLP_x_opt;
 };
 
 #endif

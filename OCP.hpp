@@ -51,6 +51,12 @@ public:
 	Number lb_t0, ub_t0, lb_tf, ub_tf;
 
 	Guess guess;
+	MVector nodes_opt;
+	MVector x0_opt;
+	MVector xf_opt;
+	MVector x_opt;
+	MVector u_opt;
+	MVector param_opt;
 
 	double (*lagrange_cost)(const double* states,
 							const double* controls,

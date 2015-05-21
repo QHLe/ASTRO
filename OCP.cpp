@@ -100,7 +100,6 @@ OCP::~OCP() {
 		lb_events = NULL;
 		ub_events = NULL;
 	}
-
 }
 
 ApplicationReturnStatus OCP::set_OCP_structure() {
@@ -166,6 +165,53 @@ ApplicationReturnStatus OCP::NLP_solve() {
 		Number final_obj = app->Statistics()->FinalObjective();
     	printf("\n\n*** The final value of the objective function is %e.\n", final_obj);
 	}
+  	Number * NLP_x = myadolc_nlp->getx_opt();
+	double t0					= 0.0;
+	double tf 					= NLP_x[myadolc_nlp->getNLP_n() - 1];
+	double delta 				= (tf - t0)/((double)n_nodes-1);
+
+	nodes_opt.resize(1, n_nodes);
+	x_opt.resize(n_nodes, n_states);
+	u_opt.resize(n_nodes, n_controls);
+	param_opt.resize(1, n_param);
+
+	nodes_opt(1,1) = t0;
+	for (Index i = 2; i <= n_nodes; i++) {
+		nodes_opt(1,i) 	= nodes_opt(1,i-1) + delta;
+	}
+	nodes_opt.save("nodes_opt.dat");
+
+	Index idx = 0;
+	while (idx < n_nodes*(n_states + n_controls) + n_param) {
+		for (Index i = 1; i <= n_nodes; i += 1)	{
+			for (Index j = 1; j <= n_states; j += 1){
+				x_opt(i,j) 	= NLP_x[idx];
+				idx++;
+			}
+			for (Index j = 1; j <= n_controls; j += 1){
+				u_opt(i,j) 	= NLP_x[idx];
+				idx++;
+			}
+		}
+		for (Index i = 1; i <= n_param; i += 1)
+		{
+			param_opt(1,i)			= NLP_x[idx];
+			idx++;
+		}
+	}
+	x_opt.save("x_opt.dat");
+	u_opt.save("u_opt.dat");
+	param_opt.save("param_opt.dat");
+
+	x0_opt.resize(1,n_states);
+	xf_opt.resize(1,n_states);
+	for (Index i = 1; i <= n_states; i += 1) {
+		x0_opt(1,i) 		= x_opt(1,i);
+		xf_opt(1,i)			= x_opt(n_nodes,i);
+	}
+	x0_opt.save("x0_opt.dat");
+	xf_opt.save("xf_opt.dat");
+
   	return status;
 }
 

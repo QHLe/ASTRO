@@ -18,7 +18,9 @@ MyADOLC_sparseNLP::MyADOLC_sparseNLP() {
 }
 
 MyADOLC_sparseNLP::~MyADOLC_sparseNLP()
-{}
+{
+	delete[] NLP_x_opt;
+}
 
 template<class T> bool  MyADOLC_sparseNLP::eval_obj(Index n, const T *x, T& obj_value) {
   // return the value of the objective function
@@ -407,87 +409,15 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 			      const IpoptData* ip_data,
 			      IpoptCalculatedQuantities* ip_cq)
 {
-
+	if (NLP_x_opt != NULL) {
+		delete[] NLP_x_opt;
+	}
+	NLP_x_opt = new Number[n];
+	for (Index i = 0; i < n; i++) {
+		NLP_x_opt[i] 	= x[i];
+	}
 // memory deallocation of ADOL-C variables
-/*//	Index n_phases		= OCP_structure[0];
-	Index n_nodes 		= OCP_structure[1];
-	Index n_states 		= OCP_structure[2];
-	Index n_controls 	= OCP_structure[3];
-	Index n_param 		= OCP_structure[4];
-	Index n_events		= OCP_structure[5];
-	Index n_path		= OCP_structure[6];
-//	Index n_linkages	= OCP_structure[7];
 
-	double *ini_states			= new double [n_states];
-	double *fin_states			= new double [n_states];
-	double **states 			= new double *[n_nodes];
-	double **states_dot		 	= new double *[n_nodes];
-	double **controls 			= new double *[n_nodes];
-	double **path				= new double *[n_nodes];
-	double *param				= new double [n_param];
-	double *e					= new double [n_events];
-//	double delta			= (double)1/(n_nodes-1);
-	double tf 					= x[n - 1];
-	double delta 				= x[n - 1]/((double)n_nodes-1);
-
-	for (Index i = 0; i < n_nodes; i += 1) {
-		states[i]			= new double [n_states];
-		path[i]				= new double [n_path];
-		states_dot[i] 		= new double [n_states];
-		controls[i]			= new double [n_controls];
-	}
-
-	Index idx = 0;
-	while (idx < n_nodes*(n_states + n_controls) + n_param) {
-		for (Index i = 0; i < n_nodes; i += 1)	{
-			for (Index j = 0; j < n_states; j += 1){
-				states[i][j] 	= x[idx];
-				idx++;
-			}
-			for (Index j = 0; j < n_controls; j += 1){
-				controls[i][j] 	= x[idx];
-				printf("controls[%d] = %f\n",i,controls[i][j]);
-				idx++;
-			}
-			derivatives(states[i], controls[i], param, states_dot[i]);
-			//euler(states[i],states_dot[i],delta,states_approx[i]);
-			//trapezoidal(states[i],states_dot[i],states_dot[i+1],delta,states_approx[i]);
-		}
-		for (Index i = 0; i < n_param; i += 1)
-		{
-			param[i]			= x[idx];
-			idx++;
-		}
-		//tf 	= x[idx];
-		//idx++;
-
-	}
-
-	for (Index i = 0; i < n_states; i += 1)
-	{
-		ini_states[i] 		= states[0][i];
-		fin_states[i]		= states[n_nodes - 1][i];
-	}
-	events(ini_states,fin_states,param,e);
-
-	delete[] ini_states;
-	delete[] fin_states;
-
-	delete[] param;
-	delete[] e;
-
-	for (Index i = 0; i < n_nodes; i += 1) {
-		delete[] states[i];
-		delete[] path[i];
-		delete[] states_dot[i];
-		delete[] controls[i];
-	}
-
-	delete[] states;
-	delete[] states_dot;
-	delete[] controls;
-	delete[] path;
-*/
 	delete[] x_lam;
 	delete[] OCP_structure;
 	delete[] NLP_x_lb;
@@ -502,8 +432,6 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 	free(rind_g);
 	free(cind_g);
 	free(jacval);
-
-
 
 }
 

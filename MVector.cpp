@@ -179,6 +179,20 @@ double MVector::operator ()(uint row, uint col) const {
 	return mvector[col-1].values[row-1];
 }
 
+double& MVector::operator ()(uint row, uint col) {
+	if (col > vector_num || row > vector_length) {
+		cout<<"===== Overloading operator (row, col) =====\n"
+			  "=====          invalid range          =====\n";
+		exit(1);
+	}
+	if (col < 1 || row < 1) {
+		cout<<"===== Overloading operator (row, col) =====\n"
+			  "=====       Index starts from 1       =====\n";
+		exit(1);
+	}
+	return mvector[col-1].values[row-1];
+}
+
 const MVector& MVector::operator= (const MVector& rhs) {
 	vector_num = rhs.vector_num;
 	vector_length = rhs.vector_length;

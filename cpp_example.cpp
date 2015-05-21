@@ -1,6 +1,6 @@
 
 
-#define N_NODES		3000
+#define N_NODES		300
 
 
 #include "OCP.hpp"
@@ -51,7 +51,7 @@ int main(int argv, char* argc[])
 	problem.ub_states[2]	= 20.0;
 
 	problem.lb_controls[0]	= 0.0;
-	problem.ub_controls[0]	= 2*3.15;
+	problem.ub_controls[0]	= 3.14;
 
 	problem.lb_t0 			= 0.0;
 	problem.ub_t0 			= 0.0;

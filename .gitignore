@@ -1,3 +1,5 @@
 *.o
 test
 test.cpp
+*.dat
+*.*~

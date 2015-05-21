@@ -33,7 +33,8 @@ public:
 	MVector truncate	(uint l_limit, uint u_limit);
 	const MVector& operator= (const MVector& rhs);
 	const MVector& operator= (const SVector& rhs);
-	double operator() 	(uint l_limit, uint u_limit)				const;
+	double operator() 	(uint row, uint col)				const;
+	double& operator() 	(uint row, uint col);
 
 	MVector	operator,	(const SVector& rhs)						const;
 	MVector	operator,	(const MVector& rhs)						const;
