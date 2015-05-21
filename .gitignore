@@ -8,5 +8,6 @@ test.cpp
 .*
 *.a
 .m
+.out
 .mat
 examples/
