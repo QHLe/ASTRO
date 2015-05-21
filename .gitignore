@@ -1,10 +1,12 @@
+*.*~
+.*~
+*~
 *.o
 test
 test.cpp
 *.dat
-*.*~
-.*~
 .*
+*.a
 .m
 .mat
 examples/
