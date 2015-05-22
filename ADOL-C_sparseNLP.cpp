@@ -16,6 +16,7 @@ MyADOLC_sparseNLP::MyADOLC_sparseNLP() {
 	NLP_g_lb		= NULL;
 	NLP_g_ub		= NULL;
 	OCP_structure 	= NULL;
+	NLP_x_opt		= NULL;
 }
 
 MyADOLC_sparseNLP::~MyADOLC_sparseNLP()
