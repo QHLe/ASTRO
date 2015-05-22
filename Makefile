@@ -17,7 +17,7 @@ IPOPTLIBDIR = $(HOME)/Ipopt-3.12.1/lib
 CXX = g++
 
 # Source files
-SRC = cpp_example.cpp ADOL-C_sparseNLP.cpp OCP.cpp SVector.cpp MVector.cpp
+SRC = main.cpp ADOL-C_sparseNLP.cpp OCP.cpp SVector.cpp MVector.cpp
 
 # C++ Compiler options
 CXXFLAGS = -O3 -pipe -DNDEBUG -pedantic-errors -Wparentheses -Wreturn-type -Wcast-qual -Wall -Wpointer-arith -Wwrite-strings -Wconversion -Wno-unknown-pragmas -Wno-long-long -fopenmp -DIPOPT_BUILD 

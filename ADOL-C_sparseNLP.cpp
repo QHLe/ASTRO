@@ -1,6 +1,6 @@
 #include <cassert>
 #include "ADOL-C_sparseNLP.hpp"
-#include "cpp_example.hpp"
+#include "model.hpp"
 
 using namespace Ipopt;
 
@@ -36,26 +36,26 @@ template<class T> bool  MyADOLC_sparseNLP::eval_obj(Index n, const T *x, T& obj_
 //	Index n_path		= OCP_structure[6];
 //	Index n_linkages	= OCP_structure[7];
 
-	T *ini_states	= new T [n_states];
-	T *fin_states	= new T [n_states];
-	T **states 		= new T *[n_nodes];
-	T **controls 	= new T *[n_nodes];
-	T *param		= new T [n_param];
-	T *delta	 	= new T [n_nodes - 1];
-	T *t 			= new T [n_nodes];
+	T *y0		= new T [n_states];
+	T *yf		= new T [n_states];
+	T **y 		= new T *[n_nodes];
+	T **u 		= new T *[n_nodes];
+	T *param	= new T [n_param];
+	T *delta	= new T [n_nodes - 1];
+	T *t 		= new T [n_nodes];
 
-	T tf 			= x[n-1];
-	T t0			= x[n-2];
+	T tf 		= x[n-1];
+	T t0		= x[n-2];
 
-	t[0]			= t0;
+	t[0]		= t0;
 	for (Index i 	= 0; i < n_nodes - 1; i++) {
 		delta[i]	= (tf-t0)*node_str[i];
 		t[i+1]		= t[i] + delta[i];
 	}
 
 	for (Index i = 0; i < n_nodes; i += 1) {
-		states[i]	= new T [n_states];
-		controls[i]	= new T [n_controls];
+		y[i]	= new T [n_states];
+		u[i]	= new T [n_controls];
 	}
 	Index idx = 0;
 
@@ -63,11 +63,11 @@ template<class T> bool  MyADOLC_sparseNLP::eval_obj(Index n, const T *x, T& obj_
 
 		for (Index i = 0; i < n_nodes; i += 1)	{
 			for (Index j = 0; j < n_states; j += 1){
-				states[i][j] 	= x[idx];
+				y[i][j] 	= x[idx];
 				idx++;
 			}
 			for (Index j = 0; j < n_controls; j += 1){
-				controls[i][j] 	= x[idx];
+				u[i][j] 	= x[idx];
 				idx++;
 			}
 		}
@@ -79,24 +79,24 @@ template<class T> bool  MyADOLC_sparseNLP::eval_obj(Index n, const T *x, T& obj_
 	}
 	for (Index i = 0; i < n_states; i += 1)
 	{
-		ini_states[i] 		= states[0][i];
-		fin_states[i]		= states[n_nodes - 1][i];
+		y0[i] 		= y[0][i];
+		yf[i]		= y[n_nodes - 1][i];
 	}
 	obj_value = 0.0;
 	for (Index i = 0; i<n_nodes-1; i++)
-		obj_value += (lagrange_cost(states[i], controls[i], param, t[i], 1)
-					+ lagrange_cost(states[i+1], controls[i+1], param, t[i+1], 1))*delta[i]*0.5;
+		obj_value += (lagrange_cost(y[i], u[i], param, t[i], 1)
+					+ lagrange_cost(y[i+1], u[i+1], param, t[i+1], 1))*delta[i]*0.5;
 
-	obj_value += endpoint_cost (ini_states, fin_states, param, t0, tf, 1);
+	obj_value += endpoint_cost (y0, yf, param, t0, tf, 1);
 
 	for (Index i = 0; i < n_nodes; i += 1) {
-		delete[] states[i];
-		delete[] controls[i];
+		delete[] y[i];
+		delete[] u[i];
 	}
-	delete[] states;
-	delete[] controls;
-	delete[] ini_states;
-	delete[] fin_states;
+	delete[] y;
+	delete[] u;
+	delete[] y0;
+	delete[] yf;
 	delete[] param;
    	delete[] delta;
 	delete[] t;
@@ -115,14 +115,20 @@ template<class T> bool  MyADOLC_sparseNLP::eval_constraints(Index n, const T *x,
 	Index n_path		= OCP_structure[6];
 //	Index n_linkages	= OCP_structure[7];
 
-	T *ini_states			= new T [n_states];
-	T *fin_states			= new T [n_states];
-	T **states 				= new T *[n_nodes];
-	T **states_dot		 	= new T *[n_nodes];
-	T **controls 			= new T *[n_nodes];
-	T **path				= new T *[n_nodes];
-	T *param				= new T [n_param];
-	T *e					= new T [n_events];
+	T *y0			= new T [n_states];
+	T *yf			= new T [n_states];
+	T **y 			= new T *[n_nodes];
+	T **f		 	= new T *[n_nodes];
+	T **u 			= new T *[n_nodes];
+	T **path		= new T *[n_nodes];
+	T *param		= new T [n_param];
+	T *e			= new T [n_events];
+
+
+	T **y_m			= new T *[n_nodes-1];
+	T **f_m			= new T *[n_nodes-1];
+	T **u_m			= new T *[n_nodes-1];
+	T *t_m			= new T [n_nodes - 1];
 
 	T *delta	 	= new T [n_nodes - 1];
 	T *t	 		= new T [n_nodes];
@@ -134,27 +140,34 @@ template<class T> bool  MyADOLC_sparseNLP::eval_constraints(Index n, const T *x,
 	for (Index i = 0; i < n_nodes - 1; i++) {
 		delta[i]	= (tf-t0)*node_str[i];
 		t[i+1]		= t[i] + delta[i];
+		t_m[i]		= (t[i] + t[i+1])/2;
 	}
 
 	for (Index i = 0; i < n_nodes; i += 1) {
-		states[i]			= new T [n_states];
-		path[i]				= new T [n_path];
-		states_dot[i] 		= new T [n_states];
-		controls[i]			= new T [n_controls];
+		y[i]		= new T [n_states];
+		path[i]		= new T [n_path];
+		f[i] 		= new T [n_states];
+		u[i]		= new T [n_controls];
+	}
+
+	for (Index i = 0; i < n_nodes - 1; i++) {
+			y_m[i]		= new T [n_states];
+			f_m[i]		= new T [n_states];
+			u_m[i]		= new T [n_controls];
 	}
 
 	Index idx = 0;
 	while (idx < n_nodes*(n_states + n_controls) + n_param) {
 		for (Index i = 0; i < n_nodes; i += 1)	{
 			for (Index j = 0; j < n_states; j += 1){
-				states[i][j] 	= x[idx];
+				y[i][j] 	= x[idx];
 				idx++;
 			}
 			for (Index j = 0; j < n_controls; j += 1){
-				controls[i][j] 	= x[idx];
+				u[i][j] 	= x[idx];
 				idx++;
 			}
-			derivatives(states_dot[i], states[i], controls[i], param, t[i], 1);
+			derivatives(f[i], y[i], u[i], param, t[i], 1);
 		}
 		for (Index i = 0; i < n_param; i += 1)
 		{
@@ -162,13 +175,21 @@ template<class T> bool  MyADOLC_sparseNLP::eval_constraints(Index n, const T *x,
 			idx++;
 		}
 	}
-
+	for (Index i = 0; i < n_nodes - 1; i += 1)	{
+		for (Index j = 0; j < n_states; j += 1){
+			y_m[i][j] 	= (y[i][j]+y[i+1][j])/2 + delta[i]/8*(f[i][j]-f[i+1][j]);
+		}
+		for (Index j = 0; j < n_controls; j += 1){
+			u_m[i][j] 	= (u[i][j]+u[i+1][j])/2;
+		}
+		derivatives(f_m[i], y_m[i], u_m[i], param, t_m[i], 1);
+	}
 	for (Index i = 0; i < n_states; i += 1)
 	{
-		ini_states[i] 		= states[0][i];
-		fin_states[i]		= states[n_nodes - 1][i];
+		y0[i] 		= y[0][i];
+		yf[i]		= y[n_nodes - 1][i];
 	}
-	events(e, ini_states,fin_states,param, t0, tf, 1);
+	events(e, y0, yf, param, t0, tf, 1);
 
 	idx = 0;
 	while( idx < m) {
@@ -182,7 +203,10 @@ template<class T> bool  MyADOLC_sparseNLP::eval_constraints(Index n, const T *x,
 			}
 			for (Index j = 0; j < n_states; j += 1) {
 				if(i < n_nodes - 1) {
-					g[idx]	= 	states[i+1][j] - states[i][j] - delta[i]/2.0*(states_dot[i][j] + states_dot[i+1][j]);
+					//trapezoidal
+					//g[idx]	= 	y[i+1][j] - y[i][j] - delta[i]/2.0*(f[i][j] + f[i+1][j]);
+					//hermite simpson
+					g[idx] 		= 	y[i+1][j] - y[i][j] - delta[i]/6*(f[i][j]+4*f_m[i][j]+f[i+1][j]);
 					idx++;
 				}
 			}
@@ -196,17 +220,29 @@ template<class T> bool  MyADOLC_sparseNLP::eval_constraints(Index n, const T *x,
 
 	for (Index i = 0; i < n_nodes; i += 1)
 	{
-		delete[] states[i];
+		delete[] y[i];
 		delete[] path[i];
-		delete[] states_dot[i];
-		delete[] controls[i];
+		delete[] f[i];
+		delete[] u[i];
 	}
-	delete[] states;
+
+	for (Index i = 0;i< n_nodes - 1;i +=1) {
+			delete[] y_m[i];
+			delete[] f_m[i];
+			delete[] u_m[i];
+	}
+
+	delete[] y_m;
+	delete[] f_m;
+	delete[] u_m;
+  	delete[] t_m;
+
+	delete[] y;
 	delete[] path;
-	delete[] controls;
-	delete[] states_dot;
-   	delete[] ini_states;
-   	delete[] fin_states;
+	delete[] u;
+	delete[] f;
+   	delete[] y0;
+   	delete[] yf;
    	delete[] param;
    	delete[] e;
    	delete[] delta;
