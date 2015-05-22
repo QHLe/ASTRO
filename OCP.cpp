@@ -137,12 +137,12 @@ ApplicationReturnStatus OCP::set_OCP_structure() {
 		ub_events 		= new Number[n_events];
 	}
 
-	app->Options()->SetNumericValue("tol", 1e-6);
-	app->Options()->SetStringValue("mu_strategy", "adaptive");
-	app->Options()->SetStringValue("output_file", "ipopt.out");
+//	app->Options()->SetNumericValue("tol", 1e-6);
+//	app->Options()->SetStringValue("mu_strategy", "adaptive");
+//	app->Options()->SetStringValue("output_file", "ipopt.out");
 //	app->Options()->SetStringValue("nlp_scaling_method","gradient-based");
-	app->Options()->SetStringValue("linear_solver", "ma86");
-	app->Options()->SetIntegerValue("max_iter", 5000);
+//	app->Options()->SetStringValue("linear_solver", "ma27");	ma86 & ma57 with memmory leakage
+	app->Options()->SetIntegerValue("max_iter", 1000);
 	app->Options()->SetStringValue("hessian_approximation", "limited-memory");
   	status = app->Initialize();
   	if (status != Solve_Succeeded) {
