@@ -92,6 +92,10 @@ private:
   	SmartPtr<MyADOLC_sparseNLP> myadolc_nlp;
   	SmartPtr<IpoptApplication> app;
   	ApplicationReturnStatus status;
+  	SVector sf_u;
+  	SVector sf_x;
+  	SVector sf_param;
+  	SVector t;
 };
 
 #endif /* OCP_HPP_ */

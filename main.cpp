@@ -1,7 +1,7 @@
 
 #include "OCP.hpp"
 #include "ADOL-C_sparseNLP.hpp"
-#include "cpp_example.hpp"
+#include "model.hpp"
 
 using namespace Ipopt;
 

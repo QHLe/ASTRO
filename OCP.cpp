@@ -140,9 +140,9 @@ ApplicationReturnStatus OCP::set_OCP_structure() {
 	app->Options()->SetNumericValue("tol", 1e-6);
 	app->Options()->SetStringValue("mu_strategy", "adaptive");
 	app->Options()->SetStringValue("output_file", "ipopt.out");
-	app->Options()->SetStringValue("nlp_scaling_method","gradient-based");
+//	app->Options()->SetStringValue("nlp_scaling_method","gradient-based");
 	app->Options()->SetStringValue("linear_solver", "ma86");
-	app->Options()->SetIntegerValue("max_iter", 1000);
+	app->Options()->SetIntegerValue("max_iter", 5000);
 	app->Options()->SetStringValue("hessian_approximation", "limited-memory");
   	status = app->Initialize();
   	if (status != Solve_Succeeded) {
@@ -223,6 +223,7 @@ void OCP::OCPBounds2NLPBounds() {
 	Number* g_u 		= new Number[NLP_m];
 	Number* x_guess 	= new Number[NLP_n];
 	Number* node_str 	= new Number[n_nodes - 1];
+//	Number* sf_NLP_x	= new Number[NLP_n];
 
 	if ((guess.nodes.getRowDim() != (uint)n_nodes) 	||
 		(guess.param.getRowDim() != (uint)n_param) 	||
@@ -246,6 +247,7 @@ void OCP::OCPBounds2NLPBounds() {
 		{
 			x_l[idx]		= lb_states[j];
 			x_u[idx]		= ub_states[j];
+//			sf_NLP_x[idx]	= get_sf(lb_states[j], ub_states[j]);
 			x_guess[idx]	= guess.x(i+1,j+1);
 			idx++;
 		}
@@ -258,7 +260,6 @@ void OCP::OCPBounds2NLPBounds() {
 		}
 	}
 
-	cout<<"here?\n";
 	for (Index i = 0; i < n_param; i += 1)
 	{
 		x_l[idx]		= lb_param[i];
