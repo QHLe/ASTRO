@@ -11,3 +11,6 @@ test.cpp
 .out
 .mat
 examples/
+*.svg
+*.eps
+*.svg

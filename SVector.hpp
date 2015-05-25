@@ -72,6 +72,8 @@ public:
 	friend SVector ones 		(uint num);
 	friend SVector zeros		(uint num);
 	friend SVector linspace		(double x0, double xn, uint n);
+	friend double min			(const SVector& v) ;
+	friend double max			(const SVector& v) ;
 
 
 private:
@@ -84,4 +86,6 @@ SVector 	cross 		(const SVector& v1, const SVector& v2);
 SVector 	ones 		(uint num);
 SVector 	zeros 		(uint num);
 SVector 	linspace	(double x0, double xn, uint n);
+double 	min			(const SVector &v) ;
+double 	max			(const SVector &v) ;
 #endif /* VECTOR_H_ */

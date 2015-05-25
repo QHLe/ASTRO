@@ -38,6 +38,8 @@ public:
 
 	MVector	operator,	(const SVector& rhs)						const;
 	MVector	operator,	(const MVector& rhs)						const;
+	friend double min	(const MVector& mv);
+	friend double max	(const MVector& mv);
 private:
 	uint vector_num;
 	uint vector_length;

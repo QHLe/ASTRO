@@ -5,7 +5,7 @@
  *      Author: zineus
  */
 
-
+#include <mgl2/mgl.h>
 #include "IpIpoptApplication.hpp"
 #include "IpSolveStatistics.hpp"
 #include "OCP.hpp"
@@ -137,12 +137,12 @@ ApplicationReturnStatus OCP::set_OCP_structure() {
 		ub_events 		= new Number[n_events];
 	}
 
-//	app->Options()->SetNumericValue("tol", 1e-6);
-//	app->Options()->SetStringValue("mu_strategy", "adaptive");
+	app->Options()->SetNumericValue("tol", 1e-7);
+	app->Options()->SetStringValue("mu_strategy", "adaptive");
 //	app->Options()->SetStringValue("output_file", "ipopt.out");
-//	app->Options()->SetStringValue("nlp_scaling_method","gradient-based");
-//	app->Options()->SetStringValue("linear_solver", "ma27");	ma86 & ma57 with memmory leakage
-	app->Options()->SetIntegerValue("max_iter", 1000);
+	app->Options()->SetStringValue("nlp_scaling_method","gradient-based");
+//	app->Options()->SetStringValue("linear_solver", "ma86");//	ma86 & ma57 with memmory leakage
+	app->Options()->SetIntegerValue("max_iter", 10000);
 	app->Options()->SetStringValue("hessian_approximation", "limited-memory");
   	status = app->Initialize();
   	if (status != Solve_Succeeded) {
@@ -154,6 +154,52 @@ ApplicationReturnStatus OCP::set_OCP_structure() {
 ApplicationReturnStatus OCP::NLP_solve() {
 
 	OCPBounds2NLPBounds();
+	mglGraph gr;
+	mglData dat_x(n_nodes);
+	mglData dat_y(n_nodes);
+	mglData x_range(2);
+	mglData y_range(2);
+	x_range.a[0] = min(guess.nodes);
+	x_range.a[1] = max(guess.nodes);
+	y_range.a[0] = min(guess.x);
+	y_range.a[1] = max(guess.x);
+
+	for (Index i = 0; i < n_nodes; ++i) {
+		dat_x[i]	= guess.nodes(i+1,1);
+	}
+	gr.NewFrame();
+	gr.Box();
+
+	gr.SetRanges(x_range,y_range);
+	gr.Axis(); gr.Label('x', "time", 0); gr.Label('y', "x_{guess}", 0);
+
+	for (Index j = 0; j < n_states; ++j) {
+		for (Index i = 0; i < n_nodes; ++i) {
+			dat_y[i]	= guess.x(i+1,j+1);
+		}
+		gr.Plot(dat_x,dat_y);
+	}
+	gr.EndFrame();
+	gr.WriteEPS("x_guess.eps");
+
+	gr.NewFrame();
+	gr.Box();
+	x_range.a[0] = min(guess.nodes);
+	x_range.a[1] = max(guess.nodes);
+	y_range.a[0] = min(guess.u);
+	y_range.a[1] = max(guess.u);
+	gr.SetRanges(x_range,y_range);
+	gr.Axis(); gr.Label('x', "time", 0); gr.Label('y', "u_{guess}", 0);
+
+	for (Index j = 0; j < n_controls; ++j) {
+		for (Index i = 0; i < n_nodes; ++i) {
+			dat_y[i]	= guess.u(i+1,j+1);
+		}
+		gr.Plot(dat_x,dat_y);
+	}
+	gr.EndFrame();
+	gr.WriteEPS("u_guess.eps");
+
   	status = app->OptimizeTNLP(myadolc_nlp);
 
   	if (status == Solve_Succeeded) {
@@ -169,14 +215,14 @@ ApplicationReturnStatus OCP::NLP_solve() {
 	double tf 					= NLP_x[myadolc_nlp->getNLP_n() - 1];
 	double delta 				= (tf - t0)/((double)n_nodes-1);
 
-	nodes_opt.resize(1, n_nodes);
+	nodes_opt.resize(n_nodes,1);
 	x_opt.resize(n_nodes, n_states);
 	u_opt.resize(n_nodes, n_controls);
 	param_opt.resize(1, n_param);
 
 	nodes_opt(1,1) = t0;
 	for (Index i = 2; i <= n_nodes; i++) {
-		nodes_opt(1,i) 	= nodes_opt(1,i-1) + delta;
+		nodes_opt(i,1) 	= nodes_opt(i-1,1) + delta;
 	}
 	nodes_opt.save("nodes_opt.dat");
 
@@ -210,6 +256,48 @@ ApplicationReturnStatus OCP::NLP_solve() {
 	}
 	x0_opt.save("x0_opt.dat");
 	xf_opt.save("xf_opt.dat");
+
+	for (Index i = 0; i < n_nodes; ++i) {
+		dat_x[i]	= nodes_opt(i+1,1);
+	}
+	gr.NewFrame();
+	gr.Box();
+
+	x_range.a[0] = min(nodes_opt);
+	x_range.a[1] = max(nodes_opt);
+	y_range.a[0] = min(x_opt);
+	y_range.a[1] = max(x_opt);
+
+	gr.SetRanges(x_range,y_range);
+	gr.Axis(); gr.Label('x', "time", 0); gr.Label('y', "x_{opt}", 0);
+
+	for (Index j = 0; j < n_states; ++j) {
+		for (Index i = 0; i < n_nodes; ++i) {
+			dat_y[i]	= x_opt(i+1,j+1);
+		}
+		gr.Plot(dat_x,dat_y);
+	}
+	gr.EndFrame();
+	gr.WriteEPS("x_opt.eps");
+
+	gr.NewFrame();
+	gr.Box();
+
+	x_range.a[0] = min(nodes_opt);
+	x_range.a[1] = max(nodes_opt);
+	y_range.a[0] = min(u_opt);
+	y_range.a[1] = max(u_opt);
+	gr.SetRanges(x_range,y_range);
+	gr.Axis(); gr.Label('x', "time", 0); gr.Label('y', "u_{opt}", 0);
+
+	for (Index j = 0; j < n_controls; ++j) {
+		for (Index i = 0; i < n_nodes; ++i) {
+			dat_y[i]	= u_opt(i+1,j+1);
+		}
+		gr.Plot(dat_x,dat_y);
+	}
+	gr.EndFrame();
+	gr.WriteEPS("u_opt.eps");
 
   	return status;
 }

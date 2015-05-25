@@ -441,3 +441,23 @@ void SVector::save (const char* filename) const {
 	}
 	fclose(fp);
 }
+double min(const SVector& v) {
+	double value;
+	value = v.values[0];
+	for (uint i = 1; i < v.n; i++ ) {
+		if (value > v.values[i]) {
+			value = v.values[i];
+		}
+	}
+	return value;
+}
+double max(const SVector& v) {
+	double value;
+	value = v.values[0];
+	for (uint i = 1; i < v.n; i++ ) {
+		if (value < v.values[i]) {
+			value = v.values[i];
+		}
+	}
+	return value;
+}

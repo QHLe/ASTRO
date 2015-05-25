@@ -7,7 +7,7 @@ OBJS =  main.o ADOL-C_sparseNLP.o OCP.o SVector.o MVector.o
 ADPATH = $(HOME)/adolc_base/include
 ADLIBDIR = $(HOME)/adolc_base/lib64
 
-ADDLIBS = $(HOME)/adolc_base/lib64/libadolc.a $(HOME)/ColPack/lib/libColPack.a
+ADDLIBS = $(HOME)/adolc_base/lib64/libadolc.a $(HOME)/ColPack/lib/libColPack.a -lmgl
 
 ADDINCFLAGS = -I$(ADPATH)  
 

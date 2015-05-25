@@ -81,12 +81,17 @@ void MVector::resize(uint v_length, uint v_num) {
 }
 
 SVector MVector::getSVector(uint num) const{
-	if (num >= vector_num) {
+	if (num > vector_num) {
 		cout<<"===== Getting vector from mvector =====\n"
 			  "==== requested number out of range ====\n";
 		exit(1);
 	}
-	return mvector[num];
+	if (num > vector_num) {
+			cout<<"===== Getting vector from mvector =====\n"
+				  "====      Index start from 1      ====\n";
+			exit(1);
+	}
+	return mvector[num-1];
 }
 
 SVector MVector::getRow(uint num) const{
@@ -243,4 +248,20 @@ void MVector::save (const char* filename) const {
 		fprintf(fp,"\n");
 	}
 	fclose(fp);
+}
+
+double min(const MVector& mv) {
+	SVector temp(mv.vector_num);
+	for (uint i = 1;i <= mv.vector_num; i++) {
+		temp(i) = min(mv.getSVector(i));
+	}
+	return min(temp);
+}
+
+double max(const MVector& mv) {
+	SVector temp(mv.vector_num);
+		for (uint i = 1;i <= mv.vector_num; i++) {
+			temp(i) = max(mv.getSVector(i));
+		}
+		return max(temp);
 }

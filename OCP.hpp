@@ -57,33 +57,8 @@ public:
 	MVector x_opt;
 	MVector u_opt;
 	MVector param_opt;
-/*
-	double (*lagrange_cost)(const double* states,
-							const double* controls,
-							const double* param,
-							const double& time,
-							uint phase);
-	double (*endpoint_cost)(const double* ini_states,
-							const double* fin_states,
-							const double* param,
-							const double& t0,
-							const double& tf,
-							uint phase);
-	void (*dynamics)(	double* derivatives,
-						double* path_constraint,
-						const double* states,
-						const double* controls,
-						const double* param,
-						const double& time,
-						uint phase);
-	void (*events)(	double* e,
-					const double* ini_states,
-					const double* fin_states,
-					const double* param,
-					const double& t0,
-					const double& tf,
-					uint phase);
-*/
+//	char* mgl_marker[5] = 	{"+", "-", "*", "x", "o"};
+
 	void auto_guess_gen();
 	ApplicationReturnStatus set_OCP_structure();
 	ApplicationReturnStatus NLP_solve();
