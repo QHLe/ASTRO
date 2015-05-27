@@ -64,13 +64,19 @@ public:
 	ApplicationReturnStatus NLP_solve();
 private:
 	void OCPBounds2NLPBounds();
+	void determine_scaling_factors();
   	SmartPtr<MyADOLC_sparseNLP> myadolc_nlp;
   	SmartPtr<IpoptApplication> app;
   	ApplicationReturnStatus status;
   	SVector sf_u;
   	SVector sf_x;
   	SVector sf_param;
-  	SVector t;
+  	SVector sf_t;
+  	SVector sf_events;
+//  	SVector sf_path;
+//  	SVector sf_f;
+//		SVector sf_constraint;
+
 };
 
 #endif /* OCP_HPP_ */

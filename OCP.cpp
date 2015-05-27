@@ -140,7 +140,7 @@ ApplicationReturnStatus OCP::set_OCP_structure() {
 	app->Options()->SetNumericValue("tol", 1e-7);
 	app->Options()->SetStringValue("mu_strategy", "adaptive");
 //	app->Options()->SetStringValue("output_file", "ipopt.out");
-	app->Options()->SetStringValue("nlp_scaling_method","gradient-based");
+//	app->Options()->SetStringValue("nlp_scaling_method","gradient-based");
 //	app->Options()->SetStringValue("linear_solver", "ma86");//	ma86 & ma57 with memmory leakage
 	app->Options()->SetIntegerValue("max_iter", 10000);
 	app->Options()->SetStringValue("hessian_approximation", "limited-memory");
@@ -154,51 +154,52 @@ ApplicationReturnStatus OCP::set_OCP_structure() {
 ApplicationReturnStatus OCP::NLP_solve() {
 
 	OCPBounds2NLPBounds();
-	mglGraph gr;
+	mglGraph* gr 	= new mglGraph;
 	mglData dat_x(n_nodes);
 	mglData dat_y(n_nodes);
 	mglData x_range(2);
 	mglData y_range(2);
+	for (Index i = 0; i < n_nodes; ++i) {
+		dat_x[i]	= guess.nodes(i+1,1);
+	}
+//	gr.NewFrame();
+	gr->Box();
+
 	x_range.a[0] = min(guess.nodes);
 	x_range.a[1] = max(guess.nodes);
 	y_range.a[0] = min(guess.x);
 	y_range.a[1] = max(guess.x);
-
-	for (Index i = 0; i < n_nodes; ++i) {
-		dat_x[i]	= guess.nodes(i+1,1);
-	}
-	gr.NewFrame();
-	gr.Box();
-
-	gr.SetRanges(x_range,y_range);
-	gr.Axis(); gr.Label('x', "time", 0); gr.Label('y', "x_{guess}", 0);
+	gr->SetRanges(x_range,y_range);
+	gr->Axis(); gr->Label('x', "time", 0); gr->Label('y', "x_{guess}", 0);
 
 	for (Index j = 0; j < n_states; ++j) {
 		for (Index i = 0; i < n_nodes; ++i) {
 			dat_y[i]	= guess.x(i+1,j+1);
 		}
-		gr.Plot(dat_x,dat_y);
+		gr->Plot(dat_x,dat_y);
 	}
-	gr.EndFrame();
-	gr.WriteEPS("x_guess.eps");
 
-	gr.NewFrame();
-	gr.Box();
+	gr->WriteEPS("x_guess.eps");
+
+//	gr.NewFrame();
+	delete gr;
+	gr = new mglGraph;
+	gr->Box();
 	x_range.a[0] = min(guess.nodes);
 	x_range.a[1] = max(guess.nodes);
-	y_range.a[0] = min(guess.u);
-	y_range.a[1] = max(guess.u);
-	gr.SetRanges(x_range,y_range);
-	gr.Axis(); gr.Label('x', "time", 0); gr.Label('y', "u_{guess}", 0);
-
+	y_range.a[0] = min(guess.x);
+	y_range.a[1] = max(guess.x);
+	gr->SetRanges(x_range,y_range);
 	for (Index j = 0; j < n_controls; ++j) {
 		for (Index i = 0; i < n_nodes; ++i) {
 			dat_y[i]	= guess.u(i+1,j+1);
 		}
-		gr.Plot(dat_x,dat_y);
+		gr->Plot(dat_x,dat_y);
 	}
-	gr.EndFrame();
-	gr.WriteEPS("u_guess.eps");
+
+	gr->Axis(); gr->Label('x', "time", 0); gr->Label('y', "u_{guess}", 0);
+
+	gr->WriteEPS("u_guess.eps");
 
   	status = app->OptimizeTNLP(myadolc_nlp);
 
@@ -210,6 +211,7 @@ ApplicationReturnStatus OCP::NLP_solve() {
 		Number final_obj = app->Statistics()->FinalObjective();
     	printf("\n\n*** The final value of the objective function is %e.\n", final_obj);
 	}
+
   	Number * NLP_x = myadolc_nlp->getx_opt();
 	double t0					= 0.0;
 	double tf 					= NLP_x[myadolc_nlp->getNLP_n() - 1];
@@ -257,52 +259,111 @@ ApplicationReturnStatus OCP::NLP_solve() {
 	x0_opt.save("x0_opt.dat");
 	xf_opt.save("xf_opt.dat");
 
+
 	for (Index i = 0; i < n_nodes; ++i) {
 		dat_x[i]	= nodes_opt(i+1,1);
 	}
-	gr.NewFrame();
-	gr.Box();
+	delete gr;
+	gr = new mglGraph;
+	gr->Box();
 
 	x_range.a[0] = min(nodes_opt);
 	x_range.a[1] = max(nodes_opt);
 	y_range.a[0] = min(x_opt);
 	y_range.a[1] = max(x_opt);
 
-	gr.SetRanges(x_range,y_range);
-	gr.Axis(); gr.Label('x', "time", 0); gr.Label('y', "x_{opt}", 0);
+	gr->SetRanges(x_range,y_range);
+	gr->Axis(); gr->Label('x', "time", 0); gr->Label('y', "x_{opt}", 0);
 
 	for (Index j = 0; j < n_states; ++j) {
 		for (Index i = 0; i < n_nodes; ++i) {
 			dat_y[i]	= x_opt(i+1,j+1);
 		}
-		gr.Plot(dat_x,dat_y);
+		gr->Plot(dat_x,dat_y);
 	}
-	gr.EndFrame();
-	gr.WriteEPS("x_opt.eps");
 
-	gr.NewFrame();
-	gr.Box();
+	gr->WriteEPS("x_opt.eps");
+
+	delete gr;
+	gr = new mglGraph;
+	gr->Box();
 
 	x_range.a[0] = min(nodes_opt);
 	x_range.a[1] = max(nodes_opt);
 	y_range.a[0] = min(u_opt);
 	y_range.a[1] = max(u_opt);
-	gr.SetRanges(x_range,y_range);
-	gr.Axis(); gr.Label('x', "time", 0); gr.Label('y', "u_{opt}", 0);
+	gr->SetRanges(x_range,y_range);
+	gr->Axis(); gr->Label('x', "time", 0); gr->Label('y', "u_{opt}", 0);
 
 	for (Index j = 0; j < n_controls; ++j) {
 		for (Index i = 0; i < n_nodes; ++i) {
 			dat_y[i]	= u_opt(i+1,j+1);
 		}
-		gr.Plot(dat_x,dat_y);
+		gr->Plot(dat_x,dat_y);
 	}
-	gr.EndFrame();
-	gr.WriteEPS("u_opt.eps");
 
+	gr->WriteEPS("u_opt.eps");
+	delete gr;
   	return status;
 }
 
+void OCP::determine_scaling_factors() {
+	sf_x.resize(n_states);
+	for (Index i = 0; i < n_states; i++) {
+		if(lb_states[i] != 0 || ub_states[i] != 0) {
+			sf_x(i+1) = max(fabs(lb_states[i]), fabs(ub_states[i]));
+		}
+		else {
+			sf_x(i+1) = 1;
+		}
+		printf("sf_x(%d) = %f\n",i+1,sf_x(i+1));
+
+	}
+	sf_u.resize(n_controls);
+	for (Index i = 0; i < n_controls; i++) {
+		if(lb_controls[i] != 0 || ub_controls[i] != 0) {
+			sf_u(i+1) = max(fabs(lb_controls[i]), fabs(ub_controls[i]));
+		}
+		else {
+			sf_u(i+1) = 1;
+		}
+		printf("sf_u(%d) = %f\n",i+1,sf_u(i+1));
+	}
+	sf_param.resize(n_param);
+	for (Index i = 0; i < n_param; i++) {
+		if(lb_param[i] != 0 || ub_param[i] != 0) {
+			sf_param(i+1) = max(fabs(lb_param[i]), fabs(ub_param[i]));
+		}
+		else {
+			sf_param(i+1) = 1;
+		}
+		printf("sf_param(%d) = %f\n",i+1,sf_param(i+1));
+	}
+	sf_events.resize(n_events);
+	for (Index i = 0; i < n_events; i++) {
+		if(lb_events[i] != 0 || ub_events[i] != 0) {
+			sf_events(i+1) = max(fabs(lb_events[i]), fabs(ub_events[i]));
+		}
+		else {
+			sf_events(i+1) = 1;
+		}
+		printf("sf_events(%d) = %f\n",i+1,sf_events(i+1));
+	}
+	sf_t.resize(1);
+	if(lb_t0 != 0 || ub_tf != 0) {
+		sf_t(1) = max(fabs(lb_t0), fabs(ub_tf));
+	}
+	else {
+		sf_t(1) = 1;
+	}
+	sf_t(1) = max(fabs(lb_t0), fabs(ub_tf));
+}
+
+
 void OCP::OCPBounds2NLPBounds() {
+
+	determine_scaling_factors();
+
 	Index NLP_n 		= myadolc_nlp->getNLP_n();
 	Index NLP_m 		= myadolc_nlp->getNLP_m();
 	Number* x_l 		= new Number[NLP_n];
@@ -311,7 +372,8 @@ void OCP::OCPBounds2NLPBounds() {
 	Number* g_u 		= new Number[NLP_m];
 	Number* x_guess 	= new Number[NLP_n];
 	Number* node_str 	= new Number[n_nodes - 1];
-//	Number* sf_NLP_x	= new Number[NLP_n];
+	Number* sf_NLP_x	= new Number[NLP_n];
+	Number* sf_NLP_g	= new Number[NLP_m];
 
 	if ((guess.nodes.getRowDim() != (uint)n_nodes) 	||
 		(guess.param.getRowDim() != (uint)n_param) 	||
@@ -333,37 +395,41 @@ void OCP::OCPBounds2NLPBounds() {
 	{
 		for (Index j = 0; j < n_states; j += 1)
 		{
-			x_l[idx]		= lb_states[j];
-			x_u[idx]		= ub_states[j];
-//			sf_NLP_x[idx]	= get_sf(lb_states[j], ub_states[j]);
-			x_guess[idx]	= guess.x(i+1,j+1);
+			x_l[idx]		= lb_states[j]/sf_x(j+1);
+			x_u[idx]		= ub_states[j]/sf_x(j+1);
+			sf_NLP_x[idx]	= sf_x(j+1);
+			x_guess[idx]	= guess.x(i+1,j+1)/sf_x(j+1);
 			idx++;
 		}
 		for (Index j = 0; j < n_controls; j += 1)
 		{
-			x_l[idx]		= lb_controls[j];
-			x_u[idx]		= ub_controls[j];
-			x_guess[idx]	= guess.u(i+1,j+1);
+			x_l[idx]		= lb_controls[j]/sf_u(j+1);
+			x_u[idx]		= ub_controls[j]/sf_u(j+1);
+			sf_NLP_x[idx]	= sf_u(j+1);
+			x_guess[idx]	= guess.u(i+1,j+1)/sf_u(j+1);
 			idx++;
 		}
 	}
 
 	for (Index i = 0; i < n_param; i += 1)
 	{
-		x_l[idx]		= lb_param[i];
-		x_u[idx]		= ub_param[i];
-		x_guess[idx]	= guess.param(1,i+1);
+		x_l[idx]		= lb_param[i]/sf_param(i+1);
+		x_u[idx]		= ub_param[i]/sf_param(i+1);
+		sf_NLP_x[idx]	= sf_param(i+1);
+		x_guess[idx]	= guess.param(1,i+1)/sf_param(i+1);
 		idx++;
 	}
 
-	x_l[idx]		= lb_t0;
-	x_u[idx]		= ub_t0;
-	x_guess[idx]	= guess.nodes(1,1);
+	x_l[idx]		= lb_t0/sf_t(1);
+	x_u[idx]		= ub_t0/sf_t(1);
+	sf_NLP_x[idx]	= sf_t(1);
+	x_guess[idx]	= guess.nodes(1,1)/sf_t(1);
 	idx++;
 
-	x_l[idx]		= lb_tf;
-	x_u[idx]		= ub_tf;
-	x_guess[idx]	= guess.nodes(n_nodes,1);
+	x_l[idx]		= lb_tf/sf_t(1);
+	x_u[idx]		= ub_tf/sf_t(1);
+	sf_NLP_x[idx]	= sf_t(1);
+	x_guess[idx]	= guess.nodes(n_nodes,1)/sf_t(1);
 
 	double delta_t 	= guess.nodes(n_nodes,1) - guess.nodes(1,1);
 
@@ -378,26 +444,38 @@ void OCP::OCPBounds2NLPBounds() {
 	{
 		for (Index j = 0; j < n_path; j += 1)
 		{	cout<<"path idx = "<<idx<<"\n";
-			g_l[idx]	= lb_path[j];
-			g_u[idx]	= ub_path[j];
+			g_l[idx]		= lb_path[j];
+			g_u[idx]		= ub_path[j];
+//			sf_NLP_g[idx]	= sf_path(j+1);
 			idx++;
 		}
 		for (Index j = 0; j < n_states; j += 1)
 		{
 			if(i < n_nodes - 1) {
-				g_l[idx]	= 0.0;
-				g_u[idx]	= 0.0;
+				g_l[idx]		= 0.0;
+				g_u[idx]		= 0.0;
+				sf_NLP_g[idx]	= 1.0;
 				idx++;
 			}
 		}
 	}
 	for (Index i = 0; i < n_events; i += 1)
 	{
-		g_l[idx]	= lb_events[i];
-		g_u[idx]	= ub_events[i];
+		g_l[idx]	= lb_events[i]/sf_events(i+1);
+		g_u[idx]	= ub_events[i]/sf_events(i+1);
+		sf_NLP_g[idx]	= sf_events(i+1);
 		idx++;
 	}
+/*
+	for( Index i = 0; i < NLP_n; i++) {
+		sf_NLP_x[i] 	= 1.0;
+	}
+	for( Index i = 0; i < NLP_m; i++) {
+		sf_NLP_g[i]		= 1.0;
+	}
+	*/
 	myadolc_nlp->setBounds(x_l, x_u, g_l, g_u);
+	myadolc_nlp->setSF(sf_NLP_x, sf_NLP_g);
 	myadolc_nlp->setguess(x_guess);
 	myadolc_nlp->setnodestr(node_str);
 

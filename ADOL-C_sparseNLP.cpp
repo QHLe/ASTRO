@@ -1,7 +1,7 @@
 #include <cassert>
 #include "ADOL-C_sparseNLP.hpp"
+//#include "examples/lowthr/model.hpp"
 #include "model.hpp"
-
 using namespace Ipopt;
 
 /* Constructor. */
@@ -134,8 +134,8 @@ template<class T> bool  MyADOLC_sparseNLP::eval_constraints(Index n, const T *x,
 	T *delta	 	= new T [n_nodes - 1];
 	T *t	 		= new T [n_nodes];
 
-	T tf 			= x[n-1];
-	T t0			= x[n-2];
+	T tf 			= x[n-1]*NLP_x_sf[n-1];
+	T t0			= x[n-2]*NLP_x_sf[n-2];
 
 	t[0]			= t0;
 	for (Index i = 0; i < n_nodes - 1; i++) {
@@ -161,18 +161,18 @@ template<class T> bool  MyADOLC_sparseNLP::eval_constraints(Index n, const T *x,
 	while (idx < n_nodes*(n_states + n_controls) + n_param) {
 		for (Index i = 0; i < n_nodes; i += 1)	{
 			for (Index j = 0; j < n_states; j += 1){
-				y[i][j] 	= x[idx];
+				y[i][j] 	= x[idx]*NLP_x_sf[idx];
 				idx++;
 			}
 			for (Index j = 0; j < n_controls; j += 1){
-				u[i][j] 	= x[idx];
+				u[i][j] 	= x[idx]*NLP_x_sf[idx];
 				idx++;
 			}
 			derivatives(f[i], y[i], u[i], param, t[i], 1);
 		}
 		for (Index i = 0; i < n_param; i += 1)
 		{
-			param[i]			= x[idx];
+			param[i]			= x[idx]*NLP_x_sf[idx];
 			idx++;
 		}
 	}
@@ -201,7 +201,7 @@ template<class T> bool  MyADOLC_sparseNLP::eval_constraints(Index n, const T *x,
 
 			for (Index j = 0; j < n_path; j += 1) {
 				cout<<"path idx = "<<idx<<"\n";
-				g[idx]	= 	0.0;	//need to be implemented
+				g[idx]	= 	0.0/NLP_g_sf[idx];	//need to be implemented
 				idx++;
 			}
 			for (Index j = 0; j < n_states; j += 1) {
@@ -209,14 +209,14 @@ template<class T> bool  MyADOLC_sparseNLP::eval_constraints(Index n, const T *x,
 					//trapezoidal
 					//g[idx]	= 	y[i+1][j] - y[i][j] - delta[i]/2.0*(f[i][j] + f[i+1][j]);
 					//hermite simpson
-					g[idx] 		= 	y[i+1][j] - y[i][j] - delta[i]/6*(f[i][j]+4*f_m[i][j]+f[i+1][j]);
+					g[idx] 		= 	(y[i+1][j] - y[i][j] - delta[i]/6*(f[i][j]+4*f_m[i][j]+f[i+1][j]))/NLP_g_sf[idx];
 					idx++;
 				}
 			}
 		}
 		for (Index i = 0; i < n_events; i += 1)
 		{
-			g[idx]	= 	e[i];
+			g[idx]	= 	e[i]/NLP_g_sf[idx];
 			idx++;
 		}
 	}
@@ -316,6 +316,12 @@ void 	MyADOLC_sparseNLP::setBounds (Number* x_lb, Number* x_ub, Number* g_lb, Nu
 	NLP_x_ub = x_ub;
 	NLP_g_lb = g_lb;
 	NLP_g_ub = g_ub;
+
+}
+
+void 	MyADOLC_sparseNLP::setSF (Number* x_sf, Number* g_sf){
+	NLP_x_sf = x_sf;
+	NLP_g_sf = g_sf;
 
 }
 
@@ -422,7 +428,7 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 	}
 	NLP_x_opt = new Number[n];
 	for (Index i = 0; i < n; i++) {
-		NLP_x_opt[i] 	= x[i];
+		NLP_x_opt[i] 	= x[i]*NLP_x_sf[i];
 	}
 // memory deallocation of ADOL-C variables
 
@@ -430,8 +436,12 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 	delete[] OCP_structure;
 	delete[] NLP_x_lb;
 	delete[] NLP_x_ub;
+	delete[] NLP_x_sf;
+
 	delete[] NLP_g_lb;
 	delete[] NLP_g_ub;
+	delete[] NLP_g_sf;
+
 	delete[] guess;
 	delete[] node_str;
 	//  free(rind_L);
