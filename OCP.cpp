@@ -302,7 +302,63 @@ ApplicationReturnStatus OCP::NLP_solve() {
   	return status;
 }
 
+void OCP::determine_scaling_factors() {
+	sf_x.resize(n_states);
+	for (Index i = 0; i < n_states; i++) {
+		if(lb_states[i] != 0 || ub_states[i] != 0) {
+			sf_x(i+1) = max(fabs(lb_states[i]), fabs(ub_states[i]));
+		}
+		else {
+			sf_x(i+1) = 1;
+		}
+		printf("sf_x(%d) = %f\n",i+1,sf_x(i+1));
+
+	}
+	sf_u.resize(n_controls);
+	for (Index i = 0; i < n_controls; i++) {
+		if(lb_controls[i] != 0 || ub_controls[i] != 0) {
+			sf_u(i+1) = max(fabs(lb_controls[i]), fabs(ub_controls[i]));
+		}
+		else {
+			sf_u(i+1) = 1;
+		}
+		printf("sf_u(%d) = %f\n",i+1,sf_u(i+1));
+	}
+	sf_param.resize(n_param);
+	for (Index i = 0; i < n_param; i++) {
+		if(lb_param[i] != 0 || ub_param[i] != 0) {
+			sf_param(i+1) = max(fabs(lb_param[i]), fabs(ub_param[i]));
+		}
+		else {
+			sf_param(i+1) = 1;
+		}
+		printf("sf_param(%d) = %f\n",i+1,sf_param(i+1));
+	}
+	sf_events.resize(n_events);
+	for (Index i = 0; i < n_events; i++) {
+		if(lb_events[i] != 0 || ub_events[i] != 0) {
+			sf_events(i+1) = max(fabs(lb_events[i]), fabs(ub_events[i]));
+		}
+		else {
+			sf_events(i+1) = 1;
+		}
+		printf("sf_events(%d) = %f\n",i+1,sf_events(i+1));
+	}
+	sf_t.resize(1);
+	if(lb_t0 != 0 || ub_tf != 0) {
+		sf_t(1) = max(fabs(lb_t0), fabs(ub_tf));
+	}
+	else {
+		sf_t(1) = 1;
+	}
+	sf_t(1) = max(fabs(lb_t0), fabs(ub_tf));
+}
+
+
 void OCP::OCPBounds2NLPBounds() {
+
+	determine_scaling_factors();
+
 	Index NLP_n 		= myadolc_nlp->getNLP_n();
 	Index NLP_m 		= myadolc_nlp->getNLP_m();
 	Number* x_l 		= new Number[NLP_n];
@@ -311,7 +367,8 @@ void OCP::OCPBounds2NLPBounds() {
 	Number* g_u 		= new Number[NLP_m];
 	Number* x_guess 	= new Number[NLP_n];
 	Number* node_str 	= new Number[n_nodes - 1];
-//	Number* sf_NLP_x	= new Number[NLP_n];
+	Number* sf_NLP_x	= new Number[NLP_n];
+	Number* sf_NLP_g	= new Number[NLP_m];
 
 	if ((guess.nodes.getRowDim() != (uint)n_nodes) 	||
 		(guess.param.getRowDim() != (uint)n_param) 	||
@@ -333,37 +390,41 @@ void OCP::OCPBounds2NLPBounds() {
 	{
 		for (Index j = 0; j < n_states; j += 1)
 		{
-			x_l[idx]		= lb_states[j];
-			x_u[idx]		= ub_states[j];
-//			sf_NLP_x[idx]	= get_sf(lb_states[j], ub_states[j]);
-			x_guess[idx]	= guess.x(i+1,j+1);
+			x_l[idx]		= lb_states[j]/sf_x(j+1);
+			x_u[idx]		= ub_states[j]/sf_x(j+1);
+			sf_NLP_x[idx]	= sf_x(j+1);
+			x_guess[idx]	= guess.x(i+1,j+1)/sf_x(j+1);
 			idx++;
 		}
 		for (Index j = 0; j < n_controls; j += 1)
 		{
-			x_l[idx]		= lb_controls[j];
-			x_u[idx]		= ub_controls[j];
-			x_guess[idx]	= guess.u(i+1,j+1);
+			x_l[idx]		= lb_controls[j]/sf_u(j+1);
+			x_u[idx]		= ub_controls[j]/sf_u(j+1);
+			sf_NLP_x[idx]	= sf_x(j+1);
+			x_guess[idx]	= guess.u(i+1,j+1)/sf_u(j+1);
 			idx++;
 		}
 	}
 
 	for (Index i = 0; i < n_param; i += 1)
 	{
-		x_l[idx]		= lb_param[i];
-		x_u[idx]		= ub_param[i];
-		x_guess[idx]	= guess.param(1,i+1);
+		x_l[idx]		= lb_param[i]/sf_param(i+1);
+		x_u[idx]		= ub_param[i]/sf_param(i+1);
+		sf_NLP_x[idx]	= sf_param(i+1);
+		x_guess[idx]	= guess.param(1,i+1)/sf_param(i+1);
 		idx++;
 	}
 
-	x_l[idx]		= lb_t0;
-	x_u[idx]		= ub_t0;
-	x_guess[idx]	= guess.nodes(1,1);
+	x_l[idx]		= lb_t0/sf_t(1);
+	x_u[idx]		= ub_t0/sf_t(1);
+	sf_NLP_x[idx]	= sf_t(1);
+	x_guess[idx]	= guess.nodes(1,1)/sf_t(1);
 	idx++;
 
-	x_l[idx]		= lb_tf;
-	x_u[idx]		= ub_tf;
-	x_guess[idx]	= guess.nodes(n_nodes,1);
+	x_l[idx]		= lb_tf/sf_t(1);
+	x_u[idx]		= ub_tf/sf_t(1);
+	sf_NLP_x[idx]	= sf_t(1);
+	x_guess[idx]	= guess.nodes(n_nodes,1)/sf_t(1);
 
 	double delta_t 	= guess.nodes(n_nodes,1) - guess.nodes(1,1);
 
@@ -378,26 +439,36 @@ void OCP::OCPBounds2NLPBounds() {
 	{
 		for (Index j = 0; j < n_path; j += 1)
 		{	cout<<"path idx = "<<idx<<"\n";
-			g_l[idx]	= lb_path[j];
-			g_u[idx]	= ub_path[j];
+			g_l[idx]		= lb_path[j];
+			g_u[idx]		= ub_path[j];
+			sf_NLP_g[idx]	= sf_path(j+1);
 			idx++;
 		}
 		for (Index j = 0; j < n_states; j += 1)
 		{
 			if(i < n_nodes - 1) {
-				g_l[idx]	= 0.0;
-				g_u[idx]	= 0.0;
+				g_l[idx]		= 0.0;
+				g_u[idx]		= 0.0;
+				sf_NLP_g[idx]	= 1.0;
 				idx++;
 			}
 		}
 	}
 	for (Index i = 0; i < n_events; i += 1)
 	{
-		g_l[idx]	= lb_events[i];
-		g_u[idx]	= ub_events[i];
+		g_l[idx]	= lb_events[i]/sf_events(i+1);
+		g_u[idx]	= ub_events[i]/sf_events(i+1);
+		sf_NLP_g[idx]	= sf_events(i+1);
 		idx++;
 	}
+	for( Index i = 0; i < NLP_n; i++) {
+		sf_NLP_x[i] 	= 1.0;
+	}
+	for( Index i = 0; i < NLP_m; i++) {
+		sf_NLP_g[i]		= 1.0;
+	}
 	myadolc_nlp->setBounds(x_l, x_u, g_l, g_u);
+	myadolc_nlp->setSF(sf_NLP_x, sf_NLP_g);
 	myadolc_nlp->setguess(x_guess);
 	myadolc_nlp->setnodestr(node_str);
 
