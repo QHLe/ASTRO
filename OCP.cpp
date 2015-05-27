@@ -140,7 +140,7 @@ ApplicationReturnStatus OCP::set_OCP_structure() {
 	app->Options()->SetNumericValue("tol", 1e-7);
 	app->Options()->SetStringValue("mu_strategy", "adaptive");
 //	app->Options()->SetStringValue("output_file", "ipopt.out");
-	app->Options()->SetStringValue("nlp_scaling_method","gradient-based");
+//	app->Options()->SetStringValue("nlp_scaling_method","gradient-based");
 //	app->Options()->SetStringValue("linear_solver", "ma86");//	ma86 & ma57 with memmory leakage
 	app->Options()->SetIntegerValue("max_iter", 10000);
 	app->Options()->SetStringValue("hessian_approximation", "limited-memory");
@@ -154,51 +154,52 @@ ApplicationReturnStatus OCP::set_OCP_structure() {
 ApplicationReturnStatus OCP::NLP_solve() {
 
 	OCPBounds2NLPBounds();
-	mglGraph gr;
+	mglGraph* gr 	= new mglGraph;
 	mglData dat_x(n_nodes);
 	mglData dat_y(n_nodes);
 	mglData x_range(2);
 	mglData y_range(2);
+	for (Index i = 0; i < n_nodes; ++i) {
+		dat_x[i]	= guess.nodes(i+1,1);
+	}
+//	gr.NewFrame();
+	gr->Box();
+
 	x_range.a[0] = min(guess.nodes);
 	x_range.a[1] = max(guess.nodes);
 	y_range.a[0] = min(guess.x);
 	y_range.a[1] = max(guess.x);
-
-	for (Index i = 0; i < n_nodes; ++i) {
-		dat_x[i]	= guess.nodes(i+1,1);
-	}
-	gr.NewFrame();
-	gr.Box();
-
-	gr.SetRanges(x_range,y_range);
-	gr.Axis(); gr.Label('x', "time", 0); gr.Label('y', "x_{guess}", 0);
+	gr->SetRanges(x_range,y_range);
+	gr->Axis(); gr->Label('x', "time", 0); gr->Label('y', "x_{guess}", 0);
 
 	for (Index j = 0; j < n_states; ++j) {
 		for (Index i = 0; i < n_nodes; ++i) {
 			dat_y[i]	= guess.x(i+1,j+1);
 		}
-		gr.Plot(dat_x,dat_y);
+		gr->Plot(dat_x,dat_y);
 	}
-	gr.EndFrame();
-	gr.WriteEPS("x_guess.eps");
 
-	gr.NewFrame();
-	gr.Box();
+	gr->WriteEPS("x_guess.eps");
+
+//	gr.NewFrame();
+	delete gr;
+	gr = new mglGraph;
+	gr->Box();
 	x_range.a[0] = min(guess.nodes);
 	x_range.a[1] = max(guess.nodes);
-	y_range.a[0] = min(guess.u);
-	y_range.a[1] = max(guess.u);
-	gr.SetRanges(x_range,y_range);
-	gr.Axis(); gr.Label('x', "time", 0); gr.Label('y', "u_{guess}", 0);
-
+	y_range.a[0] = min(guess.x);
+	y_range.a[1] = max(guess.x);
+	gr->SetRanges(x_range,y_range);
 	for (Index j = 0; j < n_controls; ++j) {
 		for (Index i = 0; i < n_nodes; ++i) {
 			dat_y[i]	= guess.u(i+1,j+1);
 		}
-		gr.Plot(dat_x,dat_y);
+		gr->Plot(dat_x,dat_y);
 	}
-	gr.EndFrame();
-	gr.WriteEPS("u_guess.eps");
+
+	gr->Axis(); gr->Label('x', "time", 0); gr->Label('y', "u_{guess}", 0);
+
+	gr->WriteEPS("u_guess.eps");
 
   	status = app->OptimizeTNLP(myadolc_nlp);
 
@@ -210,6 +211,7 @@ ApplicationReturnStatus OCP::NLP_solve() {
 		Number final_obj = app->Statistics()->FinalObjective();
     	printf("\n\n*** The final value of the objective function is %e.\n", final_obj);
 	}
+
   	Number * NLP_x = myadolc_nlp->getx_opt();
 	double t0					= 0.0;
 	double tf 					= NLP_x[myadolc_nlp->getNLP_n() - 1];
@@ -257,48 +259,51 @@ ApplicationReturnStatus OCP::NLP_solve() {
 	x0_opt.save("x0_opt.dat");
 	xf_opt.save("xf_opt.dat");
 
+
 	for (Index i = 0; i < n_nodes; ++i) {
 		dat_x[i]	= nodes_opt(i+1,1);
 	}
-	gr.NewFrame();
-	gr.Box();
+	delete gr;
+	gr = new mglGraph;
+	gr->Box();
 
 	x_range.a[0] = min(nodes_opt);
 	x_range.a[1] = max(nodes_opt);
 	y_range.a[0] = min(x_opt);
 	y_range.a[1] = max(x_opt);
 
-	gr.SetRanges(x_range,y_range);
-	gr.Axis(); gr.Label('x', "time", 0); gr.Label('y', "x_{opt}", 0);
+	gr->SetRanges(x_range,y_range);
+	gr->Axis(); gr->Label('x', "time", 0); gr->Label('y', "x_{opt}", 0);
 
 	for (Index j = 0; j < n_states; ++j) {
 		for (Index i = 0; i < n_nodes; ++i) {
 			dat_y[i]	= x_opt(i+1,j+1);
 		}
-		gr.Plot(dat_x,dat_y);
+		gr->Plot(dat_x,dat_y);
 	}
-	gr.EndFrame();
-	gr.WriteEPS("x_opt.eps");
 
-	gr.NewFrame();
-	gr.Box();
+	gr->WriteEPS("x_opt.eps");
+
+	delete gr;
+	gr = new mglGraph;
+	gr->Box();
 
 	x_range.a[0] = min(nodes_opt);
 	x_range.a[1] = max(nodes_opt);
 	y_range.a[0] = min(u_opt);
 	y_range.a[1] = max(u_opt);
-	gr.SetRanges(x_range,y_range);
-	gr.Axis(); gr.Label('x', "time", 0); gr.Label('y', "u_{opt}", 0);
+	gr->SetRanges(x_range,y_range);
+	gr->Axis(); gr->Label('x', "time", 0); gr->Label('y', "u_{opt}", 0);
 
 	for (Index j = 0; j < n_controls; ++j) {
 		for (Index i = 0; i < n_nodes; ++i) {
 			dat_y[i]	= u_opt(i+1,j+1);
 		}
-		gr.Plot(dat_x,dat_y);
+		gr->Plot(dat_x,dat_y);
 	}
-	gr.EndFrame();
-	gr.WriteEPS("u_opt.eps");
 
+	gr->WriteEPS("u_opt.eps");
+	delete gr;
   	return status;
 }
 
@@ -400,7 +405,7 @@ void OCP::OCPBounds2NLPBounds() {
 		{
 			x_l[idx]		= lb_controls[j]/sf_u(j+1);
 			x_u[idx]		= ub_controls[j]/sf_u(j+1);
-			sf_NLP_x[idx]	= sf_x(j+1);
+			sf_NLP_x[idx]	= sf_u(j+1);
 			x_guess[idx]	= guess.u(i+1,j+1)/sf_u(j+1);
 			idx++;
 		}
@@ -441,7 +446,7 @@ void OCP::OCPBounds2NLPBounds() {
 		{	cout<<"path idx = "<<idx<<"\n";
 			g_l[idx]		= lb_path[j];
 			g_u[idx]		= ub_path[j];
-			sf_NLP_g[idx]	= sf_path(j+1);
+//			sf_NLP_g[idx]	= sf_path(j+1);
 			idx++;
 		}
 		for (Index j = 0; j < n_states; j += 1)
@@ -461,12 +466,14 @@ void OCP::OCPBounds2NLPBounds() {
 		sf_NLP_g[idx]	= sf_events(i+1);
 		idx++;
 	}
+/*
 	for( Index i = 0; i < NLP_n; i++) {
 		sf_NLP_x[i] 	= 1.0;
 	}
 	for( Index i = 0; i < NLP_m; i++) {
 		sf_NLP_g[i]		= 1.0;
 	}
+	*/
 	myadolc_nlp->setBounds(x_l, x_u, g_l, g_u);
 	myadolc_nlp->setSF(sf_NLP_x, sf_NLP_g);
 	myadolc_nlp->setguess(x_guess);

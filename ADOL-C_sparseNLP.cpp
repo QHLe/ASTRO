@@ -1,6 +1,7 @@
 #include <cassert>
 #include "ADOL-C_sparseNLP.hpp"
-#include "examples/lowthr/model.hpp"
+//#include "examples/lowthr/model.hpp"
+#include "model.hpp"
 using namespace Ipopt;
 
 /* Constructor. */
@@ -427,7 +428,7 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 	}
 	NLP_x_opt = new Number[n];
 	for (Index i = 0; i < n; i++) {
-		NLP_x_opt[i] 	= x[i];
+		NLP_x_opt[i] 	= x[i]*NLP_x_sf[i];
 	}
 // memory deallocation of ADOL-C variables
 

@@ -255,7 +255,8 @@ double min(const MVector& mv) {
 	for (uint i = 1;i <= mv.vector_num; i++) {
 		temp(i) = min(mv.getSVector(i));
 	}
-	return min(temp);
+	double retval = min(temp);
+	return retval;
 }
 
 double max(const MVector& mv) {
@@ -263,5 +264,6 @@ double max(const MVector& mv) {
 		for (uint i = 1;i <= mv.vector_num; i++) {
 			temp(i) = max(mv.getSVector(i));
 		}
-		return max(temp);
+		double retval = max(temp);
+		return retval;
 }

@@ -73,8 +73,9 @@ private:
   	SVector sf_param;
   	SVector sf_t;
   	SVector sf_events;
-  	SVector sf_path;
-  	SVector sf_f;
+//  	SVector sf_path;
+//  	SVector sf_f;
+//		SVector sf_constraint;
 
 };
 
