@@ -130,20 +130,19 @@ private:
 	//@{
 	double *x_lam;
 
-
-//	unsigned int **HP_t;         /* compressed block row storage */
+	unsigned int **HP_t;         /* compressed block row storage */
 	unsigned int *rind_g;        /* row indices    */
 	unsigned int *cind_g;        /* column indices */
 	double *jacval;              /* values         */
-//	unsigned int *rind_L;        /* row indices    */
-//	unsigned int *cind_L;        /* column indices */
-//	unsigned int *rind_L_total;  /* row indices    */
-//	unsigned int *cind_L_total;  /* column indices */
-//	double *hessval;             /* values */
+	unsigned int *rind_L;        /* row indices    */
+	unsigned int *cind_L;        /* column indices */
+	unsigned int *rind_L_total;  /* row indices    */
+	unsigned int *cind_L_total;  /* column indices */
+	double *hessval;             /* values */
 //	double **Hess;
 //	double **hesspat;
 	int nnz_jac;
-	int nnz_L;
+	int nnz_L, nnz_L_total;
 	int options_g[4];
 	int options_L[4];
 

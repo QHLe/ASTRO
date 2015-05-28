@@ -11,6 +11,7 @@ test.cpp
 .out
 .mat
 examples/
+irs/
 *.svg
 *.eps
 *.svg
