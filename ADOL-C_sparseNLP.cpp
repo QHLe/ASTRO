@@ -1,7 +1,10 @@
+
+#define SPARSE_HESS
+
 #include <cassert>
 #include "ADOL-C_sparseNLP.hpp"
-#include "examples/lowthr/model.hpp"
-//#include "model.hpp"
+//#include "examples/lowthr/model.hpp"
+#include "model.hpp"
 using namespace Ipopt;
 
 /* Constructor. */
@@ -114,16 +117,26 @@ template<class T> bool  MyADOLC_sparseNLP::eval_constraints(Index n, const T *x,
 	Index n_events		= OCP_structure[5];
 	Index n_path		= OCP_structure[6];
 //	Index n_linkages	= OCP_structure[7];
+	T *y_1 		= new T [n_states];
+	T *u_1		= new T [n_controls];
+	T *f_1		= new T [n_states];
 
-	T *y0			= new T [n_states];
-	T *yf			= new T [n_states];
+	T *y_12		= new T [n_states];
+	T *f_12		= new T [n_states];
+	T *u_12		= new T [n_controls];
+
+	T *y_2		= new T [n_states];
+	T *f_2		= new T [n_states];
+	T *u_2		= new T [n_controls];
+
+	T *y_start		= new T [n_states];
+	T *y_end		= new T [n_states];
 	T **y 			= new T *[n_nodes];
 	T **f		 	= new T *[n_nodes];
 	T **u 			= new T *[n_nodes];
 	T **path		= new T *[n_nodes];
 	T *param		= new T [n_param];
 	T *e			= new T [n_events];
-
 
 	T **y_m			= new T *[n_nodes-1];
 	T **f_m			= new T *[n_nodes-1];
@@ -157,23 +170,27 @@ template<class T> bool  MyADOLC_sparseNLP::eval_constraints(Index n, const T *x,
 		u_m[i]		= new T [n_controls];
 	}
 
-	Index idx = 0;
-	while (idx < n_nodes*(n_states + n_controls) + n_param) {
+	Index idx_n = 0;
+	while (idx_n < n_nodes*(n_states + n_controls) + n_param) {
 		for (Index i = 0; i < n_nodes; i += 1)	{
 			for (Index j = 0; j < n_states; j += 1){
-				y[i][j] 	= x[idx]*NLP_x_sf[idx];
-				idx++;
+				y[i][j] 	= x[idx_n]*NLP_x_sf[idx_n];
+				y_1[j]	= x[idx_n]*NLP_x_sf[idx_n];
+				idx_n++;
 			}
 			for (Index j = 0; j < n_controls; j += 1){
-				u[i][j] 	= x[idx]*NLP_x_sf[idx];
-				idx++;
+				u[i][j] 	= x[idx_n]*NLP_x_sf[idx_n];
+				u_1[j]	= x[idx_n]*NLP_x_sf[idx_n];
+				idx_n++;
 			}
-			derivatives(f[i], y[i], u[i], param, t[i], 1);
+			derivatives(f[i], 	y[i], 	u[i], 	param, 	t[i], 	1);
+			derivatives(f_1, 	y_1, 	u_1, 	param, 	t[i], 	1);
+			//derivatives(f_12), 	y_12, 	u_12, 	param, 	t[i],	1);
 		}
 		for (Index i = 0; i < n_param; i += 1)
 		{
-			param[i]			= x[idx]*NLP_x_sf[idx];
-			idx++;
+			param[i]			= x[idx_n]*NLP_x_sf[idx_n];
+			idx_n++;
 		}
 	}
 
@@ -189,35 +206,35 @@ template<class T> bool  MyADOLC_sparseNLP::eval_constraints(Index n, const T *x,
 
 	for (Index i = 0; i < n_states; i += 1)
 	{
-		y0[i] 		= y[0][i];
-		yf[i]		= y[n_nodes - 1][i];
+		y_start[i] 		= y[0][i];
+		y_end[i]		= y[n_nodes - 1][i];
 	}
-	events(e, y0, yf, param, t0, tf, 1);
+	events(e, y_start, y_end, param, t0, tf, 1);
 
-	idx = 0;
-	while( idx < m) {
+	Index idx_m = 0;
+	while( idx_m < m) {
 		for (Index i = 0; i < n_nodes; i += 1) {
 
 
 			for (Index j = 0; j < n_path; j += 1) {
-				cout<<"path idx = "<<idx<<"\n";
-				g[idx]	= 	0.0/NLP_g_sf[idx];	//need to be implemented
-				idx++;
+				cout<<"path idx_m = "<<idx_m<<"\n";
+				g[idx_m]	= 	0.0/NLP_g_sf[idx_m];	//need to be implemented
+				idx_m++;
 			}
 			for (Index j = 0; j < n_states; j += 1) {
 				if(i < n_nodes - 1) {
 					//trapezoidal
 					//g[idx]	= 	y[i+1][j] - y[i][j] - delta[i]/2.0*(f[i][j] + f[i+1][j]);
 					//hermite simpson
-					g[idx] 		= 	(y[i+1][j] - y[i][j] - delta[i]/6*(f[i][j]+4*f_m[i][j]+f[i+1][j]))/NLP_g_sf[idx];
-					idx++;
+					g[idx_m] 		= 	(y[i+1][j] - y[i][j] - delta[i]/6*(f[i][j]+4*f_m[i][j]+f[i+1][j]))/NLP_g_sf[idx_m];
+					idx_m++;
 				}
 			}
 		}
 		for (Index i = 0; i < n_events; i += 1)
 		{
-			g[idx]	= 	e[i]/NLP_g_sf[idx];
-			idx++;
+			g[idx_m]	= 	e[i]/NLP_g_sf[idx_m];
+			idx_m++;
 		}
 	}
 
@@ -243,13 +260,24 @@ template<class T> bool  MyADOLC_sparseNLP::eval_constraints(Index n, const T *x,
 	delete[] path;
 	delete[] u;
 	delete[] f;
-   	delete[] y0;
-   	delete[] yf;
+   	delete[] y_start;
+   	delete[] y_end;
    	delete[] param;
    	delete[] e;
    	delete[] delta;
   	delete[] t;
   	delete[] t_m;
+
+  	delete[] y_1;
+  	delete[] u_1;
+  	delete[] f_1;
+  	delete[] y_12;
+  	delete[] f_12;
+  	delete[] u_12;
+  	delete[] y_2;
+  	delete[] f_2;
+  	delete[] u_2;
+
 
 	return true;
 }
@@ -266,8 +294,11 @@ bool MyADOLC_sparseNLP::get_nlp_info(Index& n, Index& m, Index& nnz_jac_g,
 	cout<<"end ini\n";
   // use the C style indexing (0-based)
 	index_style = C_STYLE;
+#ifdef FULL_HESS
+	nnz_h_lag = n*(n-1)/2+n;
+#endif
 
-  return true;
+	return true;
 }
 
 bool MyADOLC_sparseNLP::get_bounds_info(Index n, Number* x_l, Number* x_u,
@@ -373,6 +404,49 @@ bool MyADOLC_sparseNLP::eval_h(Index n, const Number* x, bool new_x,
                    bool new_lambda, Index nele_hess, Index* iRow,
                    Index* jCol, Number* values)
 {
+#ifdef FULL_HESS
+	if (values == NULL) {
+	    // return the structure. This is a symmetric matrix, fill the lower left
+	    // triangle only.
+
+	    // the hessian for this problem is actually dense
+		Index idx=0;
+		for (Index row = 0; row < n; row++) {
+			for (Index col = 0; col <= row; col++) {
+				iRow[idx] = row;
+				jCol[idx] = col;
+				idx++;
+			}
+		}
+
+		assert(idx == nele_hess);
+	}
+	else {
+	    // return the values. This is a symmetric matrix, fill the lower left
+	    // triangle only
+
+		for(Index i = 0; i<n ; i++)
+			x_lam[i] = x[i];
+		for(Index i = 0; i<m ; i++)
+			x_lam[n+i] = lambda[i];
+		x_lam[n+m] = obj_factor;
+
+		hessian(tag_L,n+m+1,x_lam,Hess);
+		Index idx = 0;
+
+		for(Index i = 0; i<n ; i++) {
+			for(Index j = 0; j<=i ; j++) {
+				values[idx++] = Hess[i][j];
+			}
+		}
+	}
+
+	return true;
+
+#endif
+
+#ifdef SPARSE_HESS
+
 	if (values == NULL) {
 	    // return the structure. This is a symmetric matrix, fill the lower left
 	    // triangle only.
@@ -395,7 +469,7 @@ bool MyADOLC_sparseNLP::eval_h(Index n, const Number* x, bool new_x,
 		sparse_hess(tag_L, n+m+1, 1, x_lam, &nnz_L_total, &rind_L_total, &cind_L_total, &hessval, options_L);
 
 		Index idx = 0;
-		for(Index idx_total = 0; idx_total <nnz_L_total ; idx_total++) {
+		for(Index idx_total = 0; idx_total <nnz_L_total; idx_total++) {
 			if((rind_L_total[idx_total] < (unsigned int) n) && (cind_L_total[idx_total] < (unsigned int) n)) {
 				values[idx] = hessval[idx_total];
 				idx++;
@@ -403,6 +477,8 @@ bool MyADOLC_sparseNLP::eval_h(Index n, const Number* x, bool new_x,
 		}
 	}
 	return true;
+#endif
+	return false;
 }
 
 void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
@@ -433,18 +509,26 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 
 	delete[] guess;
 	delete[] node_str;
-	//  free(rind_L);
-	//  free(cind_L);
-	//  free(hessval);
+	delete[] (rind_L);
+	delete[] (cind_L);
+	free(cind_L_total);
+	free(rind_L_total);
+	free(hessval);
 	free(rind_g);
 	free(cind_g);
 	free(jacval);
+#ifdef FULL_HESS
+	for(Index i=0;i<n+m+1;i++)
+		delete[] Hess[i];
+	delete[] Hess;
+#endif
 
 }
 
-
 void MyADOLC_sparseNLP::generate_tapes(Index n, Index m, Index& nnz_jac_g, Index& nnz_h_lag)
 {
+
+
 	Number *xp    = new double[n];
 	Number *lamp  = new double[m];
 	Number *zl    = new double[m];
@@ -506,11 +590,11 @@ void MyADOLC_sparseNLP::generate_tapes(Index n, Index m, Index& nnz_jac_g, Index
 
     eval_obj(n,xa,obj_value);
 
-    obj_value *= sig;
+    obj_value = obj_value*sig;
     eval_constraints(n,xa,m,g);
  
     for(Index idx=0;idx<m;idx++)
-		obj_value += g[idx]*lam[idx];
+		obj_value = obj_value + g[idx]*lam[idx];
 
     obj_value >>= dummy;
 
@@ -548,209 +632,38 @@ void MyADOLC_sparseNLP::generate_tapes(Index n, Index m, Index& nnz_jac_g, Index
 		printf("sparse_j[%d] = %f\n",i,jacval[i]);
 	}
 */
-
-/*	hess_pat(tag_L,n+m+1,x,hesspat,options_h);
-
-	for (Index i=0;i<n;i++) {
-		for (Index j=1;j<=hesspat[i][0];j++){
-			if(hesspat[i][j]<=i){ // hess_pat returns all the non-zeros, not just the lower-left corner ones
-				nnz_L++;
-			}
+#ifdef SPARSE_HESS
+	hessval			= NULL;
+	cind_L_total	= NULL;
+	rind_L_total	= NULL;
+	options_L[0]= 0;
+	options_L[1]= 0;
+	sparse_hess(tag_L, n+m+1, 0, x_lam, &nnz_L_total, &rind_L_total, &cind_L_total, &hessval, options_L);
+	nnz_L = 0;
+	for(Index idx_total = 0; idx_total <nnz_L_total ; idx_total++) {
+		if((rind_L_total[idx_total] < (unsigned int) n) && (cind_L_total[idx_total] < (unsigned int) n)) {
+			nnz_L++;
 		}
 	}
-	rind_L = new unsigned int [nnz_L];
-	cind_L = new unsigned int [nnz_L];
-	hessval = new double [nnz_L];
-	Index inx = 0;
-	for (Index i=0;i<n;i++) {
-		for (Index j=1;j<=hesspat[i][0];j++){
-			if(hesspat[i][j]<=i){ // hess_pat returns all the non-zeros, not just the lower-left corner ones
-				rind_L[inx] 	= i;
-				cind_L[inx]		= j;
-			}
+	nnz_h_lag = nnz_L;
+	cout<<"nnz_h_lag = "<<nnz_h_lag<<"\n";
+	rind_L 		= new unsigned int [nnz_L];
+	cind_L 		= new unsigned int [nnz_L];
+	Index idx 	= 0;
+	for(Index idx_total = 0; idx_total <nnz_L_total ; idx_total++) {
+		if((rind_L_total[idx_total] < (unsigned int) n) && (cind_L_total[idx_total] < (unsigned int) n)) {
+			rind_L[idx]		= rind_L_total[idx_total];
+			cind_L[idx]		= cind_L_total[idx_total];
+			idx++;
 		}
 	}
-*/
+#endif
 
-	this->hessval=NULL;
-
-	unsigned int  **JP_f=NULL;                /* compressed block row storage */
-	unsigned int  **JP_g=NULL;                /* compressed block row storage */
-	unsigned int  **HP_f=NULL;                /* compressed block row storage */
-	unsigned int  **HP_g=NULL;                /* compressed block row storage */
-	unsigned int  *HP_length=NULL;            /* length of arrays */
-	unsigned int  *temp=NULL;                 /* help array */
-
-	int ctrl_H;
-
-	JP_f = (unsigned int **) malloc(sizeof(unsigned int*));
-	JP_g = (unsigned int **) malloc(m*sizeof(unsigned int*));
-	HP_f = (unsigned int **) malloc(n*sizeof(unsigned int*));
-	HP_g = (unsigned int **) malloc(n*sizeof(unsigned int*));
-	HP_t = (unsigned int **) malloc((n+m+1)*sizeof(unsigned int*));
-	HP_length = (unsigned int *) malloc((n)*sizeof(unsigned int));
-	ctrl_H = 0;
-
-	hess_pat(tag_f, n, xp, HP_f, ctrl_H);
-
-	indopro_forward_safe(tag_f, 1, n, xp, JP_f);
-	indopro_forward_safe(tag_g, m, n, xp, JP_g);
-	nonl_ind_forward_safe(tag_g, m, n, xp, HP_g);
-
-	int i, j, k, l, ii;
-	for (i=0;i<n;i++) {
-		if (HP_f[i][0]+HP_g[i][0]!=0) {
-			if (HP_f[i][0]==0) {
-				HP_t[i] = (unsigned int *) malloc((HP_g[i][0]+HPOFF)*sizeof(unsigned int));
-				for(j=0;j<=(int) HP_g[i][0];j++) {
-					HP_t[i][j] = HP_g[i][j];
-				}
-				HP_length[i] = HP_g[i][0]+HPOFF;
-		    }
-			else {
-				if (HP_g[i][0]==0) {
-					HP_t[i] = (unsigned int *) malloc((HP_f[i][0]+HPOFF)*sizeof(unsigned int));
-					for(j=0;j<=(int) HP_f[i][0];j++) {
-						HP_t[i][j] = HP_f[i][j];
-					}
-					HP_length[i] = HP_f[i][0]+HPOFF;
-				}
-				else {
-					HP_t[i] = (unsigned int *) malloc((HP_f[i][0]+HP_g[i][0]+HPOFF)*sizeof(unsigned int));
-					k = l = j = 1;
-					while ((k<=(int) HP_f[i][0]) && (l <= (int) HP_g[i][0])) {
-						if (HP_f[i][k] < HP_g[i][l]) {
-							HP_t[i][j]=HP_f[i][k];
-							j++; k++;
-						}
-						else {
-							if (HP_f[i][k] == HP_g[i][l]) {
-								HP_t[i][j]=HP_f[i][k];
-								l++;j++;k++;
-							}
-							else {
-								HP_t[i][j]=HP_g[i][l];
-								j++;l++;
-							}
-						}
-					} // end while
-					for(ii=k;ii<=(int) HP_f[i][0];ii++) {
-						HP_t[i][j] = HP_f[i][ii];
-						j++;
-					}
-					for(ii=l;ii<=(int) HP_g[i][0];ii++) {
-						HP_t[i][j] = HP_g[i][ii];
-						j++;
-					}
-				}
-		    }
-			HP_t[i][0]=j-1;
-			HP_length[i] = HP_f[i][0]+HP_g[i][0]+HPOFF;
-		}
-		else {
-			HP_t[i] = (unsigned int *) malloc((HPOFF+1)*sizeof(unsigned int));
-			HP_t[i][0]=0;
-			HP_length[i]=HPOFF;
-		}
-	}
-
-	for (i=0;i<m;i++) {
-		HP_t[n+i] = (unsigned int *) malloc((JP_g[i][0]+1)*sizeof(unsigned int));
-		HP_t[n+i][0]=JP_g[i][0];
-		for(j=1;j<= (int) JP_g[i][0];j++) {
-			HP_t[n+i][j]=JP_g[i][j];
-			if (HP_length[JP_g[i][j]] < HP_t[JP_g[i][j]][0]+1) {
-				temp = (unsigned int *) malloc((HP_t[JP_g[i][j]][0])*sizeof(unsigned int));
-				for(l=0;l<=(int)HP_t[JP_g[i][j]][0];l++)
-					temp[l] = HP_t[JP_g[i][j]][l];
-				free(HP_t[JP_g[i][j]]);
-				HP_t[JP_g[i][j]] = (unsigned int *) malloc(2*HP_length[JP_g[i][j]]*sizeof(unsigned int));
-				HP_length[JP_g[i][j]] = 2*HP_length[JP_g[i][j]];
-				for(l=0;l<=(int)temp[0];l++)
-					HP_t[JP_g[i][j]][l] =temp[l];
-				free(temp);
-		    }
-			HP_t[JP_g[i][j]][0] = HP_t[JP_g[i][j]][0]+1;
-			HP_t[JP_g[i][j]][HP_t[JP_g[i][j]][0]] = i+n;
-		}
-	}
-
-	for(j=1;j<= (int) JP_f[0][0];j++) {
-		if (HP_length[JP_f[0][j]] < HP_t[JP_f[0][j]][0]+1) {
-			temp = (unsigned int *) malloc((HP_t[JP_f[0][j]][0])*sizeof(unsigned int));
-			for(l=0;l<=(int)HP_t[JP_f[0][j]][0];l++)
-				temp[l] = HP_t[JP_f[0][j]][l];
-			free(HP_t[JP_f[0][j]]);
-			HP_t[JP_f[0][j]] = (unsigned int *) malloc(2*HP_length[JP_f[0][j]]*sizeof(unsigned int));
-			HP_length[JP_f[0][j]] = 2*HP_length[JP_f[0][j]];
-			for(l=0;l<=(int)temp[0];l++)
-				HP_t[JP_f[0][j]][l] =temp[l];
-			free(temp);
-		}
-		HP_t[JP_f[0][j]][0] = HP_t[JP_f[0][j]][0]+1;
-		HP_t[JP_f[0][j]][HP_t[JP_f[0][j]][0]] = n+m;
-	}
-
-
-	HP_t[n+m] = (unsigned int *) malloc((JP_f[0][0]+2)*sizeof(unsigned int));
-	HP_t[n+m][0]=JP_f[0][0]+1;
-	for(j=1;j<= (int) JP_f[0][0];j++)
-		HP_t[n+m][j]=JP_f[0][j];
-	HP_t[n+m][JP_f[0][0]+1]=n+m;
-
-
-
-	set_HP(tag_L,n+m+1,HP_t);
-
-	nnz_h_lag = 0;
-	for (i=0;i<n;i++) {
-		for (j=1;j<=(int) HP_t[i][0];j++)
-			if ((int) HP_t[i][j] <= i)
-				nnz_h_lag++;
-		free(HP_f[i]);
-		free(HP_g[i]);
-	}
-	nnz_L = nnz_h_lag;
-
-	options_L[0] = 0;
-	options_L[1] = 1;
-
-	sparse_hess(tag_L, n+m+1, -1, xp, &nnz_L_total, &rind_L_total, &cind_L_total, &hessval, options_L);
-
-	rind_L = new unsigned int[nnz_L];
-	cind_L = new unsigned int[nnz_L];
-	rind_L_total = new unsigned int[nnz_L_total];
-	cind_L_total = new unsigned int[nnz_L_total];
-
-	unsigned int ind = 0;
-
-	for (int i=0;i<n;i++)
-		for (unsigned int j=1;j<=HP_t[i][0];j++) {
-			if (((int) HP_t[i][j]>=i) &&((int) HP_t[i][j]<n)) {
-				rind_L[ind] = i;
-				cind_L[ind++] = HP_t[i][j];
-			}
-		}
-
-	ind = 0;
-	for (int i=0;i<n+m+1;i++)
-		for (unsigned int j=1;j<=HP_t[i][0];j++) {
-			if ((int) HP_t[i][j]>=i) {
-				rind_L_total[ind] = i;
-				cind_L_total[ind++] = HP_t[i][j];
-			}
-		}
-
-	for (i=0;i<m;i++) {
-		free(JP_g[i]);
-	}
-
-	free(JP_f[0]);
-	free(JP_f);
-	free(JP_g);
-	free(HP_f);
-	free(HP_g);
-	free(HP_length);
+#ifdef FULL_HESS
+	Hess = new double*[n+m+1];
+	for(Index i=0;i<n+m+1;i++)
+		Hess[i] = new double[i+1];
+#endif
 
 	delete[] lam;
 	delete[] g;

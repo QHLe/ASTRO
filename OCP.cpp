@@ -143,7 +143,7 @@ ApplicationReturnStatus OCP::set_OCP_structure() {
 //	app->Options()->SetStringValue("nlp_scaling_method","gradient-based");
 //	app->Options()->SetStringValue("linear_solver", "ma86");//	ma86 & ma57 with memmory leakage
 	app->Options()->SetIntegerValue("max_iter", 10000);
-	app->Options()->SetStringValue("hessian_approximation", "limited-memory");
+//	app->Options()->SetStringValue("hessian_approximation", "limited-memory");
   	status = app->Initialize();
   	if (status != Solve_Succeeded) {
   		printf("\n\n*** Error during initialization!\n");

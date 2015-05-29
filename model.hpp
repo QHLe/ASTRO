@@ -5,7 +5,7 @@
  *      Author: zineus
  */
 
-#define N_NODES		300
+#define N_NODES		1000
 
 
 
@@ -27,7 +27,7 @@ template<class T> T endpoint_cost (	const T* ini_states,
 									const T& tf,
 									uint phase) {
 
-	return fin_states[2];
+	return tf;//fin_states[2];
 }
 
 template<class T> void derivatives(	T *states_dot,
@@ -39,13 +39,13 @@ template<class T> void derivatives(	T *states_dot,
 
 	T x1 = states[0];
 	T x2 = states[1];
-	T x3 = states[2];
+//	T x3 = states[2];
 
 	T u = controls[0];
 
 	states_dot[0] 	= x2;
 	states_dot[1]	= u;
-	states_dot[2]	= u*u/2;
+//	states_dot[2]	= u*u/2;
 }
 
 template<class T> void events(	T *events,
@@ -56,11 +56,17 @@ template<class T> void events(	T *events,
 								const T &tf,
 								uint phase) {
 
-	events [0]	= ini_states[0];
+/*	events [0]	= ini_states[0];
 	events [1]	= ini_states[1];
 	events [2]	= ini_states[2];
 	events [3]	= fin_states[0];
-	events [4]	= fin_states[1];
+	events [4]	= fin_states[1];*/
+
+	events [0]	= ini_states[0];
+	events [1]	= ini_states[1];
+	events [2]	= fin_states[0];
+	events [3]	= fin_states[1];
+
 }
 
 #endif /* CPP_EXAMPLE_HPP_ */
