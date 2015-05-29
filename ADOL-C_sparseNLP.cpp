@@ -47,8 +47,8 @@ template<class T> bool  MyADOLC_sparseNLP::eval_obj(Index n, const T *x, T& obj_
 	T *delta	= new T [n_nodes - 1];
 	T *t 		= new T [n_nodes];
 
-	T tf 		= x[n-1];
-	T t0		= x[n-2];
+	T tf 		= x[n-1]*NLP_x_sf[n-1];;
+	T t0		= x[n-2]*NLP_x_sf[n-2];;
 
 	t[0]		= t0;
 	for (Index i 	= 0; i < n_nodes - 1; i++) {
@@ -66,17 +66,17 @@ template<class T> bool  MyADOLC_sparseNLP::eval_obj(Index n, const T *x, T& obj_
 
 		for (Index i = 0; i < n_nodes; i += 1)	{
 			for (Index j = 0; j < n_states; j += 1){
-				y[i][j] 	= x[idx];
+				y[i][j] 	= x[idx]*NLP_x_sf[idx];
 				idx++;
 			}
 			for (Index j = 0; j < n_controls; j += 1){
-				u[i][j] 	= x[idx];
+				u[i][j] 	= x[idx]*NLP_x_sf[idx];
 				idx++;
 			}
 		}
 		for (Index i = 0; i < n_param; i += 1)
 		{
-			param[i]			= x[idx];
+			param[i]			= x[idx]*NLP_x_sf[idx];
 			idx++;
 		}
 	}
@@ -117,17 +117,6 @@ template<class T> bool  MyADOLC_sparseNLP::eval_constraints(Index n, const T *x,
 	Index n_events		= OCP_structure[5];
 	Index n_path		= OCP_structure[6];
 //	Index n_linkages	= OCP_structure[7];
-	T *y_1 		= new T [n_states];
-	T *u_1		= new T [n_controls];
-	T *f_1		= new T [n_states];
-
-	T *y_12		= new T [n_states];
-	T *f_12		= new T [n_states];
-	T *u_12		= new T [n_controls];
-
-	T *y_2		= new T [n_states];
-	T *f_2		= new T [n_states];
-	T *u_2		= new T [n_controls];
 
 	T *y_start		= new T [n_states];
 	T *y_end		= new T [n_states];
@@ -175,17 +164,13 @@ template<class T> bool  MyADOLC_sparseNLP::eval_constraints(Index n, const T *x,
 		for (Index i = 0; i < n_nodes; i += 1)	{
 			for (Index j = 0; j < n_states; j += 1){
 				y[i][j] 	= x[idx_n]*NLP_x_sf[idx_n];
-				y_1[j]	= x[idx_n]*NLP_x_sf[idx_n];
 				idx_n++;
 			}
 			for (Index j = 0; j < n_controls; j += 1){
 				u[i][j] 	= x[idx_n]*NLP_x_sf[idx_n];
-				u_1[j]	= x[idx_n]*NLP_x_sf[idx_n];
 				idx_n++;
 			}
 			derivatives(f[i], 	y[i], 	u[i], 	param, 	t[i], 	1);
-			derivatives(f_1, 	y_1, 	u_1, 	param, 	t[i], 	1);
-			//derivatives(f_12), 	y_12, 	u_12, 	param, 	t[i],	1);
 		}
 		for (Index i = 0; i < n_param; i += 1)
 		{
@@ -267,17 +252,6 @@ template<class T> bool  MyADOLC_sparseNLP::eval_constraints(Index n, const T *x,
    	delete[] delta;
   	delete[] t;
   	delete[] t_m;
-
-  	delete[] y_1;
-  	delete[] u_1;
-  	delete[] f_1;
-  	delete[] y_12;
-  	delete[] f_12;
-  	delete[] u_12;
-  	delete[] y_2;
-  	delete[] f_2;
-  	delete[] u_2;
-
 
 	return true;
 }
