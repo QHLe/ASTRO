@@ -16,3 +16,4 @@ irs/
 *.eps
 *.svg
 lttopt
+*.tap
