@@ -117,11 +117,16 @@ int main(int argv, char* argc[])
 	problem.lb_events[4]	=-1.0;
 	problem.ub_events[4]	=-1.0;
 */
-/*
+
+	SVector guess_nodes = linspace(0,2,N_NODES);
+	SVector guess_x1(N_NODES);
+	SVector guess_x2(N_NODES);
+	SVector guess_u(N_NODES);
+
 	problem.guess.nodes		= guess_nodes;
-	problem.guess.x			= (guess_x,guess_v);
+	problem.guess.x			= (guess_x1,guess_x2);
 	problem.guess.u			= guess_u;
-*/
+
 	status = problem.NLP_solve();
 
 	return (int) status;
