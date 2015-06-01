@@ -268,9 +268,6 @@ bool MyADOLC_sparseNLP::get_nlp_info(Index& n, Index& m, Index& nnz_jac_g,
 	cout<<"end ini\n";
   // use the C style indexing (0-based)
 	index_style = C_STYLE;
-#ifdef FULL_HESS
-	nnz_h_lag = n*(n-1)/2+n;
-#endif
 
 	return true;
 }
@@ -444,7 +441,7 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 	delete[] guess;
 	delete[] node_str;
 
-#ifdef Bang_Bang
+#ifdef SPARSE_HESS
 	delete[] (rind_L);
 	delete[] (cind_L);
 	free(cind_L_total);
@@ -458,8 +455,6 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 
 void MyADOLC_sparseNLP::generate_tapes(Index n, Index m, Index& nnz_jac_g, Index& nnz_h_lag)
 {
-
-
 	Number *xp    = new double[n];
 	Number *lamp  = new double[m];
 	Number *zl    = new double[m];
@@ -472,19 +467,8 @@ void MyADOLC_sparseNLP::generate_tapes(Index n, Index m, Index& nnz_jac_g, Index
 	adouble obj_value;
 
 	double dummy;
-//	double *jacval;
-
-//	unsigned int i,j,k,l,ii;
 
 	x_lam   = new double[n+m+1];
-//	unsigned int  **hesspat=NULL; // compressed row storage
-//	int           options_h=0; // options for the hessian patterns
-//	double        *x;
-//	int retv_h = -1; // return value
-
-//	hesspat = new unsigned int* [(n+m+1)];
-//	x = new double[(n+m+1)];
-
 
 	get_starting_point(n, 1, xp, 0, zl, zu, m, 0, lamp);
 
@@ -553,6 +537,8 @@ void MyADOLC_sparseNLP::generate_tapes(Index n, Index m, Index& nnz_jac_g, Index
 
 	double *grad_f = new double[n];
 	gradient(tag_f,n,xp,grad_f);
+
+	delete[] grad_f;
 
 /*
 	cout<<"eval_grad_f\n";
