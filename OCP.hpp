@@ -62,6 +62,15 @@ public:
 	void auto_guess_gen();
 	ApplicationReturnStatus set_OCP_structure();
 	ApplicationReturnStatus NLP_solve();
+	void set_endpoint_cost(	double (*)(	const  double* ini_states, const  double* fin_states, const  double* param, const  double& t0, const  double& tf, uint phase),
+							adouble (*)(const adouble* ini_states, const adouble* fin_states, const adouble* param, const adouble& t0, const adouble& tf, uint phase));
+	void set_lagrange_cost(  double (*)( const  double *states, const  double *controls, const  double *param, const  double &time,	uint phase),
+							adouble (*)( const adouble *states, const adouble *controls, const adouble *param, const adouble &time,	uint phase));
+	void set_derivatives(void (*)( double *states_dot,  double *path, const  double *states, const  double *controls, const  double *param, const  double &time, uint phase),
+						 void (*)(adouble *states_dot, adouble *path, const adouble *states, const adouble *controls, const adouble *param, const adouble &time, uint phase));
+	void set_events(void (*)( double *events, const  double *ini_states, const  double *fin_states, const  double *param, const  double &t0, const  double &tf, uint phase),
+						 void (*)(adouble *events, const adouble *ini_states, const adouble *fin_states, const adouble *param, const adouble &t0, const adouble &tf, uint phase));
+
 private:
 	void OCPBounds2NLPBounds();
 	void determine_scaling_factors();

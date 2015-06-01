@@ -162,7 +162,7 @@ ApplicationReturnStatus OCP::NLP_solve() {
 	for (Index i = 0; i < n_nodes; ++i) {
 		dat_x[i]	= guess.nodes(i+1,1);
 	}
-//	gr.NewFrame();
+
 	gr->Box();
 
 	x_range.a[0] = min(guess.nodes);
@@ -569,6 +569,27 @@ void OCP::auto_guess_gen() {
 	}
 }
 
+void OCP::set_endpoint_cost(double (*d_e_cost)(	  const  double* ini_states, const  double* fin_states, const  double* param, const  double& t0, const  double& tf, uint phase),
+						   adouble (*ad_e_cost)(const adouble* ini_states, const adouble* fin_states, const adouble* param, const adouble& t0, const adouble& tf, uint phase)) {
+	myadolc_nlp->d_e_cost 	= d_e_cost;
+	myadolc_nlp->ad_e_cost 	= ad_e_cost;
+}
+void OCP::set_lagrange_cost( double (*d_l_cost)	( const  double *states, const  double *controls, const  double *param, const  double &time,	uint phase),
+							adouble (*ad_l_cost)( const adouble *states, const adouble *controls, const adouble *param, const adouble &time,	uint phase)){
+	myadolc_nlp->d_l_cost 	= d_l_cost;
+	myadolc_nlp->ad_l_cost 	= ad_l_cost;
+}
+void OCP::set_derivatives(void (*d_derv)(  double *states_dot,  double *path, const  double *states, const  double *controls, const  double *param, const  double &time, uint phase),
+					 void (*ad_derv)(adouble *states_dot, adouble *path, const adouble *states, const adouble *controls, const adouble *param, const adouble &time, uint phase)){
+	myadolc_nlp->d_derv 	= d_derv;
+	myadolc_nlp->ad_derv 	= ad_derv;
+
+}
+void OCP::set_events(void (*d_events)(  double *events, const  double *ini_states, const  double *fin_states, const  double *param, const  double &t0, const  double &tf, uint phase),
+				void (*ad_events)(adouble *events, const adouble *ini_states, const adouble *fin_states, const adouble *param, const adouble &t0, const adouble &tf, uint phase)) {
+	myadolc_nlp->d_events 	= d_events;
+	myadolc_nlp->ad_events  = ad_events;
+}
 Guess::Guess() {
 
 }

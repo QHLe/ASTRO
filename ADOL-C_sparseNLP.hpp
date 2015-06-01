@@ -1,11 +1,9 @@
-
 #ifndef __MYADOLCNLP_HPP__
 #define __MYADOLCNLP_HPP__
 
 #include "IpTNLP.hpp"
 #include <adolc/adolc.h>
 #include <adolc/adolc_sparse.h>
-//#include "OCP.hpp"
 
 #define tag_f 1
 #define tag_g 2
@@ -41,12 +39,13 @@ public:
 		  	  	  	  	  	  		Number* lambda);
 
 	/** Template to return the objective value */
-	template<class T> bool eval_obj(Index n, const T *x, T& obj_value);
+	bool eval_obj(Index n, const double *x, double& obj_value);
+	bool ad_eval_obj(Index n, const adouble *x, adouble& obj_value);
 
   
 	/** Template to compute contraints */
-	template<class T> bool eval_constraints(Index n, const T *x, Index m, T *g);
-
+	bool eval_constraints(Index n, const double *x, Index m, double *g);
+	bool ad_eval_constraints(Index n, const adouble *x, Index m, adouble *g);
 	/** Original method from Ipopt to return the objective value */
 	/** remains unchanged */
 	virtual bool eval_f(Index n, const Number* x, bool new_x, Number& obj_value);
@@ -109,6 +108,14 @@ public:
 	void 	setSF		(	Number* x_sf, Number* g_sf);
 	void 	setguess	(	Number* x_guess)	{guess = x_guess;}
 	void	setnodestr	(	Number* str) 		{node_str = str;}
+	double 	(*d_e_cost) (const   double* ini_states, const   double* fin_states, const   double* param, const   double& t0, const   double& tf, uint phase);
+	adouble (*ad_e_cost)(const  adouble* ini_states, const  adouble* fin_states, const  adouble* param, const  adouble& t0, const  adouble& tf, uint phase);
+	double  (*d_l_cost)	(const  double *states, const  double *controls, const  double *param, const  double &time,	uint phase);
+	adouble	(*ad_l_cost)(const adouble *states, const adouble *controls, const adouble *param, const adouble &time,	uint phase);
+	void 	(*d_derv)	( double *states_dot,  double *path, const  double *states, const  double *controls, const  double *param, const  double &time, uint phase);
+	void 	(*ad_derv)	(adouble *states_dot, adouble *path, const adouble *states, const adouble *controls, const adouble *param, const adouble &time, uint phase);
+	void 	(*d_events)	( double *events, const  double *ini_states, const  double *fin_states, const  double *param, const  double &t0, const  double &tf, uint phase);
+	void 	(*ad_events)(adouble *events, const adouble *ini_states, const adouble *fin_states, const adouble *param, const adouble &t0, const adouble &tf, uint phase);
 
 private:
   /**@name Methods to block default compiler methods.
@@ -162,7 +169,5 @@ private:
 };
 
 #endif
-template<class T> T lagrange_cost(const T *states, const T *controls, const T *param, const T&time, uint phase);
-template<class T> T endpoint_cost (	const T* ini_states, const T* fin_states, const T* param, const T& t0, const T& tf, uint phase);
-template<class T> void derivatives(T *states_dot, T *path, const T *states, const T *controls, const T *param, const T &time, uint phase);
-template<class T> void events(T *events, const T *ini_states, const T *fin_states, const T *param, const T &t0, const T &tf, uint phase);
+
+
