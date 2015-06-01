@@ -130,7 +130,6 @@ private:
 	//@{
 	double *x_lam;
 
-//	unsigned int **HP_t;         /* compressed block row storage */
 	unsigned int *rind_g;        /* row indices    */
 	unsigned int *cind_g;        /* column indices */
 	double *jacval;              /* values         */
@@ -139,8 +138,7 @@ private:
 	unsigned int *rind_L_total;  /* row indices    */
 	unsigned int *cind_L_total;  /* column indices */
 	double *hessval;             /* values */
-	double **Hess;
-//	double **hesspat;
+
 	int nnz_jac;
 	int nnz_L;
 	int nnz_L_total;

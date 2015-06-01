@@ -137,12 +137,12 @@ ApplicationReturnStatus OCP::set_OCP_structure() {
 		ub_events 		= new Number[n_events];
 	}
 
-	app->Options()->SetNumericValue("tol", 1e-7);
+	app->Options()->SetNumericValue("tol", 1e-6);
 	app->Options()->SetStringValue("mu_strategy", "adaptive");
 //	app->Options()->SetStringValue("output_file", "ipopt.out");
 //	app->Options()->SetStringValue("nlp_scaling_method","gradient-based");
 //	app->Options()->SetStringValue("linear_solver", "ma86");//	ma86 & ma57 with memmory leakage
-	app->Options()->SetIntegerValue("max_iter", 10000);
+	app->Options()->SetIntegerValue("max_iter", 100000);
 //	app->Options()->SetStringValue("hessian_approximation", "limited-memory");
   	status = app->Initialize();
   	if (status != Solve_Succeeded) {
@@ -187,8 +187,8 @@ ApplicationReturnStatus OCP::NLP_solve() {
 	gr->Box();
 	x_range.a[0] = min(guess.nodes);
 	x_range.a[1] = max(guess.nodes);
-	y_range.a[0] = min(guess.x);
-	y_range.a[1] = max(guess.x);
+	y_range.a[0] = min(guess.u);
+	y_range.a[1] = max(guess.u);
 	gr->SetRanges(x_range,y_range);
 	for (Index j = 0; j < n_controls; ++j) {
 		for (Index i = 0; i < n_nodes; ++i) {
@@ -316,7 +316,7 @@ void OCP::determine_scaling_factors() {
 		else {
 			sf_x(i+1) = 1;
 		}
-		printf("sf_x(%d) = %f\n",i+1,sf_x(i+1));
+//		printf("sf_x(%d) = %f\n",i+1,sf_x(i+1));
 
 	}
 	sf_u.resize(n_controls);
@@ -327,7 +327,7 @@ void OCP::determine_scaling_factors() {
 		else {
 			sf_u(i+1) = 1;
 		}
-		printf("sf_u(%d) = %f\n",i+1,sf_u(i+1));
+//		printf("sf_u(%d) = %f\n",i+1,sf_u(i+1));
 	}
 	sf_param.resize(n_param);
 	for (Index i = 0; i < n_param; i++) {
@@ -337,7 +337,7 @@ void OCP::determine_scaling_factors() {
 		else {
 			sf_param(i+1) = 1;
 		}
-		printf("sf_param(%d) = %f\n",i+1,sf_param(i+1));
+//		printf("sf_param(%d) = %f\n",i+1,sf_param(i+1));
 	}
 	sf_events.resize(n_events);
 	for (Index i = 0; i < n_events; i++) {
@@ -347,7 +347,7 @@ void OCP::determine_scaling_factors() {
 		else {
 			sf_events(i+1) = 1;
 		}
-		printf("sf_events(%d) = %f\n",i+1,sf_events(i+1));
+//		printf("sf_events(%d) = %f\n",i+1,sf_events(i+1));
 	}
 	sf_t.resize(1);
 	if(lb_t0 != 0 || ub_tf != 0) {

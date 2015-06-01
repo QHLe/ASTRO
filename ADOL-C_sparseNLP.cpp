@@ -378,46 +378,6 @@ bool MyADOLC_sparseNLP::eval_h(Index n, const Number* x, bool new_x,
                    bool new_lambda, Index nele_hess, Index* iRow,
                    Index* jCol, Number* values)
 {
-#ifdef FULL_HESS
-	if (values == NULL) {
-	    // return the structure. This is a symmetric matrix, fill the lower left
-	    // triangle only.
-
-	    // the hessian for this problem is actually dense
-		Index idx=0;
-		for (Index row = 0; row < n; row++) {
-			for (Index col = 0; col <= row; col++) {
-				iRow[idx] = row;
-				jCol[idx] = col;
-				idx++;
-			}
-		}
-
-		assert(idx == nele_hess);
-	}
-	else {
-	    // return the values. This is a symmetric matrix, fill the lower left
-	    // triangle only
-
-		for(Index i = 0; i<n ; i++)
-			x_lam[i] = x[i];
-		for(Index i = 0; i<m ; i++)
-			x_lam[n+i] = lambda[i];
-		x_lam[n+m] = obj_factor;
-
-		hessian(tag_L,n+m+1,x_lam,Hess);
-		Index idx = 0;
-
-		for(Index i = 0; i<n ; i++) {
-			for(Index j = 0; j<=i ; j++) {
-				values[idx++] = Hess[i][j];
-			}
-		}
-	}
-
-	return true;
-
-#endif
 
 #ifdef SPARSE_HESS
 
@@ -483,6 +443,8 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 
 	delete[] guess;
 	delete[] node_str;
+
+#ifdef Bang_Bang
 	delete[] (rind_L);
 	delete[] (cind_L);
 	free(cind_L_total);
@@ -491,12 +453,7 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 	free(rind_g);
 	free(cind_g);
 	free(jacval);
-#ifdef FULL_HESS
-	for(Index i=0;i<n+m+1;i++)
-		delete[] Hess[i];
-	delete[] Hess;
 #endif
-
 }
 
 void MyADOLC_sparseNLP::generate_tapes(Index n, Index m, Index& nnz_jac_g, Index& nnz_h_lag)
@@ -591,12 +548,13 @@ void MyADOLC_sparseNLP::generate_tapes(Index n, Index m, Index& nnz_jac_g, Index
 	options_g[2] = 0;
 	nnz_jac_g = nnz_jac;
 
-	/*
+
 	sparse_jac(tag_g, m, n, 1, xp, &nnz_jac, &rind_g, &cind_g, &jacval, options_g);
 
 	double *grad_f = new double[n];
 	gradient(tag_f,n,xp,grad_f);
 
+/*
 	cout<<"eval_grad_f\n";
 	for(Index i = 0; i < n; i++) {
 		printf("grad_f[%d] = %f\n",i,grad_f[i]);
@@ -631,12 +589,6 @@ void MyADOLC_sparseNLP::generate_tapes(Index n, Index m, Index& nnz_jac_g, Index
 			idx++;
 		}
 	}
-#endif
-
-#ifdef FULL_HESS
-	Hess = new double*[n+m+1];
-	for(Index i=0;i<n+m+1;i++)
-		Hess[i] = new double[i+1];
 #endif
 
 	delete[] lam;
