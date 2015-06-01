@@ -31,6 +31,7 @@ template<class T> T endpoint_cost (	const T* ini_states,
 }
 
 template<class T> void derivatives(	T *states_dot,
+									T *path,
 							 	 	const T *states,
 							 	 	const T *controls,
 							 	 	const T *param,

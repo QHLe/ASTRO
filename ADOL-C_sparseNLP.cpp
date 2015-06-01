@@ -1,5 +1,5 @@
 
-#define SPARSE_HESS
+//#define SPARSE_HESS
 
 #include <cassert>
 #include "ADOL-C_sparseNLP.hpp"
@@ -127,11 +127,11 @@ template<class T> bool  MyADOLC_sparseNLP::eval_constraints(Index n, const T *x,
 	T *param		= new T [n_param];
 	T *e			= new T [n_events];
 
-	T **y_m			= new T *[n_nodes-1];
-	T **f_m			= new T *[n_nodes-1];
-	T **u_m			= new T *[n_nodes-1];
-	T *t_m			= new T [n_nodes - 1];
-
+	T **y_m			= new T *[n_nodes - 1];
+	T **f_m			= new T *[n_nodes - 1];
+	T **u_m			= new T *[n_nodes - 1];
+	T **path_m		= new T *[n_nodes - 1];
+	T *t_m			= new T  [n_nodes - 1];
 
 	T *delta	 	= new T [n_nodes - 1];
 	T *t	 		= new T [n_nodes];
@@ -156,6 +156,7 @@ template<class T> bool  MyADOLC_sparseNLP::eval_constraints(Index n, const T *x,
 	for (Index i = 0; i < n_nodes - 1; i++) {
 		y_m[i]		= new T [n_states];
 		f_m[i]		= new T [n_states];
+		path_m[i]	= new T [n_path];
 		u_m[i]		= new T [n_controls];
 	}
 
@@ -170,7 +171,7 @@ template<class T> bool  MyADOLC_sparseNLP::eval_constraints(Index n, const T *x,
 				u[i][j] 	= x[idx_n]*NLP_x_sf[idx_n];
 				idx_n++;
 			}
-			derivatives(f[i], 	y[i], 	u[i], 	param, 	t[i], 	1);
+			derivatives(f[i], path[i], y[i], u[i], param, t[i], 1);
 		}
 		for (Index i = 0; i < n_param; i += 1)
 		{
@@ -186,7 +187,7 @@ template<class T> bool  MyADOLC_sparseNLP::eval_constraints(Index n, const T *x,
 		for (Index j = 0; j < n_controls; j += 1){
 			u_m[i][j] 	= (u[i][j]+u[i+1][j])/2;
 		}
-		derivatives(f_m[i], y_m[i], u_m[i], param, t_m[i], 1);
+		derivatives(f_m[i], path_m[i], y_m[i], u_m[i], param, t_m[i], 1);
 	}
 
 	for (Index i = 0; i < n_states; i += 1)
@@ -202,12 +203,13 @@ template<class T> bool  MyADOLC_sparseNLP::eval_constraints(Index n, const T *x,
 
 
 			for (Index j = 0; j < n_path; j += 1) {
-				cout<<"path idx_m = "<<idx_m<<"\n";
-				g[idx_m]	= 	0.0/NLP_g_sf[idx_m];	//need to be implemented
+//				printf("path[%d][%d];\t idx_m = %d\n",i,j,idx_m);
+				g[idx_m]	= 	path[i][j]/NLP_g_sf[idx_m];	//need to be implemented
 				idx_m++;
 			}
 			for (Index j = 0; j < n_states; j += 1) {
 				if(i < n_nodes - 1) {
+//					printf("defect[%d][%d];\t idx_m = %d\n",i,j,idx_m);
 					//trapezoidal
 					//g[idx]	= 	y[i+1][j] - y[i][j] - delta[i]/2.0*(f[i][j] + f[i+1][j]);
 					//hermite simpson
@@ -218,6 +220,7 @@ template<class T> bool  MyADOLC_sparseNLP::eval_constraints(Index n, const T *x,
 		}
 		for (Index i = 0; i < n_events; i += 1)
 		{
+//			printf("events[%d];\t idx_m = %d\n",i,idx_m);
 			g[idx_m]	= 	e[i]/NLP_g_sf[idx_m];
 			idx_m++;
 		}
@@ -229,20 +232,22 @@ template<class T> bool  MyADOLC_sparseNLP::eval_constraints(Index n, const T *x,
 		delete[] path[i];
 		delete[] f[i];
 		delete[] u[i];
+		if (i < n_nodes - 1) {
+			delete[] y_m[i];
+			delete[] f_m[i];
+			delete[] path_m[i];
+			delete[] u_m[i];
+		}
 	}
 
-	for (Index i = 0;i< n_nodes - 1;i++) {
-		delete[] y_m[i];
-		delete[] f_m[i];
-		delete[] u_m[i];
-	}
 	delete[] y_m;
 	delete[] f_m;
+	delete[] path_m;
 	delete[] u_m;
-
 
 	delete[] y;
 	delete[] path;
+
 	delete[] u;
 	delete[] f;
    	delete[] y_start;
@@ -293,7 +298,6 @@ bool MyADOLC_sparseNLP::get_starting_point(Index n, bool init_x, Number* x,
                                Index m, bool init_lambda,
                                Number* lambda)
 {
-
 	assert(init_x == true);
 	assert(init_z == false);
 	assert(init_lambda == false);

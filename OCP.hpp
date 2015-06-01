@@ -70,6 +70,7 @@ private:
   	ApplicationReturnStatus status;
   	SVector sf_u;
   	SVector sf_x;
+  	SVector sf_path;
   	SVector sf_param;
   	SVector sf_t;
   	SVector sf_events;

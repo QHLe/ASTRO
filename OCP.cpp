@@ -167,10 +167,19 @@ ApplicationReturnStatus OCP::NLP_solve() {
 
 	x_range.a[0] = min(guess.nodes);
 	x_range.a[1] = max(guess.nodes);
-	y_range.a[0] = min(guess.x);
-	y_range.a[1] = max(guess.x);
+
+	if (min(guess.x) > 0)
+		y_range.a[0] = min(guess.x)*0.9;
+	else
+		y_range.a[0] = min(guess.x)*1.1;
+	if (max(guess.x) < 0)
+		y_range.a[1] = max(guess.x)*0.9;
+	else
+		y_range.a[1] = max(guess.x)*1.1;
+
+
 	gr->SetRanges(x_range,y_range);
-	gr->Axis(); gr->Label('x', "time", 0); gr->Label('y', "x_{guess}", 0);
+	gr->Axis(); gr->Label('x', "time", 0); gr->Label('y', "x_{opt}", 0);
 
 	for (Index j = 0; j < n_states; ++j) {
 		for (Index i = 0; i < n_nodes; ++i) {
@@ -187,9 +196,20 @@ ApplicationReturnStatus OCP::NLP_solve() {
 	gr->Box();
 	x_range.a[0] = min(guess.nodes);
 	x_range.a[1] = max(guess.nodes);
-	y_range.a[0] = min(guess.u);
-	y_range.a[1] = max(guess.u);
+
+	if (min(guess.u) > 0)
+		y_range.a[0] = min(guess.u)*0.9;
+	else
+		y_range.a[0] = min(guess.u)*1.1;
+	if (max(guess.u) < 0)
+		y_range.a[1] = max(guess.u)*0.9;
+	else
+		y_range.a[1] = max(guess.u)*1.1;
+
+	y_range.a[1] = max(guess.u)*1.1;
 	gr->SetRanges(x_range,y_range);
+	gr->Axis(); gr->Label('x', "time", 0); gr->Label('y', "u_{guess}", 0);
+
 	for (Index j = 0; j < n_controls; ++j) {
 		for (Index i = 0; i < n_nodes; ++i) {
 			dat_y[i]	= guess.u(i+1,j+1);
@@ -197,7 +217,6 @@ ApplicationReturnStatus OCP::NLP_solve() {
 		gr->Plot(dat_x,dat_y);
 	}
 
-	gr->Axis(); gr->Label('x', "time", 0); gr->Label('y', "u_{guess}", 0);
 
 	gr->WriteEPS("u_guess.eps");
 
@@ -269,8 +288,14 @@ ApplicationReturnStatus OCP::NLP_solve() {
 
 	x_range.a[0] = min(nodes_opt);
 	x_range.a[1] = max(nodes_opt);
-	y_range.a[0] = min(x_opt);
-	y_range.a[1] = max(x_opt);
+	if (min(x_opt) > 0)
+		y_range.a[0] = min(x_opt)*0.9;
+	else
+		y_range.a[0] = min(x_opt)*1.1;
+	if (max(x_opt) < 0)
+		y_range.a[1] = max(x_opt)*0.9;
+	else
+		y_range.a[1] = max(x_opt)*1.1;
 
 	gr->SetRanges(x_range,y_range);
 	gr->Axis(); gr->Label('x', "time", 0); gr->Label('y', "x_{opt}", 0);
@@ -290,8 +315,16 @@ ApplicationReturnStatus OCP::NLP_solve() {
 
 	x_range.a[0] = min(nodes_opt);
 	x_range.a[1] = max(nodes_opt);
-	y_range.a[0] = min(u_opt);
-	y_range.a[1] = max(u_opt);
+
+	if (min(u_opt) > 0)
+		y_range.a[0] = min(u_opt)*0.9;
+	else
+		y_range.a[0] = min(u_opt)*1.1;
+	if (max(u_opt) < 0)
+		y_range.a[1] = max(u_opt)*0.9;
+	else
+		y_range.a[1] = max(u_opt)*1.1;
+
 	gr->SetRanges(x_range,y_range);
 	gr->Axis(); gr->Label('x', "time", 0); gr->Label('y', "u_{opt}", 0);
 
@@ -304,6 +337,7 @@ ApplicationReturnStatus OCP::NLP_solve() {
 
 	gr->WriteEPS("u_opt.eps");
 	delete gr;
+
   	return status;
 }
 
@@ -328,6 +362,16 @@ void OCP::determine_scaling_factors() {
 			sf_u(i+1) = 1;
 		}
 //		printf("sf_u(%d) = %f\n",i+1,sf_u(i+1));
+	}
+	sf_path.resize(n_path);
+	for (Index i = 0; i < n_path; i++) {
+		if(lb_path[i] != 0 || ub_path[i] != 0) {
+			sf_path(i+1) = max(fabs(lb_path[i]), fabs(ub_path[i]));
+		}
+		else {
+			sf_path(i+1) = 1;
+		}
+//		printf("sf_path(%d) = %f\n",i+1,sf_path(i+1));
 	}
 	sf_param.resize(n_param);
 	for (Index i = 0; i < n_param; i++) {
@@ -443,10 +487,10 @@ void OCP::OCPBounds2NLPBounds() {
 	for (Index i = 0; i < n_nodes; i += 1)
 	{
 		for (Index j = 0; j < n_path; j += 1)
-		{	cout<<"path idx = "<<idx<<"\n";
-			g_l[idx]		= lb_path[j];
-			g_u[idx]		= ub_path[j];
-//			sf_NLP_g[idx]	= sf_path(j+1);
+		{
+			g_l[idx]		= lb_path[j]/sf_path(j+1);
+			g_u[idx]		= ub_path[j]/sf_path(j+1);
+			sf_NLP_g[idx]	= sf_path(j+1);
 			idx++;
 		}
 		for (Index j = 0; j < n_states; j += 1)
