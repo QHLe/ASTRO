@@ -5,7 +5,7 @@
  *      Author: zineus
  */
 
-#define N_NODES		100
+#define N_NODES		150
 
 
 
