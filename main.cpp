@@ -1,4 +1,3 @@
-
 #include "OCP.hpp"
 #include "ADOL-C_sparseNLP.hpp"
 #include "model.hpp"

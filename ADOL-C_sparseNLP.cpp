@@ -1,4 +1,3 @@
-
 //#define SPARSE_HESS
 
 #include <cassert>
