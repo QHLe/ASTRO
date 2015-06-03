@@ -47,21 +47,6 @@ OCP::OCP() {
 
 }
 
-/*
-template<class T> void MyADOLC_sparseNLP::euler(const T *states_0, const T *states_dot, const double delta, T *states_1) {
-	for (Index i = 0; i < n_states; i += 1)
-	{
-		states_1[i]		= states_0[i] + delta*states_dot[i];
-	}
-}
-
-template<class T> void MyADOLC_sparseNLP::trapezoidal(const T *states_0, const T* states_dot_0, const T *states_dot_1, const double delta, T *states_1) {
-	for (Index i = 0; i < n_states; i += 1) {
-		states_1[i]		= states_0[i] + delta*0.5*(states_0[i] + states_1[i]);
-	}
-}*/
-
-
 OCP::~OCP() {
 	// TODO Auto-generated destructor stub
 	if (lb_states != NULL) {
@@ -98,9 +83,9 @@ OCP::~OCP() {
 
 ApplicationReturnStatus OCP::set_OCP_structure() {
 	Index NLP_n = (n_states + n_controls)*n_nodes + n_param + 2;
-//	Index NLP_n = (n_states + n_controls)*n_nodes + n_param;
 	Index NLP_m = ((n_nodes - 1)*n_states + n_events + n_path*n_nodes);
-	Index* structure = new Index[8];
+
+	Index* structure = new Index[10];
 	structure[0] = n_phases;
 	structure[1] = n_nodes;
 	structure[2] = n_states;
@@ -142,8 +127,10 @@ ApplicationReturnStatus OCP::set_OCP_structure() {
 //	app->Options()->SetStringValue("output_file", "ipopt.out");
 //	app->Options()->SetStringValue("nlp_scaling_method","gradient-based");
 //	app->Options()->SetStringValue("linear_solver", "ma86");//	ma86 & ma57 with memmory leakage
-	app->Options()->SetIntegerValue("max_iter", 100000);
-//	app->Options()->SetStringValue("hessian_approximation", "limited-memory");
+	app->Options()->SetIntegerValue("max_iter", 10000);
+#ifndef SPARSE_HESS
+	app->Options()->SetStringValue("hessian_approximation", "limited-memory");
+#endif
   	status = app->Initialize();
   	if (status != Solve_Succeeded) {
   		printf("\n\n*** Error during initialization!\n");
@@ -179,7 +166,7 @@ ApplicationReturnStatus OCP::NLP_solve() {
 
 
 	gr->SetRanges(x_range,y_range);
-	gr->Axis(); gr->Label('x', "time", 0); gr->Label('y', "x_{opt}", 0);
+	gr->Axis(); gr->Label('x', "time", 0); gr->Label('y', "x_{guess}", 0);
 
 	for (Index j = 0; j < n_states; ++j) {
 		for (Index i = 0; i < n_nodes; ++i) {
@@ -188,10 +175,9 @@ ApplicationReturnStatus OCP::NLP_solve() {
 		gr->Plot(dat_x,dat_y);
 	}
 
-	gr->WriteEPS("x_guess.eps");
-
-//	gr.NewFrame();
+	gr->WriteEPS("guess_x.eps");
 	delete gr;
+
 	gr = new mglGraph;
 	gr->Box();
 	x_range.a[0] = min(guess.nodes);
@@ -218,7 +204,8 @@ ApplicationReturnStatus OCP::NLP_solve() {
 	}
 
 
-	gr->WriteEPS("u_guess.eps");
+	gr->WriteEPS("guess_u.eps");
+	delete gr;
 
   	status = app->OptimizeTNLP(myadolc_nlp);
 
@@ -245,7 +232,7 @@ ApplicationReturnStatus OCP::NLP_solve() {
 	for (Index i = 2; i <= n_nodes; i++) {
 		nodes_opt(i,1) 	= nodes_opt(i-1,1) + delta;
 	}
-	nodes_opt.save("nodes_opt.dat");
+	nodes_opt.save("results_nodes.dat");
 
 	Index idx = 0;
 	while (idx < n_nodes*(n_states + n_controls) + n_param) {
@@ -265,9 +252,9 @@ ApplicationReturnStatus OCP::NLP_solve() {
 			idx++;
 		}
 	}
-	x_opt.save("x_opt.dat");
-	u_opt.save("u_opt.dat");
-	param_opt.save("param_opt.dat");
+	x_opt.save("results_x.dat");
+	u_opt.save("results_u.dat");
+	param_opt.save("results_param.dat");
 
 	x0_opt.resize(1,n_states);
 	xf_opt.resize(1,n_states);
@@ -275,14 +262,13 @@ ApplicationReturnStatus OCP::NLP_solve() {
 		x0_opt(1,i) 		= x_opt(1,i);
 		xf_opt(1,i)			= x_opt(n_nodes,i);
 	}
-	x0_opt.save("x0_opt.dat");
-	xf_opt.save("xf_opt.dat");
+	x0_opt.save("results_x0.dat");
+	xf_opt.save("results_xf.dat");
 
 
 	for (Index i = 0; i < n_nodes; ++i) {
 		dat_x[i]	= nodes_opt(i+1,1);
 	}
-	delete gr;
 	gr = new mglGraph;
 	gr->Box();
 
@@ -307,9 +293,9 @@ ApplicationReturnStatus OCP::NLP_solve() {
 		gr->Plot(dat_x,dat_y);
 	}
 
-	gr->WriteEPS("x_opt.eps");
-
+	gr->WriteEPS("results_x.eps");
 	delete gr;
+
 	gr = new mglGraph;
 	gr->Box();
 
@@ -335,13 +321,14 @@ ApplicationReturnStatus OCP::NLP_solve() {
 		gr->Plot(dat_x,dat_y);
 	}
 
-	gr->WriteEPS("u_opt.eps");
+	gr->WriteEPS("results_u.eps");
 	delete gr;
 
   	return status;
 }
 
 void OCP::determine_scaling_factors() {
+
 	sf_x.resize(n_states);
 	for (Index i = 0; i < n_states; i++) {
 		if(lb_states[i] != 0 || ub_states[i] != 0) {

@@ -1,6 +1,7 @@
 #include "OCP.hpp"
 #include "ADOL-C_sparseNLP.hpp"
-#include "model.hpp"
+
+#define N_NODES		100
 
 template<class T> T lagrange_cost(	const T *states,
 									const T *controls,
@@ -99,34 +100,29 @@ int main(int argv, char* argc[])
 	problem.ub_t0 			= 0.0;
 
 	problem.lb_tf			= 0.1;
-	problem.ub_tf			= 1.0;
+	problem.ub_tf			= 1.5;
 
-	problem.lb_events[0]	= 0.0;
-	problem.ub_events[0]	= 0.0;
+	problem.lb_events[0]	= -0.0;
+	problem.ub_events[0]	= -0.0;
 
-	problem.lb_events[1]	= 0.0;
-	problem.ub_events[1]	= 0.0;
-
+	problem.lb_events[1]	= -0.0;
+	problem.ub_events[1]	= -0.0;
+	
 	problem.lb_events[2]	= 1.0;
 	problem.ub_events[2]	= 1.0;
 
-	problem.lb_events[3]	= 0.0;
-	problem.ub_events[3]	= 0.0;
-
+	problem.lb_events[3]	= -0.0;
+	problem.ub_events[3]	= -0.0;
 /*
-	problem.lb_events[4]	=-1.0;
-	problem.ub_events[4]	=-1.0;
-*/
-
-	SVector guess_nodes = linspace(0,2,N_NODES);
-	SVector guess_x1(N_NODES);
+	SVector guess_nodes = linspace(0,1,N_NODES);
+	SVector guess_x1	= linspace(0,1,N_NODES);
 	SVector guess_x2(N_NODES);
 	SVector guess_u(N_NODES);
 
 	problem.guess.nodes		= guess_nodes;
 	problem.guess.x			= (guess_x1,guess_x2);
 	problem.guess.u			= guess_u;
-
+*/
 	status = problem.NLP_solve();
 
 	return (int) status;

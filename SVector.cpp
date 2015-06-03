@@ -111,6 +111,7 @@ double SVector::enorm() {
 	}
 	return sqrt(temp);
 }
+
 double dot(const SVector& v1, const SVector& v2) {
 	if (v1.getsize() != v2.getsize()) {
 		cout<<"===== calculating dot product  =====\n===== SVector size do not match =====\n\n";

@@ -162,6 +162,8 @@ private:
 	Number* NLP_g_lb;
 	Number* NLP_g_ub;
 	Number* NLP_g_sf;
+	double  NLP_obj_sf;
+	Number* NLP_defect_sf;
 	Number* guess;
 	Number* node_str;
 	Index* OCP_structure;

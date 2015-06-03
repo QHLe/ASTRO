@@ -6,6 +6,7 @@ using namespace Ipopt;
 
 /* Constructor. */
 MyADOLC_sparseNLP::MyADOLC_sparseNLP() {
+	NLP_obj_sf		= 1;
 	x_lam			= NULL;
 	cind_g 			= NULL;
 	rind_g			= NULL;
@@ -13,10 +14,23 @@ MyADOLC_sparseNLP::MyADOLC_sparseNLP() {
 
 	NLP_x_lb		= NULL;
 	NLP_x_ub		= NULL;
+	NLP_x_sf 		= NULL;
 	NLP_g_lb		= NULL;
 	NLP_g_ub		= NULL;
+	NLP_g_sf		= NULL;
 	OCP_structure 	= NULL;
 	NLP_x_opt		= NULL;
+	NLP_defect_sf	= NULL;
+	guess			= NULL;
+	node_str		= NULL;
+
+	rind_L			= NULL;
+	cind_L			= NULL;
+	rind_L_total	= NULL;
+	cind_L_total	= NULL;
+	hessval			= NULL;
+
+
 }
 
 MyADOLC_sparseNLP::~MyADOLC_sparseNLP()
@@ -26,7 +40,7 @@ MyADOLC_sparseNLP::~MyADOLC_sparseNLP()
 
 bool  MyADOLC_sparseNLP::ad_eval_obj(Index n, const adouble *x, adouble& obj_value) {
   // return the value of the objective function
-
+	cout<<"ad_eval_obj\n";
 //	Index n_phases		= OCP_structure[0];
 	Index n_nodes 		= OCP_structure[1];
 	Index n_states 		= OCP_structure[2];
@@ -88,6 +102,8 @@ bool  MyADOLC_sparseNLP::ad_eval_obj(Index n, const adouble *x, adouble& obj_val
 					+ ad_l_cost(y[i+1], u[i+1], param, t[i+1], 1))*delta[i]*0.5;
 
 	obj_value += ad_e_cost (y0, yf, param, t0, tf, 1);
+
+	obj_value = obj_value/NLP_obj_sf;
 
 	for (Index i = 0; i < n_nodes; i += 1) {
 		delete[] y[i];
@@ -168,6 +184,8 @@ bool  MyADOLC_sparseNLP::eval_obj(Index n, const double *x, double& obj_value) {
 					+ d_l_cost(y[i+1], u[i+1], param, t[i+1], 1))*delta[i]*0.5;
 
 	obj_value += d_e_cost (y0, yf, param, t0, tf, 1);
+
+	obj_value /= NLP_obj_sf;
 
 	for (Index i = 0; i < n_nodes; i += 1) {
 		delete[] y[i];
@@ -571,6 +589,12 @@ bool MyADOLC_sparseNLP::eval_f(Index n, const Number* x, bool new_x, Number& obj
 bool MyADOLC_sparseNLP::eval_grad_f(Index n, const Number* x, bool new_x, Number* grad_f)
 {
 	gradient(tag_f,n,x,grad_f);
+/*	double temp = 0;
+	for (uint i = 0; i < n ; i++)
+		temp = temp + grad_f[i]*grad_f[i];
+	temp = sqrt(temp);
+	printf("norm_grad_f = %e\n",temp);
+*/
 	return true;
 }
 
@@ -675,6 +699,9 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 
 	delete[] guess;
 	delete[] node_str;
+	free(rind_g);
+	free(cind_g);
+	free(jacval);
 
 #ifdef SPARSE_HESS
 	delete[] (rind_L);
@@ -682,9 +709,6 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 	free(cind_L_total);
 	free(rind_L_total);
 	free(hessval);
-	free(rind_g);
-	free(cind_g);
-	free(jacval);
 #endif
 }
 
@@ -770,10 +794,31 @@ void MyADOLC_sparseNLP::generate_tapes(Index n, Index m, Index& nnz_jac_g, Index
 
 	sparse_jac(tag_g, m, n, 1, xp, &nnz_jac, &rind_g, &cind_g, &jacval, options_g);
 
+
 	double *grad_f = new double[n];
 	gradient(tag_f,n,xp,grad_f);
 
+	double enorm_grad_f = 0;
+	for (uint i = 0; i < n ; i++)
+		enorm_grad_f = enorm_grad_f + grad_f[i]*grad_f[i];
+	enorm_grad_f = sqrt(enorm_grad_f);
+	printf("norm_grad_f = %e\n",enorm_grad_f);
+
+	if(enorm_grad_f != 0 )
+		NLP_obj_sf = enorm_grad_f;
 	delete[] grad_f;
+/*
+	trace_on(tag_f);
+
+    for(Index idx=0;idx<n;idx++)
+      xa[idx] <<= xp[idx];
+
+    ad_eval_obj(n,xa,obj_value);
+
+    obj_value >>= dummy;
+
+    trace_off();
+
 
 /*
 	cout<<"eval_grad_f\n";

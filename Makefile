@@ -31,7 +31,7 @@ INCL = -I$(HOME)/adolc_base/include -I$(HOME)/Ipopt-3.12.1/include/coin -I$(HOME
 #INCL = -I`$(CYGPATH_W) $(HOME)/packages/Ipopt-3.12.1/build/Ipopt/include/coin`  $(ADDINCFLAGS)
 
 # Linker flags
-LIBS = -L${IPOPTLIBDIR} -lipopt -L$(HOME)/coinhsl/lib -lcoinhsl -llapack -lblas -lm  -ldl -lcoinmumps -lblas -lgfortran -lm -lgomp -lquadmath -lpthread -L/usr/lib/gcc/x86_64-linux-gnu/4.8 -L/usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/4.8/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/4.8/../../.. -lcoinmetis
+LIBS = -L${IPOPTLIBDIR} -lipopt -L$(HOME)/coinhsl/lib -lcoinhsl -lm  -ldl -lcoinmumps -lgfortran -lm -lgomp -lquadmath -lpthread -L/usr/lib/gcc/x86_64-linux-gnu/4.8 -L/usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/4.8/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/4.8/../../.. -lcoinmetis -llapack -lf77blas -lcblas -latlas
 #LIBS = `PKG_CONFIG_PATH=$(HOME)/Ipopt-3.12.1/lib/pkgconfig: pkg-config --libs ipopt`
 
 # The following is necessary under cygwin, if native compilers are used
@@ -50,7 +50,7 @@ $(EXE): $(OBJS)
 #	$(CXX) $(CXXLINKFLAGS) $(CXXFLAGS) $(INCL) $(SRC) -o cpp_example $(LIBS) $(ADDLIBS)
 
 clean:
-	rm -rf $(EXE) $(OBJS) *.eps
+	rm -rf $(EXE) $(OBJS) *.eps results*.*
 
 .cpp.o:
 	$(CXX) $(CXXFLAGS) $(INCL) -c -o $@ $<
