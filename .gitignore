@@ -12,6 +12,7 @@ test.cpp
 .mat
 examples/
 irs/
+Debug/
 *.svg
 *.eps
 *.svg
