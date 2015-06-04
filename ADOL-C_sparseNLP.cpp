@@ -696,6 +696,7 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 	delete[] NLP_x_lb;
 	delete[] NLP_x_ub;
 	delete[] NLP_x_sf;
+	delete[] NLP_constraint_sf;
 
 	delete[] NLP_g_lb;
 	delete[] NLP_g_ub;
