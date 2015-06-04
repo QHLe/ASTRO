@@ -85,7 +85,7 @@ ApplicationReturnStatus OCP::set_OCP_structure() {
 	Index NLP_n = (n_states + n_controls)*n_nodes + n_param + 2;
 	Index NLP_m = ((n_nodes - 1)*n_states + n_events + n_path*n_nodes);
 
-	Index* structure = new Index[10];
+	Index* structure = new Index[8];
 	structure[0] = n_phases;
 	structure[1] = n_nodes;
 	structure[2] = n_states;
@@ -126,7 +126,7 @@ ApplicationReturnStatus OCP::set_OCP_structure() {
 	app->Options()->SetStringValue("mu_strategy", "adaptive");
 //	app->Options()->SetStringValue("output_file", "ipopt.out");
 //	app->Options()->SetStringValue("nlp_scaling_method","gradient-based");
-//	app->Options()->SetStringValue("linear_solver", "ma86");//	ma86 & ma57 with memmory leakage
+	app->Options()->SetStringValue("linear_solver", "mumps");//	ma86 & ma57 with memmory leakage
 	app->Options()->SetIntegerValue("max_iter", 10000);
 #ifndef SPARSE_HESS
 	app->Options()->SetStringValue("hessian_approximation", "limited-memory");
@@ -139,7 +139,6 @@ ApplicationReturnStatus OCP::set_OCP_structure() {
 }
 
 ApplicationReturnStatus OCP::NLP_solve() {
-
 	OCPBounds2NLPBounds();
 	mglGraph* gr 	= new mglGraph;
 	mglData dat_x(n_nodes);
@@ -392,7 +391,6 @@ void OCP::determine_scaling_factors() {
 
 
 void OCP::OCPBounds2NLPBounds() {
-
 	determine_scaling_factors();
 
 	Index NLP_n 		= myadolc_nlp->getNLP_n();
@@ -466,6 +464,7 @@ void OCP::OCPBounds2NLPBounds() {
 
 	for (Index i = 0; i < n_nodes - 1; i++) {
 		node_str[i]	= (guess.nodes(i+2,1) - guess.nodes(i+1,1))/delta_t;
+
 	}
 
   	// structure of g
@@ -545,7 +544,7 @@ void OCP::auto_guess_gen() {
 	if(n_param > 0) {
 		param.resize((uint) n_param);
 		for (Index i = 0; i < n_param; i++) {
-			param.setelement((uint)i,(double)(lb_param[i] + ub_param[i])/2);
+			param(i+1) 	= (double)(lb_param[i] + ub_param[i])/2;
 		}
 	}
 	guess.param = param;

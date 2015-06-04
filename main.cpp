@@ -8,7 +8,7 @@ template<class T> T lagrange_cost(	const T *states,
 									const T *param,
 									const T &time,
 									uint phase) {
-	return 0;
+	return controls[0]*controls[0]/2;
 }
 
 template<class T> T endpoint_cost (	const T* ini_states,
@@ -18,7 +18,7 @@ template<class T> T endpoint_cost (	const T* ini_states,
 									const T& tf,
 									uint phase) {
 
-	return tf;//fin_states[2];
+	return 0;//fin_states[2];
 }
 
 
@@ -86,21 +86,18 @@ int main(int argv, char* argc[])
 
 	problem.lb_states[0]	= 0.0;
 	problem.lb_states[1]	=-10.0;
-//	problem.lb_states[2]	=-10.0;
 
-//	problem.ub_states[0]	= 1.0/9.0;
 	problem.ub_states[0]	= 1.0;
 	problem.ub_states[1]	= 10.0;
-//	problem.ub_states[2]	= 10.0;
 
-	problem.lb_controls[0]	=-10.0;
-	problem.ub_controls[0]	= 10.0;
+	problem.lb_controls[0]	=-5.0;
+	problem.ub_controls[0]	= 5.0;
 
 	problem.lb_t0 			= 0.0;
 	problem.ub_t0 			= 0.0;
 
-	problem.lb_tf			= 0.1;
-	problem.ub_tf			= 1.5;
+	problem.lb_tf			= 1.0;
+	problem.ub_tf			= 1.0;
 
 	problem.lb_events[0]	= -0.0;
 	problem.ub_events[0]	= -0.0;
