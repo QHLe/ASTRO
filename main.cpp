@@ -82,6 +82,12 @@ int main(int argv, char* argc[])
 
 	ApplicationReturnStatus status;
 
+	problem.config.max_iter 	= 5000;
+	problem.config.NLP_solver 	= ma27;
+	problem.config.warmstart 	= false;
+	problem.config.NLP_tol		= 1e-6;
+	problem.config.opt_oder		= first_order;
+
 	status = problem.set_OCP_structure();
 
 	problem.lb_states[0]	= 0.0;

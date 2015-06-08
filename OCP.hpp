@@ -8,6 +8,9 @@
 #ifndef OCP_HPP_
 #define OCP_HPP_
 
+enum NLP_SOLVER 	{ma27=0, ma57, ma86, ma97, mumps};
+enum OPT_ORDER		{first_order, second_order};
+
 #include "IpIpoptApplication.hpp"
 #include "IpSolveStatistics.hpp"
 #include "ADOL-C_sparseNLP.hpp"
@@ -27,9 +30,13 @@ public:
 
 class Config {
 public:
+	Config();
 	uint max_iter;
 	char* hessian_approximation;
-	char* NLP_solver;
+	NLP_SOLVER NLP_solver;
+	bool warmstart;
+	double NLP_tol;
+	OPT_ORDER opt_oder;
 };
 
 class OCP {
@@ -37,7 +44,6 @@ public:
 	OCP();
 	~OCP();
 
-	Config config;
 	Index n_nodes;
 	Index n_states;
 	Index n_controls;
@@ -50,7 +56,8 @@ public:
 	Number *lb_states, *ub_states, *lb_controls, *ub_controls, *lb_param, *ub_param, *lb_path, *ub_path, *lb_events, *ub_events;
 	Number lb_t0, ub_t0, lb_tf, ub_tf;
 
-	Guess guess;
+	Guess 	guess;
+	Config 	config;
 	MVector nodes_opt;
 	MVector x0_opt;
 	MVector xf_opt;

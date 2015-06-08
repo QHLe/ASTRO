@@ -12,6 +12,11 @@
 
 using namespace Ipopt;
 
+const char* nlp_solver(int enumval) {
+	const char* solver_string[] = {"ma27", "ma57", "ma86", "ma97", "mumps"};
+	return solver_string[enumval];
+}
+
 OCP::OCP() {
 
 	  // Create an instance of your nlp...
@@ -127,7 +132,12 @@ ApplicationReturnStatus OCP::set_OCP_structure() {
 //	app->Options()->SetStringValue("output_file", "ipopt.out");
 //	app->Options()->SetStringValue("nlp_scaling_method","gradient-based");
 	app->Options()->SetStringValue("linear_solver", "mumps");//	ma86 & ma57 with memmory leakage
-	app->Options()->SetIntegerValue("max_iter", 10000);
+	app->Options()->SetStringValue("linear_solver", nlp_solver(config.NLP_solver));//	ma86 & ma57 with memmory leakage
+	app->Options()->SetIntegerValue("max_iter", config.max_iter);
+	if (config.warmstart) {
+		app->Options()->SetStringValue("warm_start_init_point", "yes");
+	}
+
 #ifndef SPARSE_HESS
 	app->Options()->SetStringValue("hessian_approximation", "limited-memory");
 #endif
@@ -582,4 +592,12 @@ Guess::Guess() {
 
 Guess::~Guess() {
 //	delete[] nodes; delete[] x, delete[] u, delete[] param;
+}
+
+Config::Config() {
+	max_iter 	= 5000;
+	NLP_solver 	= ma27;
+	warmstart 	= false;
+	NLP_tol		= 1e-6;
+	opt_oder	= first_order;
 }
