@@ -52,7 +52,7 @@ public:
 	Index n_phases;
 	Index n_linkages;
 
-	Number *lb_states, *ub_states, *lb_controls, *ub_controls, *lb_param, *ub_param, *lb_path, *ub_path, *lb_events, *ub_events;
+	SVector<double> lb_states, ub_states, lb_controls, ub_controls, lb_param, ub_param, lb_path, ub_path, lb_events, ub_events;
 	Number lb_t0, ub_t0, lb_tf, ub_tf;
 
 	Guess 	guess;

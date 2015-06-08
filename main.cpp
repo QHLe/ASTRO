@@ -90,14 +90,14 @@ int main(int argv, char* argc[])
 
 	status = problem.set_OCP_structure();
 
-	problem.lb_states[0]	= 0.0;
-	problem.lb_states[1]	=-10.0;
+	problem.lb_states(1)	= 0.0;
+	problem.lb_states(2)	=-10.0;
 
-	problem.ub_states[0]	= 1.0;
-	problem.ub_states[1]	= 10.0;
+	problem.ub_states(1)	= 1.0;
+	problem.ub_states(2)	= 10.0;
 
-	problem.lb_controls[0]	=-5.0;
-	problem.ub_controls[0]	= 5.0;
+	problem.lb_controls(1)	=-5.0;
+	problem.ub_controls(1)	= 5.0;
 
 	problem.lb_t0 			= 0.0;
 	problem.ub_t0 			= 0.0;
@@ -105,17 +105,17 @@ int main(int argv, char* argc[])
 	problem.lb_tf			= 1.0;
 	problem.ub_tf			= 1.0;
 
-	problem.lb_events[0]	= -0.0;
-	problem.ub_events[0]	= -0.0;
+	problem.lb_events(1)	= -0.0;
+	problem.ub_events(1)	= -0.0;
 
-	problem.lb_events[1]	= -0.0;
-	problem.ub_events[1]	= -0.0;
+	problem.lb_events(2)	= -0.0;
+	problem.ub_events(2)	= -0.0;
 	
-	problem.lb_events[2]	= 1.0;
-	problem.ub_events[2]	= 1.0;
+	problem.lb_events(3)	= 1.0;
+	problem.ub_events(3)	= 1.0;
 
-	problem.lb_events[3]	= -0.0;
-	problem.ub_events[3]	= -0.0;
+	problem.lb_events(4)	= -0.0;
+	problem.ub_events(4)	= -0.0;
 /*
 	SVector guess_nodes = linspace(0,1,N_NODES);
 	SVector guess_x1	= linspace(0,1,N_NODES);
