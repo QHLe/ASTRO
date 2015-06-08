@@ -522,23 +522,23 @@ void OCP::OCPBounds2NLPBounds() {
 }
 
 void OCP::auto_guess_gen() {
-	SVector nodes = linspace((lb_t0+ub_t0)/2,(lb_tf+ub_tf)/2,n_nodes);
+	SVector<double> nodes = linspace<double>((lb_t0+ub_t0)/2,(lb_tf+ub_tf)/2,n_nodes);
 	guess.nodes = nodes;
 
-	SVector* states = new SVector[n_states];
+	SVector<double>* states = new SVector<double>[n_states];
 	for (Index i = 0; i < n_states; i++) {
-			states[i] = linspace(lb_states[i], ub_states[i],n_nodes);
+			states[i] = linspace<double>(lb_states[i], ub_states[i],n_nodes);
 		}
 	guess.x		= states[0];
 	for (Index i = 1; i < n_states; i++) {
 		guess.x = (guess.x,states[i]);
 	}
 
-	SVector* controls = NULL;
+	SVector<double>* controls = NULL;
 	if (n_controls > 0) {
-		controls = new SVector[n_controls];
+		controls = new SVector<double>[n_controls];
 		for (Index i = 0; i < n_controls; i++) {
-			controls[i] = linspace(lb_controls[i], ub_controls[i],n_nodes);
+			controls[i] = linspace<double>(lb_controls[i], ub_controls[i],n_nodes);
 		}
 		guess.u		= controls[0];
 		for (Index i = 1; i < n_controls; i++) {
@@ -546,11 +546,11 @@ void OCP::auto_guess_gen() {
 		}
 	}
 	else {
-		SVector Null_vector;
+		SVector<double> Null_vector;
 		guess.u = Null_vector;
 	}
 
-	SVector param;
+	SVector<double> param;
 	if(n_param > 0) {
 		param.resize((uint) n_param);
 		for (Index i = 0; i < n_param; i++) {

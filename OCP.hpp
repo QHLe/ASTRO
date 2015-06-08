@@ -15,7 +15,6 @@ enum OPT_ORDER		{first_order, second_order};
 #include "IpSolveStatistics.hpp"
 #include "ADOL-C_sparseNLP.hpp"
 #include "SVector.hpp"
-#include "MVector.hpp"
 
 class Phase;
 class Guess {
@@ -84,12 +83,12 @@ private:
   	SmartPtr<MyADOLC_sparseNLP> myadolc_nlp;
   	SmartPtr<IpoptApplication> app;
   	ApplicationReturnStatus status;
-  	SVector sf_u;
-  	SVector sf_x;
-  	SVector sf_path;
-  	SVector sf_param;
-  	SVector sf_t;
-  	SVector sf_events;
+  	SVector<double> sf_u;
+  	SVector<double> sf_x;
+  	SVector<double> sf_path;
+  	SVector<double> sf_param;
+  	SVector<double> sf_t;
+  	SVector<double> sf_events;
 
 //  	SVector sf_f;
 //		SVector sf_constraint;

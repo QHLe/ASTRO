@@ -1,7 +1,7 @@
 
 EXE = lttopt
 
-OBJS =  main.o ADOL-C_sparseNLP.o OCP.o SVector.o MVector.o
+OBJS =  main.o ADOL-C_sparseNLP.o OCP.o MVector.o
 
 
 ADPATH = $(HOME)/adolc_base/include
