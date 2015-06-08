@@ -7,9 +7,6 @@ using namespace Ipopt;
 /* Constructor. */
 MyADOLC_sparseNLP::MyADOLC_sparseNLP() {
 
-	OCP_structure 		= NULL;
-	node_str			= NULL;
-
 	x_lam				= NULL;
 	cind_g 				= NULL;
 	rind_g				= NULL;
@@ -30,14 +27,14 @@ MyADOLC_sparseNLP::~MyADOLC_sparseNLP()
 bool  MyADOLC_sparseNLP::ad_eval_obj(Index n, const adouble *x, adouble& obj_value) {
   // return the value of the objective function
 	cout<<"ad_eval_obj\n";
-//	Index n_phases		= OCP_structure[0];
-	Index n_nodes 		= OCP_structure[1];
-	Index n_states 		= OCP_structure[2];
-	Index n_controls 	= OCP_structure[3];
-	Index n_param 		= OCP_structure[4];
-//	Index n_events		= OCP_structure[5];
-//	Index n_path		= OCP_structure[6];
-//	Index n_linkages	= OCP_structure[7];
+//	Index n_phases		= OCP_structure(1);
+	Index n_nodes 		= OCP_structure(2);
+	Index n_states 		= OCP_structure(3);
+	Index n_controls 	= OCP_structure(4);
+	Index n_param 		= OCP_structure(5);
+//	Index n_events		= OCP_structure(6);
+//	Index n_path		= OCP_structure(7);
+//	Index n_linkages	= OCP_structure(8);
 
 	adouble *y0		= new adouble [n_states];
 	adouble *yf		= new adouble [n_states];
@@ -52,7 +49,7 @@ bool  MyADOLC_sparseNLP::ad_eval_obj(Index n, const adouble *x, adouble& obj_val
 
 	t[0]		= t0;
 	for (Index i 	= 0; i < n_nodes - 1; i++) {
-		delta[i]	= (tf-t0)*node_str[i];
+		delta[i]	= (tf-t0)*node_str(i+1);
 		t[i+1]		= t[i] + delta[i];
 	}
 
@@ -112,15 +109,14 @@ bool  MyADOLC_sparseNLP::ad_eval_obj(Index n, const adouble *x, adouble& obj_val
 bool  MyADOLC_sparseNLP::eval_obj(Index n, const double *x, double& obj_value) {
   // return the value of the objective function
 
-//	Index n_phases		= OCP_structure[0];
-	Index n_nodes 		= OCP_structure[1];
-	Index n_states 		= OCP_structure[2];
-	Index n_controls 	= OCP_structure[3];
-	Index n_param 		= OCP_structure[4];
-//	Index n_events		= OCP_structure[5];
-//	Index n_path		= OCP_structure[6];
-//	Index n_linkages	= OCP_structure[7];
-
+//	Index n_phases		= OCP_structure(1);
+	Index n_nodes 		= OCP_structure(2);
+	Index n_states 		= OCP_structure(3);
+	Index n_controls 	= OCP_structure(4);
+	Index n_param 		= OCP_structure(5);
+//	Index n_events		= OCP_structure(6);
+//	Index n_path		= OCP_structure(7);
+//	Index n_linkages	= OCP_structure(8);
 	double *y0		= new double [n_states];
 	double *yf		= new double [n_states];
 	double **y 		= new double *[n_nodes];
@@ -134,7 +130,7 @@ bool  MyADOLC_sparseNLP::eval_obj(Index n, const double *x, double& obj_value) {
 
 	t[0]		= t0;
 	for (Index i 	= 0; i < n_nodes - 1; i++) {
-		delta[i]	= (tf-t0)*node_str[i];
+		delta[i]	= (tf-t0)*node_str(i+1);
 		t[i+1]		= t[i] + delta[i];
 	}
 
@@ -193,15 +189,15 @@ bool  MyADOLC_sparseNLP::eval_obj(Index n, const double *x, double& obj_value) {
 
 bool  MyADOLC_sparseNLP::ad_eval_constraints(Index n, const adouble *x, Index m, adouble* g) {
 	cout<<"ad_eval_constraints\n";
-//	Index n_phases		= OCP_structure[0];
-	Index n_nodes 		= OCP_structure[1];
-	Index n_states 		= OCP_structure[2];
-	Index n_controls 	= OCP_structure[3];
-	Index n_param 		= OCP_structure[4];
-	Index n_events		= OCP_structure[5];
-	Index n_path		= OCP_structure[6];
-//	Index n_linkages	= OCP_structure[7];
 
+//	Index n_phases		= OCP_structure(1);
+	Index n_nodes 		= OCP_structure(2);
+	Index n_states 		= OCP_structure(3);
+	Index n_controls 	= OCP_structure(4);
+	Index n_param 		= OCP_structure(5);
+	Index n_events		= OCP_structure(6);
+	Index n_path		= OCP_structure(7);
+//	Index n_linkages	= OCP_structure(8);
 	adouble *y_start	= new adouble [n_states];
 	adouble *y_end		= new adouble [n_states];
 	adouble **y 		= new adouble *[n_nodes];
@@ -225,7 +221,7 @@ bool  MyADOLC_sparseNLP::ad_eval_constraints(Index n, const adouble *x, Index m,
 
 	t[0]			= t0;
 	for (Index i = 0; i < n_nodes - 1; i++) {
-		delta[i]	= (tf-t0)*node_str[i];
+		delta[i]	= (tf-t0)*node_str(i+1);
 		t[i+1]		= t[i] + delta[i];
 		t_m[i]		= (t[i] + t[i+1])/2;
 	}
@@ -350,14 +346,14 @@ bool  MyADOLC_sparseNLP::ad_eval_constraints(Index n, const adouble *x, Index m,
 
 bool  MyADOLC_sparseNLP::eval_constraints(Index n, const double *x, Index m, double* g) {
 
-//	Index n_phases		= OCP_structure[0];
-	Index n_nodes 		= OCP_structure[1];
-	Index n_states 		= OCP_structure[2];
-	Index n_controls 	= OCP_structure[3];
-	Index n_param 		= OCP_structure[4];
-	Index n_events		= OCP_structure[5];
-	Index n_path		= OCP_structure[6];
-//	Index n_linkages	= OCP_structure[7];
+//	Index n_phases		= OCP_structure(1);
+	Index n_nodes 		= OCP_structure(2);
+	Index n_states 		= OCP_structure(3);
+	Index n_controls 	= OCP_structure(4);
+	Index n_param 		= OCP_structure(5);
+	Index n_events		= OCP_structure(6);
+	Index n_path		= OCP_structure(7);
+//	Index n_linkages	= OCP_structure(8);
 
 	double *y_start		= new double [n_states];
 	double *y_end		= new double [n_states];
@@ -382,7 +378,7 @@ bool  MyADOLC_sparseNLP::eval_constraints(Index n, const double *x, Index m, dou
 
 	t[0]			= t0;
 	for (Index i = 0; i < n_nodes - 1; i++) {
-		delta[i]	= (tf-t0)*node_str[i];
+		delta[i]	= (tf-t0)*node_str(i+1);
 		t[i+1]		= t[i] + delta[i];
 		t_m[i]		= (t[i] + t[i+1])/2;
 	}
@@ -546,13 +542,13 @@ bool MyADOLC_sparseNLP::get_starting_point(Index n, bool init_x, Number* x,
 	cout<<"get starting point\n";
 
 	for (Index i = 0; i < n; i += 1) {
-		x[i]	= guess(i+1);
+		x[i]	= NLP_x_guess(i+1);
 	}
 	cout<<"end of getting starting point\n";
 	return true;
 }
 
-void 	MyADOLC_sparseNLP::setNLP_structure(Index n, Index m, Index* structure) {
+void 	MyADOLC_sparseNLP::setNLP_structure(Index n, Index m, SVector<uint> structure) {
 	NLP_n 			= n;
 	NLP_m 			= m;
 	OCP_structure 	= structure;
@@ -670,9 +666,7 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 // memory deallocation of ADOL-C variables
 
 	delete[] x_lam;
-	delete[] OCP_structure;
 
-	delete[] node_str;
 	free(rind_g);
 	free(cind_g);
 	free(jacval);

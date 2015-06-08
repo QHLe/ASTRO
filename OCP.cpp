@@ -49,15 +49,15 @@ ApplicationReturnStatus OCP::set_OCP_structure() {
 	Index NLP_n = (n_states + n_controls)*n_nodes + n_param + 2;
 	Index NLP_m = ((n_nodes - 1)*n_states + n_events + n_path*n_nodes);
 
-	Index* structure = new Index[8];
-	structure[0] = n_phases;
-	structure[1] = n_nodes;
-	structure[2] = n_states;
-	structure[3] = n_controls;
-	structure[4] = n_param;
-	structure[5] = n_events;
-	structure[6] = n_path;
-	structure[7] = n_linkages;
+	SVector<uint> structure(8);
+	structure(1) = n_phases;
+	structure(2) = n_nodes;
+	structure(3) = n_states;
+	structure(4) = n_controls;
+	structure(5) = n_param;
+	structure(6) = n_events;
+	structure(7) = n_path;
+	structure(8) = n_linkages;
 
 	myadolc_nlp->setNLP_structure(NLP_n, NLP_m, structure);
 
@@ -369,7 +369,7 @@ void OCP::OCPBounds2NLPBounds() {
 	SVector<double> g_l(NLP_m);
 	SVector<double> g_u(NLP_m);
 	SVector<double> x_guess(NLP_n);
-	Number* node_str 	= new Number[n_nodes - 1];
+	SVector<double> node_str(n_nodes - 1);
 	SVector<double> sf_NLP_x(NLP_n);
 	SVector<double> sf_NLP_g(NLP_m);
 
@@ -432,7 +432,7 @@ void OCP::OCPBounds2NLPBounds() {
 	double delta_t 	= guess.nodes(n_nodes,1) - guess.nodes(1,1);
 
 	for (Index i = 1; i <= n_nodes - 1; i++) {
-		node_str[i-1]	= (guess.nodes(i+1,1) - guess.nodes(i,1))/delta_t;
+		node_str(i)	= (guess.nodes(i+1,1) - guess.nodes(i,1))/delta_t;
 	}
 
   	// structure of g

@@ -100,15 +100,15 @@ public:
 //	template<class T>	void trapezoidal(const T *states_0, const T *states_dot_0, const T *states_dot_1, const double delta, T *states_1);
 
 	//***************    end   ADOL-C part ***********************************
-	void 	setNLP_structure(Index n, Index m, Index* structure);
+	void 	setNLP_structure(Index n, Index m, SVector<uint> structure);
 
 	Index 	getNLP_n	() 				{ return NLP_n;}
 	Index 	getNLP_m	() 				{ return NLP_m;}
 	SVector<double> getx_opt	()				{ return NLP_x_opt;}
 	void 	setBounds	(	SVector<double> x_lb, SVector<double> x_ub, SVector<double> g_lb, SVector<double> g_ub);
 	void 	setSF		(	SVector<double> x_sf, SVector<double> g_sf);
-	void 	setguess	(	SVector<double> x_guess)	{guess = x_guess;}
-	void	setnodestr	(	Number* str) 		{node_str = str;}
+	void 	setguess	(	SVector<double> x_guess)	{NLP_x_guess = x_guess;}
+	void	setnodestr	(	SVector<double> str) 		{node_str = str;}
 	double 	(*d_e_cost) (const   double* ini_states, const   double* fin_states, const   double* param, const   double& t0, const   double& tf, uint phase);
 	adouble (*ad_e_cost)(const  adouble* ini_states, const  adouble* fin_states, const  adouble* param, const  adouble& t0, const  adouble& tf, uint phase);
 	double  (*d_l_cost)	(const  double *states, const  double *controls, const  double *param, const  double &time,	uint phase);
@@ -160,14 +160,16 @@ private:
 	SVector<double> NLP_x_lb;
 	SVector<double> NLP_x_ub;
 	SVector<double> NLP_x_sf;
+	SVector<double> NLP_x_guess;
 	SVector<double> NLP_g_lb;
 	SVector<double> NLP_g_ub;
 	SVector<double> NLP_g_sf;
-	SVector<double> guess;
+	SVector<double> NLP_lam_guess;
 
-	Number* node_str;
-	Index* OCP_structure;
+	SVector<double> node_str;
+	SVector<uint> OCP_structure;
 	SVector<double> NLP_x_opt;
+	SVector<double> NLP_lam_opt;
 };
 
 #endif
