@@ -36,6 +36,7 @@ public:
 	bool warmstart;
 	double NLP_tol;
 	OPT_ORDER opt_oder;
+	bool with_mgl;
 };
 
 class OCP {

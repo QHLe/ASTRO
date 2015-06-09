@@ -18,3 +18,5 @@ Debug/
 *.svg
 lttopt
 *.tap
+*.out
+analysis.txt

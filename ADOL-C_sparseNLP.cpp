@@ -102,7 +102,7 @@ bool  MyADOLC_sparseNLP::ad_eval_obj(Index n, const adouble *x, adouble& obj_val
 	delete[] param;
    	delete[] delta;
 	delete[] t;
-
+	cout<<"end ad_eval_obj\n";
 	return true;
 }
 
@@ -340,7 +340,7 @@ bool  MyADOLC_sparseNLP::ad_eval_constraints(Index n, const adouble *x, Index m,
    	delete[] delta;
   	delete[] t;
   	delete[] t_m;
-
+  	cout<<"end ad_eval_constraints\n";
 	return true;
 }
 
@@ -722,6 +722,8 @@ void MyADOLC_sparseNLP::generate_tapes(Index n, Index m, Index& nnz_jac_g, Index
 		g[idx] >>= dummy;
     trace_off();
 
+#ifdef SPARSE_HESS
+
     trace_on(tag_L);
     
     for(Index idx=0;idx<n;idx++)
@@ -741,6 +743,7 @@ void MyADOLC_sparseNLP::generate_tapes(Index n, Index m, Index& nnz_jac_g, Index
     obj_value >>= dummy;
 
     trace_off();
+#endif
 
 	rind_g = NULL;
 	cind_g = NULL;

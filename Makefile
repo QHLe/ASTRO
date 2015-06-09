@@ -14,7 +14,7 @@ ADDINCFLAGS = -I$(ADPATH)
 IPOPTLIBDIR = $(HOME)/Ipopt-3.12.1/lib
 
 # C++ Compiler command
-CXX = g++ #-DSPARSE_HESS	
+CXX = g++ -pg #-DSPARSE_HESS
 
 # Source files
 SRC = main.cpp ADOL-C_sparseNLP.cpp OCP.cpp SVector.cpp MVector.cpp

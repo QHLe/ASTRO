@@ -114,66 +114,68 @@ ApplicationReturnStatus OCP::NLP_solve() {
 	mglData dat_y(n_nodes);
 	mglData x_range(2);
 	mglData y_range(2);
-	for (Index i = 0; i < n_nodes; ++i) {
-		dat_x[i]	= guess.nodes(i+1,1);
-	}
-
-	gr->Box();
-
-	x_range.a[0] = min(guess.nodes);
-	x_range.a[1] = max(guess.nodes);
-
-	if (min(guess.x) > 0)
-		y_range.a[0] = min(guess.x)*0.9;
-	else
-		y_range.a[0] = min(guess.x)*1.1;
-	if (max(guess.x) < 0)
-		y_range.a[1] = max(guess.x)*0.9;
-	else
-		y_range.a[1] = max(guess.x)*1.1;
-
-
-	gr->SetRanges(x_range,y_range);
-	gr->Axis(); gr->Label('x', "time", 0); gr->Label('y', "x_{guess}", 0);
-
-	for (Index j = 0; j < n_states; ++j) {
+	if (config.with_mgl) {
 		for (Index i = 0; i < n_nodes; ++i) {
-			dat_y[i]	= guess.x(i+1,j+1);
+			dat_x[i]	= guess.nodes(i+1,1);
 		}
-		gr->Plot(dat_x,dat_y);
-	}
 
-	gr->WriteEPS("guess_x.eps");
-	delete gr;
+		gr->Box();
 
-	gr = new mglGraph;
-	gr->Box();
-	x_range.a[0] = min(guess.nodes);
-	x_range.a[1] = max(guess.nodes);
+		x_range.a[0] = min(guess.nodes);
+		x_range.a[1] = max(guess.nodes);
 
-	if (min(guess.u) > 0)
-		y_range.a[0] = min(guess.u)*0.9;
-	else
-		y_range.a[0] = min(guess.u)*1.1;
-	if (max(guess.u) < 0)
-		y_range.a[1] = max(guess.u)*0.9;
-	else
+		if (min(guess.x) > 0)
+			y_range.a[0] = min(guess.x)*0.9;
+		else
+			y_range.a[0] = min(guess.x)*1.1;
+		if (max(guess.x) < 0)
+			y_range.a[1] = max(guess.x)*0.9;
+		else
+			y_range.a[1] = max(guess.x)*1.1;
+
+
+		gr->SetRanges(x_range,y_range);
+		gr->Axis(); gr->Label('x', "time", 0); gr->Label('y', "x_{guess}", 0);
+
+		for (Index j = 0; j < n_states; ++j) {
+			for (Index i = 0; i < n_nodes; ++i) {
+				dat_y[i]	= guess.x(i+1,j+1);
+			}
+			gr->Plot(dat_x,dat_y);
+		}
+
+		gr->WriteEPS("guess_x.eps");
+		delete gr;
+
+		gr = new mglGraph;
+		gr->Box();
+		x_range.a[0] = min(guess.nodes);
+		x_range.a[1] = max(guess.nodes);
+
+		if (min(guess.u) > 0)
+			y_range.a[0] = min(guess.u)*0.9;
+		else
+			y_range.a[0] = min(guess.u)*1.1;
+		if (max(guess.u) < 0)
+			y_range.a[1] = max(guess.u)*0.9;
+		else
+			y_range.a[1] = max(guess.u)*1.1;
+
 		y_range.a[1] = max(guess.u)*1.1;
+		gr->SetRanges(x_range,y_range);
+		gr->Axis(); gr->Label('x', "time", 0); gr->Label('y', "u_{guess}", 0);
 
-	y_range.a[1] = max(guess.u)*1.1;
-	gr->SetRanges(x_range,y_range);
-	gr->Axis(); gr->Label('x', "time", 0); gr->Label('y', "u_{guess}", 0);
-
-	for (Index j = 0; j < n_controls; ++j) {
-		for (Index i = 0; i < n_nodes; ++i) {
-			dat_y[i]	= guess.u(i+1,j+1);
+		for (Index j = 0; j < n_controls; ++j) {
+			for (Index i = 0; i < n_nodes; ++i) {
+				dat_y[i]	= guess.u(i+1,j+1);
+			}
+			gr->Plot(dat_x,dat_y);
 		}
-		gr->Plot(dat_x,dat_y);
+
+
+		gr->WriteEPS("guess_u.eps");
+		delete gr;
 	}
-
-
-	gr->WriteEPS("guess_u.eps");
-	delete gr;
 
   	status = app->OptimizeTNLP(myadolc_nlp);
 
@@ -233,64 +235,65 @@ ApplicationReturnStatus OCP::NLP_solve() {
 	x0_opt.save("results_x0.dat");
 	xf_opt.save("results_xf.dat");
 
-
-	for (Index i = 0; i < n_nodes; ++i) {
-		dat_x[i]	= nodes_opt(i+1,1);
-	}
-	gr = new mglGraph;
-	gr->Box();
-
-	x_range.a[0] = min(nodes_opt);
-	x_range.a[1] = max(nodes_opt);
-	if (min(x_opt) > 0)
-		y_range.a[0] = min(x_opt)*0.9;
-	else
-		y_range.a[0] = min(x_opt)*1.1;
-	if (max(x_opt) < 0)
-		y_range.a[1] = max(x_opt)*0.9;
-	else
-		y_range.a[1] = max(x_opt)*1.1;
-
-	gr->SetRanges(x_range,y_range);
-	gr->Axis(); gr->Label('x', "time", 0); gr->Label('y', "x_{opt}", 0);
-
-	for (Index j = 0; j < n_states; ++j) {
+	if (config.with_mgl) {
 		for (Index i = 0; i < n_nodes; ++i) {
-			dat_y[i]	= x_opt(i+1,j+1);
+			dat_x[i]	= nodes_opt(i+1,1);
 		}
-		gr->Plot(dat_x,dat_y);
-	}
+		gr = new mglGraph;
+		gr->Box();
 
-	gr->WriteEPS("results_x.eps");
-	delete gr;
+		x_range.a[0] = min(nodes_opt);
+		x_range.a[1] = max(nodes_opt);
+		if (min(x_opt) > 0)
+			y_range.a[0] = min(x_opt)*0.9;
+		else
+			y_range.a[0] = min(x_opt)*1.1;
+		if (max(x_opt) < 0)
+			y_range.a[1] = max(x_opt)*0.9;
+		else
+			y_range.a[1] = max(x_opt)*1.1;
 
-	gr = new mglGraph;
-	gr->Box();
+		gr->SetRanges(x_range,y_range);
+		gr->Axis(); gr->Label('x', "time", 0); gr->Label('y', "x_{opt}", 0);
 
-	x_range.a[0] = min(nodes_opt);
-	x_range.a[1] = max(nodes_opt);
-
-	if (min(u_opt) > 0)
-		y_range.a[0] = min(u_opt)*0.9;
-	else
-		y_range.a[0] = min(u_opt)*1.1;
-	if (max(u_opt) < 0)
-		y_range.a[1] = max(u_opt)*0.9;
-	else
-		y_range.a[1] = max(u_opt)*1.1;
-
-	gr->SetRanges(x_range,y_range);
-	gr->Axis(); gr->Label('x', "time", 0); gr->Label('y', "u_{opt}", 0);
-
-	for (Index j = 0; j < n_controls; ++j) {
-		for (Index i = 0; i < n_nodes; ++i) {
-			dat_y[i]	= u_opt(i+1,j+1);
+		for (Index j = 0; j < n_states; ++j) {
+			for (Index i = 0; i < n_nodes; ++i) {
+				dat_y[i]	= x_opt(i+1,j+1);
+			}
+			gr->Plot(dat_x,dat_y);
 		}
-		gr->Plot(dat_x,dat_y);
-	}
 
-	gr->WriteEPS("results_u.eps");
-	delete gr;
+		gr->WriteEPS("results_x.eps");
+		delete gr;
+
+		gr = new mglGraph;
+		gr->Box();
+
+		x_range.a[0] = min(nodes_opt);
+		x_range.a[1] = max(nodes_opt);
+
+		if (min(u_opt) > 0)
+			y_range.a[0] = min(u_opt)*0.9;
+		else
+			y_range.a[0] = min(u_opt)*1.1;
+		if (max(u_opt) < 0)
+			y_range.a[1] = max(u_opt)*0.9;
+		else
+			y_range.a[1] = max(u_opt)*1.1;
+
+		gr->SetRanges(x_range,y_range);
+		gr->Axis(); gr->Label('x', "time", 0); gr->Label('y', "u_{opt}", 0);
+
+		for (Index j = 0; j < n_controls; ++j) {
+			for (Index i = 0; i < n_nodes; ++i) {
+				dat_y[i]	= u_opt(i+1,j+1);
+			}
+			gr->Plot(dat_x,dat_y);
+		}
+
+		gr->WriteEPS("results_u.eps");
+		delete gr;
+	}
 
   	return status;
 }
@@ -558,4 +561,5 @@ Config::Config() {
 	warmstart 	= false;
 	NLP_tol		= 1e-6;
 	opt_oder	= first_order;
+	with_mgl	= false;
 }
