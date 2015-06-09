@@ -292,9 +292,9 @@ ApplicationReturnStatus OCP::NLP_solve() {
 		}
 
 		gr->WriteEPS("results_u.eps");
-		delete gr;
 	}
 
+	delete gr;
   	return status;
 }
 

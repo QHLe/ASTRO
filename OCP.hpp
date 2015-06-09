@@ -95,5 +95,33 @@ private:
 //		SVector sf_constraint;
 
 };
+template<class T>
+SVector<T>	lin_interpol(const SVector<T> x, const SVector<T> y, const SVector<T> x_new) {
+	SVector <T> y_new(x_new.getsize());
+	for (uint i = 1; i <= x_new.getsize(); i++) {
+		for(uint j = 1; j < x.getsize(); j++) {
+/*			if (x_new(i) < x(1) || x(x.getsize()) < x_new(i)) {
+				printf("x_new[%d] = %.10e\t	x[%d] = %.10e\n",i,x_new(i),x.getsize(),x(x.getsize()));
+				printf("lin_interpot out of range\n");
+				exit(1);
+			}*/
+			if (x(j) <= x_new(i) && x(j+1) >= x_new(i)) {
+		//		cout<<i<<"\t"<<j<<endl;
+				y_new(i)	= y(j) + (y(j+1) - y(j))/(x(j+1) - x(j))*(x_new(i) - x(j));
+				break;
+			}
+			if (j == 1 || j == x.getsize() - 1) {
+				if (x_new(i) < x(1) || x(x.getsize()) < x_new(i)) {
+	//				cout<<i<<"\t"<<j<<endl;
+					printf("x_new[%d] = %.10e\t	x[%d] = %.10e\n",i,x_new(i),j+1,x(j+1));
+					printf("lin_interpot out of range\n");
+					//exit(1);
+				}
+			}
+
+		}
+	}
+	return y_new;
+}
 
 #endif /* OCP_HPP_ */

@@ -5,13 +5,10 @@
  *      Author: quanghoale
  */
 
-
-#include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
 #include <fstream>
-#include <math.h>
-#include <adolc/adolc.h>
+#include <adolc/adouble.h>
 
 #include "SVector.hpp"
 
@@ -293,5 +290,79 @@ double max(const MVector& mv) {
 		}
 		double retval = max(temp);
 		return retval;
+}
+
+adouble dot(const SVector<adouble>& v1, const SVector<double>& v2) {
+	if (v1.getsize() != v2.getsize()) {
+		cout<<"===== calculating dot product  =====\n===== SVector size do not match =====\n\n";
+	exit(1);
+	}
+	else {
+		adouble temp_value = 0;
+		for(uint i = 0; i < v1.getsize(); i++) {
+			temp_value += v1(i+1) * v2(i+1);
+		}
+		return temp_value;
+	}
+}
+
+adouble dot(const SVector<double>& v1, const SVector<adouble>& v2) {
+	if (v1.getsize() != v2.getsize()) {
+		cout<<"===== calculating dot product  =====\n===== SVector size do not match =====\n\n";
+	exit(1);
+	}
+	else {
+		adouble temp_value = 0;
+		for(uint i = 0; i < v1.getsize(); i++) {
+			temp_value += v1(i+1) * v2(i+1);
+		}
+		return temp_value;
+	}
+}
+
+SVector<adouble> cross(const SVector<adouble>& v1, const SVector<double>& v2) {
+	if (v1.getsize() != v2.getsize()) {
+		cout<<"===== calculating cross product  =====\n===== SVector size do not match =====\n\n";
+		exit(1);
+	}
+	else if (v1.getsize() != 3) {
+		cout<<"===== calculating cross product  =====\n=====    SVector size is not 3    =====\n\n";
+		exit(1);
+	}
+	else {
+		SVector<adouble> temp(3);
+		adouble temp_value;
+
+		temp_value = v1(2) * v2(3) - v1(3) * v2(2);
+		temp(1) = temp_value;
+		temp_value = v1(3) * v2(1) - v1(1) * v2(3);
+		temp(2)	= temp_value;
+		temp_value = v1(1) * v2(2) - v1(2) * v2(1);
+		temp(3)	= temp_value;
+		return temp;
+	}
+}
+
+SVector<adouble> cross(const SVector<double>& v1, const SVector<adouble>& v2) {
+	if (v1.getsize() != v2.getsize()) {
+		cout<<"===== calculating cross product  =====\n===== SVector size do not match =====\n\n";
+		exit(1);
+	}
+	else if (v1.getsize() != 3) {
+		cout<<"===== calculating cross product  =====\n=====    SVector size is not 3    =====\n\n";
+		exit(1);
+	}
+	else {
+		SVector<adouble> temp(3);
+		adouble temp_value;
+
+		temp_value = v1(2) * v2(3) - v1(3) * v2(2);
+		temp(1) = temp_value;
+		temp_value = v1(3) * v2(1) - v1(1) * v2(3);
+		temp(2)	= temp_value;
+		temp_value = v1(1) * v2(2) - v1(2) * v2(1);
+		temp(3)	= temp_value;
+		return temp;
+	}
 }
 

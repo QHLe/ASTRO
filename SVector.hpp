@@ -11,12 +11,9 @@ using namespace std;
 #ifndef SVECTOR_HPP_
 #define SVECTOR_HPP_
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
 #include <fstream>
-#include <math.h>
-#include <adolc/adolc.h>
 #include <adolc/adouble.h>
 
 #include "MVector.hpp"
@@ -70,16 +67,9 @@ private:
 };
 
 template<class T>
-SVector<T> 	linspace	(double x0, double xn, uint n);
-template<class T>
-SVector<T>		ones 		(uint num);
-template<class T>
-SVector<T>		zeros		(uint num);
-
-template<class T>
 SVector<T>::SVector() {
-	values = NULL;
 	n = 0;
+	values = NULL;
 }
 
 template<class T>
@@ -409,8 +399,10 @@ MVector SVector<T>::operator, (const SVector<T>& rhs) const{
 	}
 
 	MVector temp(n,2);
-	temp.getSVector(1) = *this;
-	temp.getSVector(2) = rhs;
+	for (uint i = 1; i <= n; i++) {
+		temp(i,1) 	= values[i-1];
+		temp(i,2)	= rhs(i);
+	}
 	return temp;
 }
 
@@ -423,180 +415,21 @@ MVector SVector<T>::operator, (const MVector& rhs) const{
 	}
 	MVector temp(n, rhs.getColDim() + 1);
 	temp.getSVector(1) = *this;
-	for (uint i = 0; i < rhs.getColDim(); i++) {
-		temp.getSVector(i+2) = rhs.getSVector(i+1);
+	for (uint i = 1; i <= n; i++) {
+		temp(i,1) 	= values[i-1];
+	}
+
+	for (uint i = 2; i <= rhs.getColDim(); i++) {
+		for (uint j = 1; j<=n; j++) {
+			temp(j,i) = rhs.getSVector(i-1);
+		}
 	}
 	return temp;
 }
-
 
 /*
- * friend functions
+ * Specialization of SVector class
  */
-
-template<class T>
-SVector<T> operator+ (double sum, const SVector<T>& rhs) {
-	SVector<T> temp(rhs.getsize());
-	for(uint i = 0;i<rhs.getsize();i++) {
-		temp(i+1) = rhs(i+1)+sum;
-	}
-	return temp;
-}
-
-template<class T>
-SVector<T> operator- (double sum, const SVector<T>& rhs){
-	SVector<T> temp(rhs.getsize());
-
-	for(uint i = 0;i<rhs.getsize();i++) {
-		temp(i+1) = sum - rhs(i+1);
-	}
-	return temp;
-}
-
-template<class T>
-SVector<T> operator* (double factor, const SVector<T>& rhs){
-	SVector<T> temp(rhs.getsize());
-
-	for(uint i = 0;i<rhs.getsize();i++) {
-		temp(i+1) = factor*rhs(i+1);
-	}
-	return temp;
-}
-
-template<class T>
-SVector<T> operator/ (double factor, const SVector<T>& rhs){
-	SVector<T> temp(rhs.getsize());
-
-	for(uint i = 0;i<rhs.getsize();i++) {
-		temp(i+1) = factor/rhs(i+1);
-	}
-	return temp;
-}
-
-template<class T>
-SVector<T> operator+ (adouble sum, const SVector<T>& rhs) {
-	SVector<T> temp(rhs.getsize());
-	for(uint i = 0;i<rhs.getsize();i++) {
-		temp(i+1) = rhs(i+1)+sum;
-	}
-	return temp;
-}
-
-template<class T>
-SVector<T> operator- (adouble sum, const SVector<T>& rhs){
-	SVector<T> temp(rhs.getsize());
-
-	for(uint i = 0;i<rhs.getsize();i++) {
-		temp(i+1) = sum - rhs(i+1);
-	}
-	return temp;
-}
-
-template<class T>
-SVector<T> operator* (adouble factor, const SVector<T>& rhs){
-	SVector<T> temp(rhs.getsize());
-
-	for(uint i = 0;i<rhs.getsize();i++) {
-		temp(i+1) = factor*rhs(i+1);
-	}
-	return temp;
-}
-
-template<class T>
-SVector<T> operator/ (adouble factor, const SVector<T>& rhs){
-	SVector<T> temp(rhs.getsize());
-
-	for(uint i = 0;i<rhs.getsize();i++) {
-		temp(i+1) = factor/rhs(i+1);
-	}
-	return temp;
-}
-
-template<class T>
-SVector<T> linspace (double x0, double xn, uint n) {
-	SVector<double> temp(n);
-	temp(1) 	= x0;
-	double delta = (xn - x0)/(n-1);
-	for (uint i = 1; i < n; i++) {
-		temp(i+1)	= temp(i) + delta;
-	}
-	return temp;
-}
-
-template<class T>
-T dot(const SVector<T>& v1, const SVector<T>& v2) {
-	if (v1.getsize() != v2.getsize()) {
-		cout<<"===== calculating dot product  =====\n===== SVector size do not match =====\n\n";
-	exit(1);
-	}
-	else {
-		T temp_value = 0;
-		for(uint i = 0; i < v1.getsize(); i++) {
-			temp_value += v1(i+1) * v2(i+1);
-		}
-		return temp_value;
-	}
-}
-
-template<class T>
-SVector<T> cross(const SVector<T>& v1, const SVector<T>& v2) {
-	if (v1.getsize() != v2.getsize()) {
-		cout<<"===== calculating cross product  =====\n===== SVector size do not match =====\n\n";
-		exit(1);
-	}
-	else if (v1.getsize() != 3) {
-		cout<<"===== calculating cross product  =====\n=====    SVector size is not 3    =====\n\n";
-		exit(1);
-	}
-	else {
-		SVector<T> temp(3);
-		T temp_value;
-
-		temp_value = v1(2) * v2(3) - v1(3) * v2(2);
-		temp(1) = temp_value;
-		temp_value = v1(3) * v2(1) - v1(1) * v2(3);
-		temp(2)	= temp_value;
-		temp_value = v1(1) * v2(2) - v1(2) * v2(1);
-		temp(3)	= temp_value;
-		return temp;
-	}
-}
-
-template<class T>
-SVector<T> ones(uint num) {
-	SVector<T> temp(num);
-	return temp + 1;
-}
-
-template<class T>
-SVector<T> zeros(uint num) {
-	SVector<T> temp(num);
-	return temp;
-}
-
-template<class T>
-T min(const SVector<T>& v) {
-	T value;
-	value = v(1);
-	for (uint i = 1; i < v.getsize(); i++ ) {
-		if (value > v(i+1)) {
-			value = v(i+1);
-		}
-	}
-	return value;
-}
-
-template<class T>
-T max(const SVector<T>& v) {
-	T value;
-	value = v(1);
-	for (uint i = 1; i < v.getsize(); i++ ) {
-		if (value < v(i+1)) {
-			value = v(i+1);
-		}
-	}
-	return value;
-}
 
 template<>
 class SVector <adouble>{
@@ -957,6 +790,182 @@ inline SVector<adouble> SVector<adouble>::operator/ (adouble factor) const{
 	}
 	return temp;
 }
+
+
+/*
+ * friend functions
+ */
+
+template<class T>
+SVector<T> operator+ (double sum, const SVector<T>& rhs) {
+	SVector<T> temp(rhs.getsize());
+	for(uint i = 0;i<rhs.getsize();i++) {
+		temp(i+1) = rhs(i+1)+sum;
+	}
+	return temp;
+}
+
+template<class T>
+SVector<T> operator- (double sum, const SVector<T>& rhs){
+	SVector<T> temp(rhs.getsize());
+
+	for(uint i = 0;i<rhs.getsize();i++) {
+		temp(i+1) = sum - rhs(i+1);
+	}
+	return temp;
+}
+
+template<class T>
+SVector<T> operator* (double factor, const SVector<T>& rhs){
+	SVector<T> temp(rhs.getsize());
+
+	for(uint i = 0;i<rhs.getsize();i++) {
+		temp(i+1) = factor*rhs(i+1);
+	}
+	return temp;
+}
+
+template<class T>
+SVector<T> operator/ (double factor, const SVector<T>& rhs){
+	SVector<T> temp(rhs.getsize());
+
+	for(uint i = 0;i<rhs.getsize();i++) {
+		temp(i+1) = factor/rhs(i+1);
+	}
+	return temp;
+}
+
+template<class T>
+SVector<T> operator+ (adouble sum, const SVector<T>& rhs) {
+	SVector<T> temp(rhs.getsize());
+	for(uint i = 0;i<rhs.getsize();i++) {
+		temp(i+1) = rhs(i+1)+sum;
+	}
+	return temp;
+}
+
+template<class T>
+SVector<T> operator- (adouble sum, const SVector<T>& rhs){
+	SVector<T> temp(rhs.getsize());
+
+	for(uint i = 0;i<rhs.getsize();i++) {
+		temp(i+1) = sum - rhs(i+1);
+	}
+	return temp;
+}
+
+template<class T>
+SVector<T> operator* (adouble factor, const SVector<T>& rhs){
+	SVector<T> temp(rhs.getsize());
+
+	for(uint i = 0;i<rhs.getsize();i++) {
+		temp(i+1) = factor*rhs(i+1);
+	}
+	return temp;
+}
+
+template<class T>
+SVector<T> operator/ (adouble factor, const SVector<T>& rhs){
+	SVector<T> temp(rhs.getsize());
+
+	for(uint i = 0;i<rhs.getsize();i++) {
+		temp(i+1) = factor/rhs(i+1);
+	}
+	return temp;
+}
+
+template<class T>
+SVector<T> linspace (double x0, double xn, uint n) {
+	SVector<double> temp(n);
+	temp(1) 	= x0;
+	double delta = (xn - x0)/(n-1);
+	for (uint i = 2; i < n; i++) {
+		temp(i)	= temp(i-1) + delta;
+	}
+	temp(n) = xn;
+	return temp;
+}
+
+template<class T>
+T dot(const SVector<T>& v1, const SVector<T>& v2) {
+	if (v1.getsize() != v2.getsize()) {
+		cout<<"===== calculating dot product  =====\n===== SVector size do not match =====\n\n";
+	exit(1);
+	}
+	else {
+		T temp_value = 0;
+		for(uint i = 0; i < v1.getsize(); i++) {
+			temp_value += v1(i+1) * v2(i+1);
+		}
+		return temp_value;
+	}
+}
+
+template<class T>
+SVector<T> cross(const SVector<T>& v1, const SVector<T>& v2) {
+	if (v1.getsize() != v2.getsize()) {
+		cout<<"===== calculating cross product  =====\n===== SVector size do not match =====\n\n";
+		exit(1);
+	}
+	else if (v1.getsize() != 3) {
+		cout<<"===== calculating cross product  =====\n=====    SVector size is not 3    =====\n\n";
+		exit(1);
+	}
+	else {
+		SVector<T> temp(3);
+		T temp_value;
+
+		temp_value = v1(2) * v2(3) - v1(3) * v2(2);
+		temp(1) = temp_value;
+		temp_value = v1(3) * v2(1) - v1(1) * v2(3);
+		temp(2)	= temp_value;
+		temp_value = v1(1) * v2(2) - v1(2) * v2(1);
+		temp(3)	= temp_value;
+		return temp;
+	}
+}
+
+template<class T>
+SVector<T> ones(uint num) {
+	SVector<T> temp(num);
+	return temp + 1;
+}
+
+template<class T>
+SVector<T> zeros(uint num) {
+	SVector<T> temp(num);
+	return temp;
+}
+
+template<class T>
+T min(const SVector<T>& v) {
+	T value;
+	value = v(1);
+	for (uint i = 1; i < v.getsize(); i++ ) {
+		if (value > v(i+1)) {
+			value = v(i+1);
+		}
+	}
+	return value;
+}
+
+template<class T>
+T max(const SVector<T>& v) {
+	T value;
+	value = v(1);
+	for (uint i = 1; i < v.getsize(); i++ ) {
+		if (value < v(i+1)) {
+			value = v(i+1);
+		}
+	}
+	return value;
+}
+
+adouble dot(const SVector<adouble>& v1, const SVector<double>& v2);
+adouble dot(const SVector<double>& v1, const SVector<adouble>& v2);
+
+SVector<adouble> cross(const SVector<adouble>& v1, const SVector<double>& v2);
+SVector<adouble> cross(const SVector<double>& v1, const SVector<adouble>& v2);
 
 
 #endif
