@@ -53,10 +53,10 @@ public:
 
 	/* operations with a scalar */
 
-	SVector<T> 		operator+ 	(double sum)					const;
-	SVector<T> 		operator- 	(double sum)					const;
-	SVector<T> 		operator* 	(double factor)					const;
-	SVector<T> 		operator/ 	(double factor)					const;
+	SVector<T> 		operator+ 	(T sum)					const;
+	SVector<T> 		operator- 	(T sum)					const;
+	SVector<T> 		operator* 	(T factor)					const;
+	SVector<T> 		operator/ 	(T factor)					const;
 
 	SVector<T> 		operator- 	()								const;
 
@@ -359,7 +359,7 @@ SVector<T> sqrt		 		 (const SVector<T>& vec) {
  */
 
 template<class T>
-SVector<T> SVector<T>::operator+ (double sum) const{
+SVector<T> SVector<T>::operator+ (T sum) const{
 	SVector<T> temp(n);
 	for(uint i = 0;i<n;i++) {
 		temp.values[i] = values[i]+sum;
@@ -368,7 +368,7 @@ SVector<T> SVector<T>::operator+ (double sum) const{
 }
 
 template<class T>
-SVector<T> SVector<T>::operator- (double sum) const{
+SVector<T> SVector<T>::operator- (T sum) const{
 	SVector<T> temp(n);
 	for(uint i = 0;i<n;i++) {
 		temp.values[i] = values[i]-sum;
@@ -377,7 +377,7 @@ SVector<T> SVector<T>::operator- (double sum) const{
 }
 
 template<class T>
-SVector<T> SVector<T>::operator* (double factor) const{
+SVector<T> SVector<T>::operator* (T factor) const{
 	SVector<T> temp;
 	temp.resize(n);
 	for(uint i = 0; i<n; i++) {
@@ -387,7 +387,7 @@ SVector<T> SVector<T>::operator* (double factor) const{
 }
 
 template<class T>
-SVector<T> SVector<T>::operator/ (double factor) const{
+SVector<T> SVector<T>::operator/ (T factor) const{
 	SVector<T> temp;
 	temp.resize(n);
 	for(uint i = 0; i<n; i++) {
@@ -465,6 +465,45 @@ SVector<T> operator* (double factor, const SVector<T>& rhs){
 
 template<class T>
 SVector<T> operator/ (double factor, const SVector<T>& rhs){
+	SVector<T> temp(rhs.getsize());
+
+	for(uint i = 0;i<rhs.getsize();i++) {
+		temp(i+1) = factor/rhs(i+1);
+	}
+	return temp;
+}
+
+template<class T>
+SVector<T> operator+ (adouble sum, const SVector<T>& rhs) {
+	SVector<T> temp(rhs.getsize());
+	for(uint i = 0;i<rhs.getsize();i++) {
+		temp(i+1) = rhs(i+1)+sum;
+	}
+	return temp;
+}
+
+template<class T>
+SVector<T> operator- (adouble sum, const SVector<T>& rhs){
+	SVector<T> temp(rhs.getsize());
+
+	for(uint i = 0;i<rhs.getsize();i++) {
+		temp(i+1) = sum - rhs(i+1);
+	}
+	return temp;
+}
+
+template<class T>
+SVector<T> operator* (adouble factor, const SVector<T>& rhs){
+	SVector<T> temp(rhs.getsize());
+
+	for(uint i = 0;i<rhs.getsize();i++) {
+		temp(i+1) = factor*rhs(i+1);
+	}
+	return temp;
+}
+
+template<class T>
+SVector<T> operator/ (adouble factor, const SVector<T>& rhs){
 	SVector<T> temp(rhs.getsize());
 
 	for(uint i = 0;i<rhs.getsize();i++) {
@@ -559,7 +598,6 @@ T max(const SVector<T>& v) {
 	return value;
 }
 
-
 template<>
 class SVector <adouble>{
 public:
@@ -585,12 +623,21 @@ public:
 	adouble& operator() (uint num);
 
 	/* element wise operations */
+	SVector<adouble> 		operator+ 	(const SVector<double>& rhs) 			const;
+	SVector<adouble> 		operator- 	(const SVector<double>& rhs)			const;
+	SVector<adouble> 		operator* 	(const SVector<double>& rhs)			const;
+	SVector<adouble> 		operator/ 	(const SVector<double>& rhs)			const;
 	SVector<adouble> 		operator+ 	(const SVector<adouble>& rhs) 			const;
-	SVector<adouble> 		operator- 	(const SVector<adouble>& rhs)				const;
-	SVector<adouble> 		operator* 	(const SVector<adouble>& rhs)				const;
-	SVector<adouble> 		operator/ 	(const SVector<adouble>& rhs)				const;
+	SVector<adouble> 		operator- 	(const SVector<adouble>& rhs)			const;
+	SVector<adouble> 		operator* 	(const SVector<adouble>& rhs)			const;
+	SVector<adouble> 		operator/ 	(const SVector<adouble>& rhs)			const;
 
 	/* operations with a scalar */
+
+	SVector<adouble> 		operator+ 	(adouble sum)					const;
+	SVector<adouble> 		operator- 	(adouble sum)					const;
+	SVector<adouble> 		operator* 	(adouble factor)				const;
+	SVector<adouble> 		operator/ 	(adouble factor)				const;
 
 	SVector<adouble> 		operator+ 	(double sum)					const;
 	SVector<adouble> 		operator- 	(double sum)					const;
@@ -604,7 +651,6 @@ private:
 	adouble* values;
 	uint n;
 };
-
 
 inline SVector<adouble>::SVector(){
 	values = NULL;
@@ -782,6 +828,54 @@ inline SVector<adouble> SVector<adouble>::operator/ (const SVector<adouble>& rhs
 	return temp;
 }
 
+inline SVector<adouble> SVector<adouble>::operator+ (const SVector<double>& rhs) const{
+	SVector<adouble> temp(rhs.getsize());
+	if (rhs.getsize() != n) {
+		cout<<"SVector dimensions do not match\n";
+		exit(1);
+	}
+	for(uint i = 0;i<n;i++) {
+		temp.values[i] = values[i]+rhs(i+1);
+	}
+	return temp;
+}
+
+inline SVector<adouble> SVector<adouble>::operator- (const SVector<double>& rhs) const{
+	SVector<adouble> temp(rhs.getsize());
+	if (rhs.getsize() != n) {
+		cout<<"SVector dimensions do not match\n";
+		exit(1);
+	}
+	for(uint i = 0;i<n;i++) {
+		temp.values[i] = values[i]-rhs(i+1);
+	}
+	return temp;
+}
+
+inline SVector<adouble> SVector<adouble>::operator* (const SVector<double>& rhs) const{
+	SVector<adouble> temp(rhs.getsize());
+	if (rhs.getsize() != n) {
+		cout<<"SVector dimensions do not match\n";
+		exit(1);
+	}
+	for(uint i = 0;i<n;i++) {
+		temp.values[i] = values[i]*rhs(i+1);
+	}
+	return temp;
+}
+
+inline SVector<adouble> SVector<adouble>::operator/ (const SVector<double>& rhs) const{
+	SVector<adouble> temp(rhs.getsize());
+	if (rhs.getsize() != n) {
+		cout<<"SVector dimensions do not match\n";
+		exit(1);
+	}
+	for(uint i = 0;i<n;i++) {
+		temp.values[i] = values[i]/rhs(i+1);
+	}
+	return temp;
+}
+
 inline SVector<adouble> SVector<adouble>::operator- ()						 const{
 	SVector<adouble> temp(n);
 	for(uint i = 0;i<n;i++) {
@@ -789,6 +883,7 @@ inline SVector<adouble> SVector<adouble>::operator- ()						 const{
 	}
 	return temp;
 }
+
 
 /*
  * operations with a scalar
@@ -828,6 +923,40 @@ inline SVector<adouble> SVector<adouble>::operator/ (double factor) const{
 	return temp;
 }
 
+
+inline SVector<adouble> SVector<adouble>::operator+ (adouble sum) const{
+	SVector<adouble> temp(n);
+	for(uint i = 0;i<n;i++) {
+		temp.values[i] = values[i]+sum;
+	}
+	return temp;
+}
+
+inline SVector<adouble> SVector<adouble>::operator- (adouble sum) const{
+	SVector<adouble> temp(n);
+	for(uint i = 0;i<n;i++) {
+		temp.values[i] = values[i]-sum;
+	}
+	return temp;
+}
+
+inline SVector<adouble> SVector<adouble>::operator* (adouble factor) const{
+	SVector<adouble> temp;
+	temp.resize(n);
+	for(uint i = 0; i<n; i++) {
+		temp.values[i] = factor*values[i];
+	}
+	return temp;
+}
+
+inline SVector<adouble> SVector<adouble>::operator/ (adouble factor) const{
+	SVector<adouble> temp;
+	temp.resize(n);
+	for(uint i = 0; i<n; i++) {
+		temp.values[i] = values[i]/factor;
+	}
+	return temp;
+}
 
 
 #endif
