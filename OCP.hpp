@@ -25,6 +25,9 @@ public:
 	MVector x;
 	MVector u;
 	MVector param;
+	MVector lam_x;
+	MVector lam_path;
+	MVector lam_events;
 };
 
 class Config {
@@ -57,6 +60,7 @@ public:
 	Number lb_t0, ub_t0, lb_tf, ub_tf;
 
 	Guess 	guess;
+	Guess 	results;
 	Config 	config;
 	MVector nodes_opt;
 	MVector x0_opt;

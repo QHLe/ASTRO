@@ -108,7 +108,9 @@ ApplicationReturnStatus OCP::set_OCP_structure() {
 }
 
 ApplicationReturnStatus OCP::NLP_solve() {
+
 	OCPBounds2NLPBounds();
+
 	mglGraph* gr 	= new mglGraph;
 	mglData dat_x(n_nodes);
 	mglData dat_y(n_nodes);
@@ -177,88 +179,120 @@ ApplicationReturnStatus OCP::NLP_solve() {
 		delete gr;
 	}
 
-  	status = app->OptimizeTNLP(myadolc_nlp);
+	status = app->OptimizeTNLP(myadolc_nlp);
 
-  	if (status == Solve_Succeeded) {
-    // Retrieve some statistics about the solve
+	if (status == Solve_Succeeded) {
+	// Retrieve some statistics about the solve
 		Index iter_count = app->Statistics()->IterationCount();
 		printf("\n\n*** The problem solved in %d iterations!\n", iter_count);
 
 		Number final_obj = app->Statistics()->FinalObjective();
-    	printf("\n\n*** The final value of the objective function is %e.\n", final_obj);
+		printf("\n\n*** The final value of the objective function is %e.\n", final_obj);
 	}
+	SVector<double> NLP_x 		= myadolc_nlp->get_x_opt();
+	SVector<double> NLP_lam 	= myadolc_nlp->get_lam_opt();
+	uint NLP_n					= myadolc_nlp->getNLP_n();
+//	uint NLP_m					= myadolc_nlp->getNLP_m();
+	double t0					= NLP_x(NLP_n - 1);
+	double tf 					= NLP_x(NLP_n);
+	SVector<double> delta 		= (tf - t0)*myadolc_nlp->getnode_str();
 
-  	SVector<double> NLP_x = myadolc_nlp->getx_opt();
-	double t0					= NLP_x(myadolc_nlp->getNLP_n()-1);
-	double tf 					= NLP_x(myadolc_nlp->getNLP_n());
-	double delta 				= (tf - t0)/((double)n_nodes-1);
+	results.nodes.resize(n_nodes,1);
+	results.x.resize(n_nodes, n_states);
+	results.u.resize(n_nodes, n_controls);
+	results.param.resize(n_param,1);
 
-	nodes_opt.resize(n_nodes,1);
-	x_opt.resize(n_nodes, n_states);
-	u_opt.resize(n_nodes, n_controls);
-	param_opt.resize(1, n_param);
-
-	nodes_opt(1,1) = t0;
-	for (Index i = 2; i <= n_nodes; i++) {
-		nodes_opt(i,1) 	= nodes_opt(i-1,1) + delta;
+	results.nodes(1,1) = t0;
+	for (Index i = 2; i < n_nodes; i++) {
+		results.nodes(i,1) 	= results.nodes(i-1,1) + delta(i);
 	}
-	nodes_opt.save("results_nodes.dat");
+	results.nodes(n_nodes,1) = tf;
+	results.nodes.save("results_nodes.dat");
 
 	Index idx = 1;
 	while (idx < n_nodes*(n_states + n_controls) + n_param) {
 		for (Index i = 1; i <= n_nodes; i += 1)	{
 			for (Index j = 1; j <= n_states; j += 1){
-				x_opt(i,j) 	= NLP_x(idx);
+				results.x(i,j) 	= NLP_x(idx);
 				idx++;
 			}
 			for (Index j = 1; j <= n_controls; j += 1){
-				u_opt(i,j) 	= NLP_x(idx);
+				results.u(i,j) 	= NLP_x(idx);
 				idx++;
 			}
 		}
 		for (Index i = 1; i <= n_param; i += 1)
 		{
-			param_opt(1,i)			= NLP_x(idx);
+			results.param(i,1)			= NLP_x(idx);
 			idx++;
 		}
 	}
-	x_opt.save("results_x.dat");
-	u_opt.save("results_u.dat");
-	param_opt.save("results_param.dat");
+
+	results.lam_x.resize(n_nodes - 1, n_states);
+	results.lam_path.resize(n_nodes, n_path);
+	results.lam_events.resize(n_events, 1);
+
+	Index idx_m = 1;
+	for (Index i = 1; i <= n_nodes; i += 1) {
+		for (Index j = 1; j <= n_path; j += 1) {
+			results.lam_path(i,j)	= NLP_lam(idx_m);
+			idx_m++;
+		}
+		for (Index j = 1; j <= n_states; j += 1) {
+			if(i < n_nodes) {
+				results.lam_x(i,j)	= NLP_lam(idx_m);
+				idx_m++;
+			}
+		}
+	}
+
+	for (Index i = 1; i <= n_events; i += 1)	{
+		results.lam_events(i,1)		= NLP_lam(idx_m);
+		idx_m++;
+	}
+
+	results.x.save("results_x.dat");
+	results.u.save("results_u.dat");
+	results.param.save("results_param.dat");
+
+	results.lam_x.save("results_lam_x.dat");
+	results.lam_path.save("results_lam_path.dat");
+	results.lam_events.save("results_lam_events.dat");
 
 	x0_opt.resize(1,n_states);
 	xf_opt.resize(1,n_states);
 	for (Index i = 1; i <= n_states; i += 1) {
-		x0_opt(1,i) 		= x_opt(1,i);
-		xf_opt(1,i)			= x_opt(n_nodes,i);
+		x0_opt(1,i) 		= results.x(1,i);
+		xf_opt(1,i)			= results.x(n_nodes,i);
 	}
 	x0_opt.save("results_x0.dat");
 	xf_opt.save("results_xf.dat");
 
 	if (config.with_mgl) {
 		for (Index i = 0; i < n_nodes; ++i) {
-			dat_x[i]	= nodes_opt(i+1,1);
+			dat_x[i]	= results.nodes(i+1,1);
 		}
+
 		gr = new mglGraph;
 		gr->Box();
 
-		x_range.a[0] = min(nodes_opt);
-		x_range.a[1] = max(nodes_opt);
-		if (min(x_opt) > 0)
-			y_range.a[0] = min(x_opt)*0.9;
+		x_range.a[0] = min(results.nodes);
+		x_range.a[1] = max(results.nodes);
+		if (min(results.x) > 0)
+			y_range.a[0] = min(results.x)*0.9;
 		else
-			y_range.a[0] = min(x_opt)*1.1;
-		if (max(x_opt) < 0)
-			y_range.a[1] = max(x_opt)*0.9;
+			y_range.a[0] = min(results.x)*1.1;
+		if (max(results.x) < 0)
+			y_range.a[1] = max(results.x)*0.9;
 		else
-			y_range.a[1] = max(x_opt)*1.1;
+			y_range.a[1] = max(results.x)*1.1;
 
 		gr->SetRanges(x_range,y_range);
 		gr->Axis(); gr->Label('x', "time", 0); gr->Label('y', "x_{opt}", 0);
 
 		for (Index j = 0; j < n_states; ++j) {
 			for (Index i = 0; i < n_nodes; ++i) {
-				dat_y[i]	= x_opt(i+1,j+1);
+				dat_y[i]	= results.x(i+1,j+1);
 			}
 			gr->Plot(dat_x,dat_y);
 		}
@@ -269,24 +303,25 @@ ApplicationReturnStatus OCP::NLP_solve() {
 		gr = new mglGraph;
 		gr->Box();
 
-		x_range.a[0] = min(nodes_opt);
-		x_range.a[1] = max(nodes_opt);
+		x_range.a[0] = min(results.nodes);
+		x_range.a[1] = max(results.nodes);
 
-		if (min(u_opt) > 0)
-			y_range.a[0] = min(u_opt)*0.9;
+		cout<<"omg\n";
+		if (min(results.u) > 0)
+			y_range.a[0] = min(results.u)*0.9;
 		else
-			y_range.a[0] = min(u_opt)*1.1;
-		if (max(u_opt) < 0)
-			y_range.a[1] = max(u_opt)*0.9;
+			y_range.a[0] = min(results.u)*1.1;
+		if (max(results.u) < 0)
+			y_range.a[1] = max(results.u)*0.9;
 		else
-			y_range.a[1] = max(u_opt)*1.1;
+			y_range.a[1] = max(results.u)*1.1;
 
 		gr->SetRanges(x_range,y_range);
 		gr->Axis(); gr->Label('x', "time", 0); gr->Label('y', "u_{opt}", 0);
 
 		for (Index j = 0; j < n_controls; ++j) {
 			for (Index i = 0; i < n_nodes; ++i) {
-				dat_y[i]	= u_opt(i+1,j+1);
+				dat_y[i]	= results.u(i+1,j+1);
 			}
 			gr->Plot(dat_x,dat_y);
 		}
@@ -377,7 +412,7 @@ void OCP::OCPBounds2NLPBounds() {
 	SVector<double> sf_NLP_g(NLP_m);
 
 	if ((guess.nodes.getRowDim() != (uint)n_nodes) 	||
-		(guess.param.getRowDim() != (uint)n_param) 	||
+		(guess.param.getColDim() != (uint)n_param) 	||
 		(guess.u.getColDim() != (uint)n_controls)	||
 		(guess.x.getColDim() != (uint)n_states)	||
 		(guess.u.getRowDim() != (uint)n_nodes)	||
@@ -445,16 +480,16 @@ void OCP::OCPBounds2NLPBounds() {
 	{
 		for (Index j = 1; j <= n_path; j += 1)
 		{
-			g_l(idx)		= lb_path(j)/sf_path(j);
-			g_u(idx)		= ub_path(j)/sf_path(j);
+			g_l(idx)		= lb_path(j)/sf_path(j) + 1;
+			g_u(idx)		= ub_path(j)/sf_path(j) + 1;
 			sf_NLP_g(idx)	= sf_path(j);
 			idx++;
 		}
 		for (Index j = 1; j <= n_states; j += 1)
 		{
 			if(i < n_nodes) {
-				g_l(idx)		= 0.0;
-				g_u(idx)		= 0.0;
+				g_l(idx)		= 1.0;
+				g_u(idx)		= 1.0;
 				sf_NLP_g(idx)	= 1.0;
 				idx++;
 			}
@@ -462,8 +497,8 @@ void OCP::OCPBounds2NLPBounds() {
 	}
 	for (Index i = 1; i <= n_events; i += 1)
 	{
-		g_l(idx)	= lb_events(i)/sf_events(i);
-		g_u(idx)	= ub_events(i)/sf_events(i);
+		g_l(idx)	= lb_events(i)/sf_events(i) + 1;
+		g_u(idx)	= ub_events(i)/sf_events(i) + 1;
 		sf_NLP_g(idx)	= sf_events(i);
 		idx++;
 	}

@@ -104,11 +104,13 @@ public:
 
 	Index 	getNLP_n	() 				{ return NLP_n;}
 	Index 	getNLP_m	() 				{ return NLP_m;}
-	SVector<double> getx_opt	()				{ return NLP_x_opt;}
+	SVector<double> get_x_opt	()				{ return NLP_x_opt;}
+	SVector<double> get_lam_opt	()				{ return NLP_lam_opt;}
 	void 	setBounds	(	SVector<double> x_lb, SVector<double> x_ub, SVector<double> g_lb, SVector<double> g_ub);
 	void 	setSF		(	SVector<double> x_sf, SVector<double> g_sf);
 	void 	setguess	(	SVector<double> x_guess)	{NLP_x_guess = x_guess;}
 	void	setnodestr	(	SVector<double> str) 		{node_str = str;}
+	SVector<double> getnode_str() 		{ return node_str;}
 	double 	(*d_e_cost) (const   double* ini_states, const   double* fin_states, const   double* param, const   double& t0, const   double& tf, uint phase);
 	adouble (*ad_e_cost)(const  adouble* ini_states, const  adouble* fin_states, const  adouble* param, const  adouble& t0, const  adouble& tf, uint phase);
 	double  (*d_l_cost)	(const  double *states, const  double *controls, const  double *param, const  double &time,	uint phase);

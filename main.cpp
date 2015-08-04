@@ -1,7 +1,7 @@
 #include "OCP.hpp"
 #include "ADOL-C_sparseNLP.hpp"
 
-#define N_NODES		15000
+#define N_NODES		150
 
 template<class T> T lagrange_cost(	const T *states,
 									const T *controls,
@@ -94,7 +94,7 @@ int main(int argv, char* argc[])
 	problem.lb_states(1)	= 0.0;
 	problem.lb_states(2)	=-10.0;
 
-	problem.ub_states(1)	= 1.0;
+	problem.ub_states(1)	= 2.0;
 	problem.ub_states(2)	= 10.0;
 
 	problem.lb_controls(1)	=-5.0;
@@ -109,14 +109,14 @@ int main(int argv, char* argc[])
 	problem.lb_events(1)	= -0.0;
 	problem.ub_events(1)	= -0.0;
 
-	problem.lb_events(2)	= -0.0;
-	problem.ub_events(2)	= -0.0;
+	problem.lb_events(2)	= 1.0;
+	problem.ub_events(2)	= 1.0;
 	
-	problem.lb_events(3)	= 1.0;
-	problem.ub_events(3)	= 1.0;
+	problem.lb_events(3)	= 0.0;
+	problem.ub_events(3)	= 0.0;
 
-	problem.lb_events(4)	= -0.0;
-	problem.ub_events(4)	= -0.0;
+	problem.lb_events(4)	= -1.0;
+	problem.ub_events(4)	= -1.0;
 /*
 	SVector guess_nodes = linspace(0,1,N_NODES);
 	SVector guess_x1	= linspace(0,1,N_NODES);

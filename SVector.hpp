@@ -26,6 +26,8 @@ public:
 	SVector(uint size);
 	virtual ~SVector();
 
+	SVector<double> 	double_conv	();
+
 	void 	resize		(uint n_new);
 	uint 	getsize		() 									const	{return n;}
 
@@ -100,6 +102,12 @@ SVector<T>::~SVector() {
 	if (values != NULL)
 		delete[] values;
 }
+
+template<class T>
+SVector<double> SVector<T>::double_conv() {
+	return *this;
+}
+
 
 template<class T>
 void SVector<T>::resize(uint n_new) {
@@ -439,6 +447,8 @@ public:
 	SVector(uint size);
 	virtual ~SVector();
 
+	SVector<double>		double_conv();
+
 	void 	resize		(uint n_new);
 	uint 	getsize		() 									const	{return n;}
 
@@ -514,6 +524,14 @@ inline SVector<adouble>::SVector(uint size) {
 inline SVector<adouble>::~SVector() {
 	if (values != NULL)
 		delete[] values;
+}
+
+inline SVector<double> SVector<adouble>::double_conv() {
+	SVector<double> temp(n);
+	for (uint i = 0; i<n; i++) {
+		temp(i+1)	= this->values[i].getValue();
+	}
+	return temp;
 }
 
 inline void SVector<adouble>::resize(uint n_new) {
