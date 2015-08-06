@@ -235,19 +235,19 @@ ApplicationReturnStatus OCP::NLP_solve() {
 	Index idx_m = 1;
 	for (Index i = 1; i <= n_nodes; i += 1) {
 		for (Index j = 1; j <= n_path; j += 1) {
-			results.lam_path(i,j)	= NLP_lam(idx_m);
+			results.lam_path(i,j)	= -NLP_lam(idx_m);
 			idx_m++;
 		}
 		for (Index j = 1; j <= n_states; j += 1) {
 			if(i < n_nodes) {
-				results.lam_x(i,j)	= NLP_lam(idx_m);
+				results.lam_x(i,j)	= -NLP_lam(idx_m);
 				idx_m++;
 			}
 		}
 	}
 
 	for (Index i = 1; i <= n_events; i += 1)	{
-		results.lam_events(i,1)		= NLP_lam(idx_m);
+		results.lam_events(i,1)		= -NLP_lam(idx_m);
 		idx_m++;
 	}
 
@@ -412,7 +412,7 @@ void OCP::OCPBounds2NLPBounds() {
 	SVector<double> sf_NLP_g(NLP_m);
 
 	if ((guess.nodes.getRowDim() != (uint)n_nodes) 	||
-		(guess.param.getColDim() != (uint)n_param) 	||
+		(guess.param.getRowDim() != (uint)n_param) 	||
 		(guess.u.getColDim() != (uint)n_controls)	||
 		(guess.x.getColDim() != (uint)n_states)	||
 		(guess.u.getRowDim() != (uint)n_nodes)	||
@@ -452,7 +452,7 @@ void OCP::OCPBounds2NLPBounds() {
 		x_l(idx)		= lb_param(i)/sf_param(i);
 		x_u(idx)		= ub_param(i)/sf_param(i);
 		sf_NLP_x(idx)	= sf_param(i);
-		x_guess(idx)	= guess.param(1,i)/sf_param(i);
+		x_guess(idx)	= guess.param(i,1)/sf_param(i);
 		idx++;
 	}
 
