@@ -566,14 +566,14 @@ void 	MyADOLC_sparseNLP::setNLP_structure(Index n, Index m, SVector<uint> struct
 	OCP_structure 	= structure;
 }
 
-void 	MyADOLC_sparseNLP::setBounds (	SVector<double> x_lb, SVector<double> x_ub, SVector<double> g_lb, SVector<double> g_ub){
+void 	MyADOLC_sparseNLP::setBounds (	Matrix<double> x_lb, Matrix<double> x_ub, Matrix<double> g_lb, Matrix<double> g_ub){
 	NLP_x_lb = x_lb;
 	NLP_x_ub = x_ub;
 	NLP_g_lb = g_lb;
 	NLP_g_ub = g_ub;
 }
 
-void 	MyADOLC_sparseNLP::setSF (SVector<double> x_sf, SVector<double> g_sf){
+void 	MyADOLC_sparseNLP::setSF (Matrix<double> x_sf, Matrix<double> g_sf){
 	NLP_x_sf = x_sf;
 	NLP_g_sf = g_sf;
 }

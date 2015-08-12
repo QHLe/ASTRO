@@ -4,7 +4,7 @@
 #include "IpTNLP.hpp"
 #include <adolc/adolc.h>
 #include <adolc/adolc_sparse.h>
-#include "SVector.hpp"
+#include "Matrix.hpp"
 
 #define tag_f 1
 #define tag_g 2
@@ -100,17 +100,17 @@ public:
 //	template<class T>	void trapezoidal(const T *states_0, const T *states_dot_0, const T *states_dot_1, const double delta, T *states_1);
 
 	//***************    end   ADOL-C part ***********************************
-	void 	setNLP_structure(Index n, Index m, SVector<uint> structure);
+	void 	setNLP_structure(Index n, Index m, Matrix<uint> structure);
 
 	Index 	getNLP_n	() 				{ return NLP_n;}
 	Index 	getNLP_m	() 				{ return NLP_m;}
-	SVector<double> get_x_opt	()				{ return NLP_x_opt;}
-	SVector<double> get_lam_opt	()				{ return NLP_lam_opt;}
-	void 	setBounds	(	SVector<double> x_lb, SVector<double> x_ub, SVector<double> g_lb, SVector<double> g_ub);
-	void 	setSF		(	SVector<double> x_sf, SVector<double> g_sf);
-	void 	setguess	(	SVector<double> x_guess)	{NLP_x_guess = x_guess;}
-	void	setnodestr	(	SVector<double> str) 		{node_str = str;}
-	SVector<double> getnode_str() 		{ return node_str;}
+	Matrix<double> get_x_opt	()				{ return NLP_x_opt;}
+	Matrix<double> get_lam_opt	()				{ return NLP_lam_opt;}
+	void 	setBounds	(	Matrix<double> x_lb, Matrix<double> x_ub, Matrix<double> g_lb, Matrix<double> g_ub);
+	void 	setSF		(	Matrix<double> x_sf, Matrix<double> g_sf);
+	void 	setguess	(	Matrix<double> x_guess)	{NLP_x_guess = x_guess;}
+	void	setnodestr	(	Matrix<double> str) 		{node_str = str;}
+	Matrix<double> getnode_str() 		{ return node_str;}
 	double 	(*d_e_cost) (const   double* ini_states, const   double* fin_states, const   double* param, const   double& t0, const   double& tf, uint phase);
 	adouble (*ad_e_cost)(const  adouble* ini_states, const  adouble* fin_states, const  adouble* param, const  adouble& t0, const  adouble& tf, uint phase);
 	double  (*d_l_cost)	(const  double *states, const  double *controls, const  double *param, const  double &time,	uint phase);
@@ -159,19 +159,19 @@ private:
 
 	Index NLP_n;
 	Index NLP_m;
-	SVector<double> NLP_x_lb;
-	SVector<double> NLP_x_ub;
-	SVector<double> NLP_x_sf;
-	SVector<double> NLP_x_guess;
-	SVector<double> NLP_g_lb;
-	SVector<double> NLP_g_ub;
-	SVector<double> NLP_g_sf;
-	SVector<double> NLP_lam_guess;
+	Matrix<double> NLP_x_lb;
+	Matrix<double> NLP_x_ub;
+	Matrix<double> NLP_x_sf;
+	Matrix<double> NLP_x_guess;
+	Matrix<double> NLP_g_lb;
+	Matrix<double> NLP_g_ub;
+	Matrix<double> NLP_g_sf;
+	Matrix<double> NLP_lam_guess;
 
-	SVector<double> node_str;
-	SVector<uint> OCP_structure;
-	SVector<double> NLP_x_opt;
-	SVector<double> NLP_lam_opt;
+	Matrix<double> node_str;
+	Matrix<uint> OCP_structure;
+	Matrix<double> NLP_x_opt;
+	Matrix<double> NLP_lam_opt;
 };
 
 #endif
