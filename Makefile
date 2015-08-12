@@ -1,7 +1,7 @@
 
 EXE = lttopt
 
-OBJS =  main.o ADOL-C_sparseNLP.o OCP.o MVector.o
+OBJS =  main.o ADOL-C_sparseNLP.o OCP.o 
 
 
 ADPATH = $(HOME)/adolc_base/include
@@ -17,7 +17,7 @@ IPOPTLIBDIR = $(HOME)/Ipopt-3.12.1/lib
 CXX = g++ -pg #-DSPARSE_HESS
 
 # Source files
-SRC = main.cpp ADOL-C_sparseNLP.cpp OCP.cpp SVector.cpp MVector.cpp
+SRC = main.cpp ADOL-C_sparseNLP.cpp OCP.cpp 
 
 # C++ Compiler options
 CXXFLAGS = -O3 -pipe -DNDEBUG -pedantic-errors -Wparentheses -Wreturn-type -Wcast-qual -Wall -Wpointer-arith -Wwrite-strings -Wconversion -Wno-unknown-pragmas -Wno-long-long -fopenmp -DIPOPT_BUILD 

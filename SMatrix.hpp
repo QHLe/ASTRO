@@ -1065,8 +1065,9 @@ SMatrix<T> ones(uint row, uint col) {
 	return temp + 1;
 }
 
-SMatrix<double> linspace (double x1, double xn, uint n) {
-	SMatrix<double> temp(n,1);
+template<class T>
+SMatrix<T> linspace (double x1, double xn, uint n) {
+	SMatrix<T> temp(n,1);
 	temp(1,1) 	= x1;
 	double delta = (xn - x1)/(n-1);
 	for (uint i = 2; i < n; i++) {

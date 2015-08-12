@@ -14,7 +14,6 @@ enum OPT_ORDER		{first_order, second_order};
 #include "IpIpoptApplication.hpp"
 #include "IpSolveStatistics.hpp"
 #include "ADOL-C_sparseNLP.hpp"
-#include "SMatrix.hpp"
 
 class Phase;
 class Guess {
