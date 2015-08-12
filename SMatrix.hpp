@@ -195,9 +195,9 @@ T SMatrix<T>::operator()(uint idx) const{
 		exit(1);
 	}
 	if (n_col == 1)
-		return data[idx-1][1];
+		return data[idx-1][0];
 	else
-		return data[1][idx-1];
+		return data[0][idx-1];
 }
 
 template<class T>
@@ -218,9 +218,9 @@ T& SMatrix<T>::operator()(uint idx) {
 		exit(1);
 	}
 	if (n_col == 1)
-		return data[idx-1][1];
+		return data[idx-1][0];
 	else
-		return data[1][idx-1];
+		return data[0][idx-1];
 }
 
 template<class T>
@@ -633,9 +633,9 @@ inline double SMatrix<double>::operator()(uint idx) const{
 		exit(1);
 	}
 	if (n_col == 1)
-		return data[idx-1][1];
+		return data[idx-1][0];
 	else
-		return data[1][idx-1];
+		return data[0][idx-1];
 }
 
 inline double& SMatrix<double>::operator()(uint idx) {
@@ -655,9 +655,9 @@ inline double& SMatrix<double>::operator()(uint idx) {
 		exit(1);
 	}
 	if (n_col == 1)
-		return data[idx-1][1];
+		return data[idx-1][0];
 	else
-		return data[1][idx-1];
+		return data[0][idx-1];
 }
 
 inline void SMatrix<double>::load (const char* filename) {
@@ -1290,9 +1290,9 @@ inline adouble SMatrix<adouble>::operator()(uint idx) const{
 		exit(1);
 	}
 	if (n_col == 1)
-		return data[idx-1][1];
+		return data[idx-1][0];
 	else
-		return data[1][idx-1];
+		return data[0][idx-1];
 }
 
 inline adouble& SMatrix<adouble>::operator()(uint idx) {
@@ -1312,9 +1312,9 @@ inline adouble& SMatrix<adouble>::operator()(uint idx) {
 		exit(1);
 	}
 	if (n_col == 1)
-		return data[idx-1][1];
+		return data[idx-1][0];
 	else
-		return data[1][idx-1];
+		return data[0][idx-1];
 }
 
 inline void SMatrix<adouble>::load (const char* filename) {

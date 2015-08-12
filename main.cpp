@@ -29,8 +29,6 @@ template<class T> void derivatives(	T *states_dot,
 							 	 	const T *param,
 							 	 	const T &time,
 							 	 	uint phase) {
-
-	T x1 = states[0];
 	T x2 = states[1];
 //	T x3 = states[2];
 
