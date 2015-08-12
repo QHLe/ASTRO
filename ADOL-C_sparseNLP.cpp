@@ -560,20 +560,20 @@ bool MyADOLC_sparseNLP::get_starting_point(Index n, bool init_x, Number* x,
 	return true;
 }
 
-void 	MyADOLC_sparseNLP::setNLP_structure(Index n, Index m, SVector<uint> structure) {
+void 	MyADOLC_sparseNLP::setNLP_structure(Index n, Index m, SMatrix<uint> structure) {
 	NLP_n 			= n;
 	NLP_m 			= m;
 	OCP_structure 	= structure;
 }
 
-void 	MyADOLC_sparseNLP::setBounds (	SVector<double> x_lb, SVector<double> x_ub, SVector<double> g_lb, SVector<double> g_ub){
+void 	MyADOLC_sparseNLP::setBounds (	SMatrix<double> x_lb, SMatrix<double> x_ub, SMatrix<double> g_lb, SMatrix<double> g_ub){
 	NLP_x_lb = x_lb;
 	NLP_x_ub = x_ub;
 	NLP_g_lb = g_lb;
 	NLP_g_ub = g_ub;
 }
 
-void 	MyADOLC_sparseNLP::setSF (SVector<double> x_sf, SVector<double> g_sf){
+void 	MyADOLC_sparseNLP::setSF (SMatrix<double> x_sf, SMatrix<double> g_sf){
 	NLP_x_sf = x_sf;
 	NLP_g_sf = g_sf;
 }
@@ -711,11 +711,11 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 			      const IpoptData* ip_data,
 			      IpoptCalculatedQuantities* ip_cq)
 {
-	NLP_x_opt.resize(n);
+	NLP_x_opt.resize(n,1);
 	for (Index i = 0; i < n; i++) {
 		NLP_x_opt(i+1) 	= x[i]*NLP_x_sf(i+1);
 	}
-	NLP_lam_opt.resize(m);
+	NLP_lam_opt.resize(m,1);
 	for (Index i = 0; i < m; i++) {
 		NLP_lam_opt(i+1) 	= lambda[i]*NLP_g_sf(i+1);
 	}

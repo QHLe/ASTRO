@@ -14,20 +14,19 @@ enum OPT_ORDER		{first_order, second_order};
 #include "IpIpoptApplication.hpp"
 #include "IpSolveStatistics.hpp"
 #include "ADOL-C_sparseNLP.hpp"
-#include "SVector.hpp"
 
 class Phase;
 class Guess {
 public:
 	Guess();
 	~Guess();
-	MVector nodes;
-	MVector x;
-	MVector u;
-	MVector param;
-	MVector lam_x;
-	MVector lam_path;
-	MVector lam_events;
+	SMatrix <double> nodes;
+	SMatrix <double> x;
+	SMatrix <double> u;
+	SMatrix <double> param;
+	SMatrix <double> lam_x;
+	SMatrix <double> lam_path;
+	SMatrix <double> lam_events;
 };
 
 class Config {
@@ -56,18 +55,18 @@ public:
 	Index n_phases;
 	Index n_linkages;
 
-	SVector<double> lb_states, ub_states, lb_controls, ub_controls, lb_param, ub_param, lb_path, ub_path, lb_events, ub_events;
+	SMatrix<double> lb_states, ub_states, lb_controls, ub_controls, lb_param, ub_param, lb_path, ub_path, lb_events, ub_events;
 	Number lb_t0, ub_t0, lb_tf, ub_tf;
 
 	Guess 	guess;
 	Guess 	results;
 	Config 	config;
-	MVector nodes_opt;
-	MVector x0_opt;
-	MVector xf_opt;
-	MVector x_opt;
-	MVector u_opt;
-	MVector param_opt;
+	SMatrix<double> nodes_opt;
+	SMatrix<double> x0_opt;
+	SMatrix<double> xf_opt;
+	SMatrix<double> x_opt;
+	SMatrix<double> u_opt;
+	SMatrix<double> param_opt;
 //	char* mgl_marker[5] = 	{"+", "-", "*", "x", "o"};
 
 	void auto_guess_gen();
@@ -88,20 +87,20 @@ private:
   	SmartPtr<MyADOLC_sparseNLP> myadolc_nlp;
   	SmartPtr<IpoptApplication> app;
   	ApplicationReturnStatus status;
-  	SVector<double> sf_u;
-  	SVector<double> sf_x;
-  	SVector<double> sf_path;
-  	SVector<double> sf_param;
-  	SVector<double> sf_t;
-  	SVector<double> sf_events;
+  	SMatrix<double> sf_u;
+  	SMatrix<double> sf_x;
+  	SMatrix<double> sf_path;
+  	SMatrix<double> sf_param;
+  	SMatrix<double> sf_t;
+  	SMatrix<double> sf_events;
 
-//  	SVector sf_f;
-//		SVector sf_constraint;
+//  	SMatrix sf_f;
+//		SMatrix sf_constraint;
 
 };
-template<class T>
-SVector<T>	lin_interpol(const SVector<T> x, const SVector<T> y, const SVector<T> x_new) {
-	SVector <T> y_new(x_new.getsize());
+/*template<class T>
+SMatrix<T>	lin_interpol(const SMatrix<T> x, const SMatrix<T> y, const SMatrix<T> x_new) {
+	SMatrix <T> y_new(x_new.getsize());
 	for (uint i = 1; i <= x_new.getsize(); i++) {
 		for(uint j = 1; j < x.getsize(); j++) {
 /*			if (x_new(i) < x(1) || x(x.getsize()) < x_new(i)) {
@@ -109,7 +108,8 @@ SVector<T>	lin_interpol(const SVector<T> x, const SVector<T> y, const SVector<T>
 				printf("lin_interpot out of range\n");
 				exit(1);
 			}*/
-			if (x(j) <= x_new(i) && x(j+1) >= x_new(i)) {
+
+/*				if (x(j) <= x_new(i) && x(j+1) >= x_new(i)) {
 		//		cout<<i<<"\t"<<j<<endl;
 				y_new(i)	= y(j) + (y(j+1) - y(j))/(x(j+1) - x(j))*(x_new(i) - x(j));
 				break;
@@ -127,5 +127,5 @@ SVector<T>	lin_interpol(const SVector<T> x, const SVector<T> y, const SVector<T>
 	}
 	return y_new;
 }
-
+*/
 #endif /* OCP_HPP_ */
