@@ -14,20 +14,20 @@ enum OPT_ORDER		{first_order, second_order};
 #include "IpIpoptApplication.hpp"
 #include "IpSolveStatistics.hpp"
 #include "ADOL-C_sparseNLP.hpp"
-#include "Matrix.hpp"
+#include "SMatrix.hpp"
 
 class Phase;
 class Guess {
 public:
 	Guess();
 	~Guess();
-	Matrix nodes;
-	Matrix x;
-	Matrix u;
-	Matrix param;
-	Matrix lam_x;
-	Matrix lam_path;
-	Matrix lam_events;
+	SMatrix <double> nodes;
+	SMatrix <double> x;
+	SMatrix <double> u;
+	SMatrix <double> param;
+	SMatrix <double> lam_x;
+	SMatrix <double> lam_path;
+	SMatrix <double> lam_events;
 };
 
 class Config {
@@ -56,18 +56,18 @@ public:
 	Index n_phases;
 	Index n_linkages;
 
-	Matrix<double> lb_states, ub_states, lb_controls, ub_controls, lb_param, ub_param, lb_path, ub_path, lb_events, ub_events;
+	SMatrix<double> lb_states, ub_states, lb_controls, ub_controls, lb_param, ub_param, lb_path, ub_path, lb_events, ub_events;
 	Number lb_t0, ub_t0, lb_tf, ub_tf;
 
 	Guess 	guess;
 	Guess 	results;
 	Config 	config;
-	Matrix<double> nodes_opt;
-	Matrix<double> x0_opt;
-	Matrix<double> xf_opt;
-	Matrix<double> x_opt;
-	Matrix<double> u_opt;
-	Matrix<double> param_opt;
+	SMatrix<double> nodes_opt;
+	SMatrix<double> x0_opt;
+	SMatrix<double> xf_opt;
+	SMatrix<double> x_opt;
+	SMatrix<double> u_opt;
+	SMatrix<double> param_opt;
 //	char* mgl_marker[5] = 	{"+", "-", "*", "x", "o"};
 
 	void auto_guess_gen();
@@ -88,20 +88,20 @@ private:
   	SmartPtr<MyADOLC_sparseNLP> myadolc_nlp;
   	SmartPtr<IpoptApplication> app;
   	ApplicationReturnStatus status;
-  	Matrix<double> sf_u;
-  	Matrix<double> sf_x;
-  	Matrix<double> sf_path;
-  	Matrix<double> sf_param;
-  	Matrix<double> sf_t;
-  	Matrix<double> sf_events;
+  	SMatrix<double> sf_u;
+  	SMatrix<double> sf_x;
+  	SMatrix<double> sf_path;
+  	SMatrix<double> sf_param;
+  	SMatrix<double> sf_t;
+  	SMatrix<double> sf_events;
 
-//  	Matrix sf_f;
-//		Matrix sf_constraint;
+//  	SMatrix sf_f;
+//		SMatrix sf_constraint;
 
 };
 /*template<class T>
-Matrix<T>	lin_interpol(const Matrix<T> x, const Matrix<T> y, const Matrix<T> x_new) {
-	Matrix <T> y_new(x_new.getsize());
+SMatrix<T>	lin_interpol(const SMatrix<T> x, const SMatrix<T> y, const SMatrix<T> x_new) {
+	SMatrix <T> y_new(x_new.getsize());
 	for (uint i = 1; i <= x_new.getsize(); i++) {
 		for(uint j = 1; j < x.getsize(); j++) {
 /*			if (x_new(i) < x(1) || x(x.getsize()) < x_new(i)) {
