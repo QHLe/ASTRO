@@ -854,7 +854,21 @@ inline SMatrix<double> SMatrix<double>::operator- (const SMatrix<double>& rhs) c
 
 inline SMatrix<double> SMatrix<double>::operator* (const SMatrix<double>& rhs) const{
 	SMatrix<double> temp(*this);
-	if (rhs.getRowDim() != n_row || rhs.getColDim() != n_col) {
+	if (rhs.getRowDim() == 1 && rhs.getColDim() == 1) {
+		for (uint i = 1; i <= n_row; i++)
+			for (uint j = 1; j <= n_col; j++)
+				temp(i,j) = temp(i,j)*rhs(1,1);
+		return temp;
+	}
+	else if (n_row == 1 && n_col == 1) {
+		double val = temp(1,1);
+		temp.resize(rhs.getRowDim(), rhs.getColDim());
+		for (uint i = 1; i <= rhs.getRowDim(); i++)
+			for (uint j = 1; j <= rhs.getColDim(); j++)
+				temp(i,j) = rhs(i,j)*val;
+		return temp;
+	}
+	else if (rhs.getRowDim() != n_row || rhs.getColDim() != n_col) {
 		cout<<"=====  Element-wise multiplication   =====\n"
 			  "===== SMatrix dimensions do not match =====\n";
 		exit(1);
@@ -917,7 +931,21 @@ inline SMatrix<adouble> SMatrix<double>::operator- (const SMatrix<adouble>& rhs)
 
 inline SMatrix<adouble> SMatrix<double>::operator* (const SMatrix<adouble>& rhs) const{
 	SMatrix<adouble> temp(*this);
-	if (rhs.getRowDim() != n_row || rhs.getColDim() != n_col) {
+	if (rhs.getRowDim() == 1 && rhs.getColDim() == 1) {
+		for (uint i = 1; i <= n_row; i++)
+			for (uint j = 1; j <= n_col; j++)
+				temp(i,j) = temp(i,j)*rhs(1,1);
+		return temp;
+	}
+	else if (n_row == 1 && n_col == 1) {
+		adouble val = temp(1,1);
+		temp.resize(rhs.getRowDim(), rhs.getColDim());
+		for (uint i = 1; i <= rhs.getRowDim(); i++)
+			for (uint j = 1; j <= rhs.getColDim(); j++)
+				temp(i,j) = rhs(i,j)*val;
+		return temp;
+	}
+	else if (rhs.getRowDim() != n_row || rhs.getColDim() != n_col) {
 		cout<<"=====  Element-wise multiplication   =====\n"
 			  "===== SMatrix dimensions do not match =====\n";
 		exit(1);
@@ -1559,7 +1587,21 @@ inline SMatrix<adouble> SMatrix<adouble>::operator- (const SMatrix<adouble>& rhs
 
 inline SMatrix<adouble> SMatrix<adouble>::operator* (const SMatrix<adouble>& rhs) const{
 	SMatrix<adouble> temp(*this);
-	if (rhs.getRowDim() != n_row || rhs.getColDim() != n_col) {
+	if (rhs.getRowDim() == 1 && rhs.getColDim() == 1) {
+		for (uint i = 1; i <= n_row; i++)
+			for (uint j = 1; j <= n_col; j++)
+				temp(i,j) = temp(i,j)*rhs(1,1);
+		return temp;
+	}
+	else if (n_row == 1 && n_col == 1) {
+		adouble val = temp(1,1);
+		temp.resize(rhs.getRowDim(), rhs.getColDim());
+		for (uint i = 1; i <= rhs.getRowDim(); i++)
+			for (uint j = 1; j <= rhs.getColDim(); j++)
+				temp(i,j) = rhs(i,j)*val;
+		return temp;
+	}
+	else if (rhs.getRowDim() != n_row || rhs.getColDim() != n_col) {
 		cout<<"=====  Element-wise multiplication   =====\n"
 			  "===== SMatrix dimensions do not match =====\n";
 		exit(1);
@@ -1622,7 +1664,21 @@ inline SMatrix<adouble> SMatrix<adouble>::operator- (const SMatrix<double>& rhs)
 
 inline SMatrix<adouble> SMatrix<adouble>::operator* (const SMatrix<double>& rhs) const{
 	SMatrix<adouble> temp(*this);
-	if (rhs.getRowDim() != n_row || rhs.getColDim() != n_col) {
+	if (rhs.getRowDim() == 1 && rhs.getColDim() == 1) {
+		for (uint i = 1; i <= n_row; i++)
+			for (uint j = 1; j <= n_col; j++)
+				temp(i,j) = temp(i,j)*rhs(1,1);
+		return temp;
+	}
+	else if (n_row == 1 && n_col == 1) {
+		adouble val = temp(1,1);
+		temp.resize(rhs.getRowDim(), rhs.getColDim());
+		for (uint i = 1; i <= rhs.getRowDim(); i++)
+			for (uint j = 1; j <= rhs.getColDim(); j++)
+				temp(i,j) = rhs(i,j)*val;
+		return temp;
+	}
+	else if (rhs.getRowDim() != n_row || rhs.getColDim() != n_col) {
 		cout<<"=====  Element-wise multiplication   =====\n"
 			  "===== SMatrix dimensions do not match =====\n";
 		exit(1);

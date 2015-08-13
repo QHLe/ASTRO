@@ -5,15 +5,12 @@
  *      Author: zineus
  */
 
-#ifndef OCP_HPP_
-#define OCP_HPP_
-
-enum NLP_SOLVER 	{ma27=0, ma57, ma86, ma97, mumps};
-enum OPT_ORDER		{first_order, second_order};
-
 #include "IpIpoptApplication.hpp"
 #include "IpSolveStatistics.hpp"
 #include "ADOL-C_sparseNLP.hpp"
+
+#ifndef OCP_HPP_
+#define OCP_HPP_
 
 class Phase;
 class Guess {
@@ -36,9 +33,11 @@ public:
 	char* hessian_approximation;
 	NLP_SOLVER NLP_solver;
 	bool warmstart;
+	bool with_mgl;
 	double NLP_tol;
 	OPT_ORDER opt_oder;
-	bool with_mgl;
+	APPROX disc_method;
+
 };
 
 class OCP {
@@ -46,15 +45,7 @@ public:
 	OCP();
 	~OCP();
 
-	Index n_nodes;
-	Index n_states;
-	Index n_controls;
-	Index n_param;
-	Index n_events;
-	Index n_path;
-	Index n_phases;
-	Index n_linkages;
-
+	Index n_nodes, n_states, n_controls, n_param, n_events, n_path, n_phases, n_linkages;
 	SMatrix<double> lb_states, ub_states, lb_controls, ub_controls, lb_param, ub_param, lb_path, ub_path, lb_events, ub_events;
 	Number lb_t0, ub_t0, lb_tf, ub_tf;
 
@@ -103,7 +94,7 @@ SMatrix<T>	lin_interpol(const SMatrix<T> x, const SMatrix<T> y, const SMatrix<T>
 	SMatrix <T> y_new(x_new.getsize());
 	for (uint i = 1; i <= x_new.getsize(); i++) {
 		for(uint j = 1; j < x.getsize(); j++) {
-/*			if (x_new(i) < x(1) || x(x.getsize()) < x_new(i)) {
+*//*			if (x_new(i) < x(1) || x(x.getsize()) < x_new(i)) {
 				printf("x_new[%d] = %.10e\t	x[%d] = %.10e\n",i,x_new(i),x.getsize(),x(x.getsize()));
 				printf("lin_interpot out of range\n");
 				exit(1);

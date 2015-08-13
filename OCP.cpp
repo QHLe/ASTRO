@@ -46,8 +46,17 @@ OCP::~OCP() {
 }
 
 ApplicationReturnStatus OCP::set_OCP_structure() {
-	Index NLP_n = (n_states + n_controls)*n_nodes + n_param + 2;
-	Index NLP_m = ((n_nodes - 1)*n_states + n_events + n_path*n_nodes);
+
+	Index NLP_n, NLP_m;
+
+	if(config.disc_method == trapezoidal) {
+		NLP_n = (n_states + n_controls)*n_nodes + n_param + 2;
+		NLP_m = ((n_nodes - 1)*n_states + n_events + n_path*n_nodes);
+	}
+	else {
+		NLP_n = (n_states + n_controls)*n_nodes + n_param + 2;
+		NLP_m = ((n_nodes - 1)*n_states + n_events + n_path*n_nodes);
+	}
 
 	SMatrix<uint> structure(8,1);
 	structure(1) = n_phases;
@@ -59,7 +68,7 @@ ApplicationReturnStatus OCP::set_OCP_structure() {
 	structure(7) = n_path;
 	structure(8) = n_linkages;
 
-	myadolc_nlp->setNLP_structure(NLP_n, NLP_m, structure);
+	myadolc_nlp->setNLP_structure(NLP_n, NLP_m, structure, config.disc_method);
 
 	if (n_states > 0) {
 		lb_states.resize(n_states,1);
@@ -591,10 +600,11 @@ Guess::~Guess() {
 }
 
 Config::Config() {
-	max_iter 	= 5000;
-	NLP_solver 	= ma27;
-	warmstart 	= false;
-	NLP_tol		= 1e-6;
-	opt_oder	= first_order;
-	with_mgl	= false;
+	max_iter 		= 5000;
+	NLP_solver 		= ma27;
+	warmstart 		= false;
+	NLP_tol			= 1e-6;
+	opt_oder		= first_order;
+	with_mgl		= false;
+	disc_method 	= Hermite_Simpson;
 }
