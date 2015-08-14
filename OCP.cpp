@@ -570,8 +570,8 @@ void OCP::auto_guess_gen() {
 	}
 }
 
-void OCP::set_endpoint_cost(double (*d_e_cost)(	  const  double* ini_states, const  double* fin_states, const  double* param, const  double& t0, const  double& tf, uint phase),
-						   adouble (*ad_e_cost)(const adouble* ini_states, const adouble* fin_states, const adouble* param, const adouble& t0, const adouble& tf, uint phase)) {
+void OCP::set_endpoint_cost(double (*d_e_cost)	(SMatrix< double> ini_states, SMatrix< double> fin_states, SMatrix< double> param, SMatrix< double> t0, SMatrix< double> tf, uint phase),
+						   adouble (*ad_e_cost)	(SMatrix<adouble> ini_states, SMatrix<adouble> fin_states, SMatrix<adouble> param, SMatrix<adouble> t0, SMatrix<adouble> tf, uint phase)) {
 	myadolc_nlp->d_e_cost 	= d_e_cost;
 	myadolc_nlp->ad_e_cost 	= ad_e_cost;
 }

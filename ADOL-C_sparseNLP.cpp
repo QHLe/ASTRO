@@ -29,7 +29,7 @@ MyADOLC_sparseNLP::~MyADOLC_sparseNLP()
 bool  MyADOLC_sparseNLP::ad_eval_obj(Index n, const adouble *x, adouble& obj_value) {
   // return the value of the objective function
 	cout<<"ad_eval_obj\n";
-
+/*
 	adouble *y0		= new adouble [n_states];
 	adouble *yf		= new adouble [n_states];
 	adouble **y 	= new adouble *[n_nodes];
@@ -81,11 +81,20 @@ bool  MyADOLC_sparseNLP::ad_eval_obj(Index n, const adouble *x, adouble& obj_val
 	for (Index i = 0; i<n_nodes-1; i++)
 		obj_value += (ad_l_cost(y[i], u[i], param, t[i], 1)
 					+ ad_l_cost(y[i+1], u[i+1], param, t[i+1], 1))*delta[i]*0.5;
+*/
+	SMatrix<adouble> ad_states(n_nodes,n_states);
+	SMatrix<adouble> ad_controls(n_nodes,n_controls);
+	SMatrix<adouble> ad_param(n_param,1);
+	SMatrix<adouble> ad_t0(1,1), ad_tf(1,1);
+	SMatrix<adouble> ad_x_sf(NLP_x_sf);
 
-	obj_value += ad_e_cost (y0, yf, param, t0, tf, 1);
+	cout<<"here1?\n";
+	NLP_x_2_OCP_var(x,ad_x_sf,ad_states,ad_controls,ad_param,ad_t0,ad_tf);
 
-//	obj_value = obj_value/NLP_obj_sf;
+	cout<<"here3?\n";
+	obj_value = ad_e_cost (states.getRow(1), states.getRow(n_nodes), param, t0, tf, 1);
 
+/*
 	for (Index i = 0; i < n_nodes; i += 1) {
 		delete[] y[i];
 		delete[] u[i];
@@ -97,12 +106,21 @@ bool  MyADOLC_sparseNLP::ad_eval_obj(Index n, const adouble *x, adouble& obj_val
 	delete[] param;
    	delete[] delta;
 	delete[] t;
+	*/
 	cout<<"end ad_eval_obj\n";
 	return true;
 }
 
 bool  MyADOLC_sparseNLP::eval_obj(Index n, const double *x, double& obj_value) {
   // return the value of the objective function
+
+	NLP_x_2_OCP_var(x,NLP_x_sf,states,controls,param,t0,tf);
+/*	t(1)	= t0(1);
+	delta	= (tf-t0)*node_str;
+	for (Index i = 1; i <= n_nodes - 1; i++) {
+		t(i+1)		= t(i) + delta(i);
+		t_m(i)		= (t(i) + t(i+1))/2;
+	}
 
 	double *y0		= new double [n_states];
 	double *yf		= new double [n_states];
@@ -150,15 +168,11 @@ bool  MyADOLC_sparseNLP::eval_obj(Index n, const double *x, double& obj_value) {
 		y0[i] 		= y[0][i];
 		yf[i]		= y[n_nodes - 1][i];
 	}
-	obj_value = 0.0;
-	for (Index i = 0; i<n_nodes-1; i++)
-		obj_value += (d_l_cost(y[i], u[i], param, t[i], 1)
-					+ d_l_cost(y[i+1], u[i+1], param, t[i+1], 1))*delta[i]*0.5;
-
-	obj_value += d_e_cost (y0, yf, param, t0, tf, 1);
+*/
+	obj_value = d_e_cost (states.getRow(1), states.getRow(n_nodes), param, t0, tf, 1);
 
 //	obj_value /= NLP_obj_sf;
-
+/*
 	for (Index i = 0; i < n_nodes; i += 1) {
 		delete[] y[i];
 		delete[] u[i];
@@ -170,7 +184,7 @@ bool  MyADOLC_sparseNLP::eval_obj(Index n, const double *x, double& obj_value) {
 	delete[] param;
    	delete[] delta;
 	delete[] t;
-
+*/
 	return true;
 }
 
@@ -332,9 +346,15 @@ bool  MyADOLC_sparseNLP::eval_constraints(Index n, const double *x, Index m, dou
 		t(i+1)		= t(i) + delta(i);
 		t_m(i)		= (t(i) + t(i+1))/2;
 	}
+	SMatrix<double> derivatives(1,n_states);
+	for (uint i = 1; i <= n_nodes; i++) {
+		d_derv(derivatives, path.getRow(i), states.getRow(i), controls.getRow(i), param, t.getRow(i), 1);
+		for (uint j = 1; j <= n_states; j++)
+			states_dot(j,i) = derivatives(1,j);
+	}
 
-	d_derv(states_dot, path, states, controls, param, t, 1);
-	**/
+
+	*/
 	double *y_start		= new double [n_states];
 	double *y_end		= new double [n_states];
 	double **y 			= new double *[n_nodes];
@@ -562,6 +582,8 @@ void 	MyADOLC_sparseNLP::setNLP_structure(Index n, Index m, SMatrix<uint> struct
 		events.resize(n_events,1);
 		path.resize(n_nodes, n_path);
 		param.resize(n_param,1);
+		t0.resize(1,1);
+		tf.resize(1,1);
 		t.resize(n_nodes,1);
 		delta.resize(n_nodes-1,1);
 		t_m.resize(n_nodes-1,1);

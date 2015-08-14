@@ -128,8 +128,8 @@ public:
 	void 	setguess	(	SMatrix<double> x_guess)	{NLP_x_guess = x_guess;}
 	void	setnodestr	(	SMatrix<double> str) 		{node_str = str;}
 	SMatrix<double> getnode_str() 		{ return node_str;}
-	double 	(*d_e_cost) (const   double* ini_states, const   double* fin_states, const   double* param, const   double& t0, const   double& tf, uint phase);
-	adouble (*ad_e_cost)(const  adouble* ini_states, const  adouble* fin_states, const  adouble* param, const  adouble& t0, const  adouble& tf, uint phase);
+	double (*d_e_cost) 	(SMatrix< double> ini_states, SMatrix< double> fin_states, SMatrix< double> param, SMatrix< double> t0, SMatrix< double> tf, uint phase);
+	adouble (*ad_e_cost)(SMatrix<adouble> ini_states, SMatrix<adouble> fin_states, SMatrix<adouble> param, SMatrix<adouble> t0, SMatrix<adouble> tf, uint phase);
 	double  (*d_l_cost)	(const  double *states, const  double *controls, const  double *param, const  double &time,	uint phase);
 	adouble	(*ad_l_cost)(const adouble *states, const adouble *controls, const adouble *param, const adouble &time,	uint phase);
 	void 	(*d_derv)	( double *states_dot,  double *path, const  double *states, const  double *controls, const  double *param, const  double &time, uint phase);
@@ -287,10 +287,9 @@ void 	MyADOLC_sparseNLP::NLP_x_2_OCP_var(const T* x, SMatrix<T>sf, SMatrix<T>sta
 			param(i)			= x[idx_n]*sf(idx_n+1);
 			idx_n++;
 		}
-
-		t0(1) 					= x(idx_n)*sf(idx_n+1);
+		t0(1) 					= x[idx_n]*sf(idx_n+1);
 		idx_n++;
-		tf(1); 					x(idx_n)*sf(idx_n+1);
+		tf(1)	 				= x[idx_n]*sf(idx_n+1);
 		idx_n++;
 
 		if (idx_n != NLP_n)
@@ -314,9 +313,9 @@ void 	MyADOLC_sparseNLP::NLP_x_2_OCP_var(const T* x, SMatrix<T>sf, SMatrix<T>sta
 			idx_n++;
 		}
 
-		t0(1) 					= x(idx_n);
+		t0(1) 					= x[idx_n]*sf(idx_n+1);
 		idx_n++;
-		tf(1); 					x(idx_n);
+		tf(1)					= x[idx_n]*sf(idx_n+1);
 		idx_n++;
 
 		if (idx_n != NLP_n)

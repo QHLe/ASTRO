@@ -11,14 +11,14 @@ template<class T> T lagrange_cost(	const T *states,
 	return controls[0]*controls[0]/2;
 }
 
-template<class T> T endpoint_cost (	const T* ini_states,
-									const T* fin_states,
-									const T* param,
-									const T& t0,
-									const T& tf,
+template<class T> T endpoint_cost (	SMatrix<T> ini_states,
+									SMatrix<T> fin_states,
+									SMatrix<T> param,
+									SMatrix<T> t0,
+									SMatrix<T> tf,
 									uint phase) {
 
-	return 0;//fin_states[2];
+	return -tf(1);
 }
 
 
@@ -56,7 +56,7 @@ template<class T> void events(	T *events,
 	events [0]	= ini_states[0];
 	events [1]	= ini_states[1];
 	events [2]	= fin_states[0];
-	events [3]	= fin_states[1];
+	events [2]	= fin_states[1];
 
 }
 
@@ -107,14 +107,14 @@ int main(int argv, char* argc[])
 	problem.lb_events(1)	= -0.0;
 	problem.ub_events(1)	= -0.0;
 
-	problem.lb_events(2)	= 1.0;
-	problem.ub_events(2)	= 1.0;
+	problem.lb_events(2)	= 0.0;
+	problem.ub_events(2)	= 0.0;
 	
-	problem.lb_events(3)	= 0.0;
-	problem.ub_events(3)	= 0.0;
+	problem.lb_events(3)	= 1.0;
+	problem.ub_events(3)	= 1.0;
 
-	problem.lb_events(4)	= -1.0;
-	problem.ub_events(4)	= -1.0;
+	problem.lb_events(4)	= -0.0;
+	problem.ub_events(4)	= -0.0;
 /*
 	SVector guess_nodes = linspace(0,1,N_NODES);
 	SVector guess_x1	= linspace(0,1,N_NODES);
