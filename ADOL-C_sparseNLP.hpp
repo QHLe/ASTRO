@@ -178,7 +178,7 @@ private:
 	Index n_nodes, n_states, n_controls, n_param, n_events, n_path, n_phases, n_linkages;
 	APPROX disc_method;
 	SMatrix<double> NLP_x_lb, NLP_x_ub, NLP_x_sf, NLP_x_guess, NLP_g_lb, NLP_g_ub, NLP_g_sf, NLP_lam_guess;
-	double *y0, *yf, **y, **u, *param, *x_sf, tf, t0;
+	double *y0, *yf, **y, **u, *param, *x_sf, tf, t0, **f, **path, *e, *t, *delta;
 
 
 

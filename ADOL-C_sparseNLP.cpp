@@ -95,7 +95,6 @@ bool  MyADOLC_sparseNLP::eval_obj(Index n, const double *x, double& obj_value) {
 
 	NLP_x_2_OCP_var(x,x_sf,y,u,param,t0,tf);
 
-
 	for (Index i = 0; i < n_states; i += 1)
 	{
 		y0[i] 		= y[0][i];
@@ -248,9 +247,6 @@ bool  MyADOLC_sparseNLP::ad_eval_constraints(Index n, const adouble *x, Index m,
 
 bool  MyADOLC_sparseNLP::eval_constraints(Index n, const double *x, Index m, double* g) {
 
-	double **f		 	= new double *[n_nodes];
-	double **path		= new double *[n_nodes];
-	double *e			= new double [n_events];
 
 	double **y_m		= new double *[n_nodes - 1];
 	double **f_m		= new double *[n_nodes - 1];
@@ -258,8 +254,12 @@ bool  MyADOLC_sparseNLP::eval_constraints(Index n, const double *x, Index m, dou
 	double **path_m		= new double *[n_nodes - 1];
 	double *t_m			= new double  [n_nodes - 1];
 
-	double *delta	 	= new double [n_nodes - 1];
-	double *t	 		= new double [n_nodes];
+	for (Index i = 0; i < n_nodes - 1; i++) {
+		y_m[i]		= new double [n_states];
+		f_m[i]		= new double [n_states];
+		path_m[i]	= new double [n_path];
+		u_m[i]		= new double [n_controls];
+	}
 
 	NLP_x_2_OCP_var(x,x_sf,y,u,param,t0,tf);
 
@@ -268,18 +268,6 @@ bool  MyADOLC_sparseNLP::eval_constraints(Index n, const double *x, Index m, dou
 		delta[i]	= (tf-t0)*node_str(i+1);
 		t[i+1]		= t[i] + delta[i];
 		t_m[i]		= (t[i] + t[i+1])/2;
-	}
-
-	for (Index i = 0; i < n_nodes; i += 1) {
-		path[i]		= new double [n_path];
-		f[i] 		= new double [n_states];
-	}
-
-	for (Index i = 0; i < n_nodes - 1; i++) {
-		y_m[i]		= new double [n_states];
-		f_m[i]		= new double [n_states];
-		path_m[i]	= new double [n_path];
-		u_m[i]		= new double [n_controls];
 	}
 
 	for (Index i = 0; i < n_nodes; i += 1)	{
@@ -309,7 +297,6 @@ bool  MyADOLC_sparseNLP::eval_constraints(Index n, const double *x, Index m, dou
 
 
 			for (Index j = 0; j < n_path; j += 1) {
-//				printf("path[%d][%d];\t idx_m = %d\n",i,j,idx_m);
 				g[idx_m]	= 	path[i][j]/NLP_g_sf(idx_m+1) + 1;	//need to be implemented
 				idx_m++;
 			}
@@ -326,7 +313,6 @@ bool  MyADOLC_sparseNLP::eval_constraints(Index n, const double *x, Index m, dou
 		}
 		for (Index i = 0; i < n_events; i += 1)
 		{
-//			printf("events[%d];\t idx_m = %d\n",i,idx_m);
 			g[idx_m]	= 	e[i]/NLP_g_sf(idx_m+1) + 1;
 			idx_m++;
 		}
@@ -334,8 +320,7 @@ bool  MyADOLC_sparseNLP::eval_constraints(Index n, const double *x, Index m, dou
 
 	for (Index i = 0; i < n_nodes; i += 1)
 	{
-		delete[] path[i];
-		delete[] f[i];
+
 		if (i < n_nodes - 1) {
 			delete[] y_m[i];
 			delete[] f_m[i];
@@ -349,12 +334,6 @@ bool  MyADOLC_sparseNLP::eval_constraints(Index n, const double *x, Index m, dou
 	delete[] path_m;
 	delete[] u_m;
 
-	delete[] path;
-
-	delete[] f;
-   	delete[] e;
-   	delete[] delta;
-  	delete[] t;
   	delete[] t_m;
 
 	return true;
@@ -423,15 +402,23 @@ void 	MyADOLC_sparseNLP::setNLP_structure(Index n, Index m, SMatrix<uint> struct
 	n_linkages			= structure(8);
 	disc_method			= method;
 
-	y0		= new double [n_states];
-	yf		= new double [n_states];
-	y 		= new double *[n_nodes];
-	u 		= new double *[n_nodes];
-	param	= new double [n_param];
-	x_sf 	= new double [NLP_n];
+	y0			= new double [n_states];
+	yf			= new double [n_states];
+	y 			= new double *[n_nodes];
+	u 			= new double *[n_nodes];
+	param		= new double [n_param];
+	x_sf 		= new double [NLP_n];
+
+	f		 	= new double *[n_nodes];
+	path		= new double *[n_nodes];
+	e			= new double [n_events];
+	t	 		= new double [n_nodes];
+	delta	 	= new double [n_nodes - 1];
 
 	for (Index i = 0; i < n_nodes; i += 1) {
 		y[i]	= new double [n_states];
+		f[i]	= new double [n_states];
+		path[i] = new double [n_path];
 		u[i]	= new double [n_controls];
 	}
 }
@@ -591,6 +578,8 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 	for (Index i = 0; i < n_nodes; i += 1) {
 		delete[] y[i];
 		delete[] u[i];
+		delete[] path[i];
+		delete[] f[i];
 	}
 
 	delete[] y0;
@@ -600,6 +589,11 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 	delete[] param;
 	delete[] x_sf;
 
+	delete[] path;
+	delete[] f;
+   	delete[] e;
+  	delete[] t;
+  	delete[] delta;
 	delete[] x_lam;
 
 	free(rind_g);
