@@ -46,8 +46,17 @@ OCP::~OCP() {
 }
 
 ApplicationReturnStatus OCP::set_OCP_structure() {
-	Index NLP_n = (n_states + n_controls)*n_nodes + n_param + 2;
-	Index NLP_m = ((n_nodes - 1)*n_states + n_events + n_path*n_nodes);
+
+	Index NLP_n, NLP_m;
+
+	if(config.disc_method == trapezoidal) {
+		NLP_n = (n_states + n_controls)*n_nodes + n_param + 2;
+		NLP_m = ((n_nodes - 1)*n_states + n_events + n_path*n_nodes);
+	}
+	else {
+		NLP_n = (n_states + n_controls)*n_nodes + n_param + 2;
+		NLP_m = ((n_nodes - 1)*n_states + n_events + n_path*n_nodes);
+	}
 
 	SMatrix<uint> structure(8,1);
 	structure(1) = n_phases;
@@ -59,7 +68,7 @@ ApplicationReturnStatus OCP::set_OCP_structure() {
 	structure(7) = n_path;
 	structure(8) = n_linkages;
 
-	myadolc_nlp->setNLP_structure(NLP_n, NLP_m, structure);
+	myadolc_nlp->setNLP_structure(NLP_n, NLP_m, structure, config.disc_method);
 
 	if (n_states > 0) {
 		lb_states.resize(n_states,1);
@@ -561,8 +570,8 @@ void OCP::auto_guess_gen() {
 	}
 }
 
-void OCP::set_endpoint_cost(double (*d_e_cost)(	  const  double* ini_states, const  double* fin_states, const  double* param, const  double& t0, const  double& tf, uint phase),
-						   adouble (*ad_e_cost)(const adouble* ini_states, const adouble* fin_states, const adouble* param, const adouble& t0, const adouble& tf, uint phase)) {
+void OCP::set_endpoint_cost(double (*d_e_cost)	(SMatrix< double> ini_states, SMatrix< double> fin_states, SMatrix< double> param, SMatrix< double> t0, SMatrix< double> tf, uint phase),
+						   adouble (*ad_e_cost)	(SMatrix<adouble> ini_states, SMatrix<adouble> fin_states, SMatrix<adouble> param, SMatrix<adouble> t0, SMatrix<adouble> tf, uint phase)) {
 	myadolc_nlp->d_e_cost 	= d_e_cost;
 	myadolc_nlp->ad_e_cost 	= ad_e_cost;
 }
@@ -591,10 +600,11 @@ Guess::~Guess() {
 }
 
 Config::Config() {
-	max_iter 	= 5000;
-	NLP_solver 	= ma27;
-	warmstart 	= false;
-	NLP_tol		= 1e-6;
-	opt_oder	= first_order;
-	with_mgl	= false;
+	max_iter 		= 5000;
+	NLP_solver 		= ma27;
+	warmstart 		= false;
+	NLP_tol			= 1e-6;
+	opt_oder		= first_order;
+	with_mgl		= false;
+	disc_method 	= Hermite_Simpson;
 }

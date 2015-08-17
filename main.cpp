@@ -11,14 +11,16 @@ template<class T> T lagrange_cost(	const T *states,
 	return 0;// controls[0]*controls[0]/2;
 }
 
-template<class T> T endpoint_cost (	const T* ini_states,
-									const T* fin_states,
-									const T* param,
-									const T& t0,
-									const T& tf,
+template<class T> T endpoint_cost (	SMatrix<T> ini_states,
+									SMatrix<T> fin_states,
+									SMatrix<T> param,
+									SMatrix<T> t0,
+									SMatrix<T> tf,
 									uint phase) {
 
+
 	return tf;//fin_states[2];
+
 }
 
 
@@ -56,7 +58,7 @@ template<class T> void events(	T *events,
 	events [0]	= ini_states[0];
 	events [1]	= ini_states[1];
 	events [2]	= fin_states[0];
-	events [3]	= fin_states[1];
+	events [2]	= fin_states[1];
 
 }
 
