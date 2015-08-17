@@ -1,7 +1,7 @@
 #include "OCP.hpp"
 #include "ADOL-C_sparseNLP.hpp"
 
-#define N_NODES		150
+#define N_NODES		300
 
 template<class T> T lagrange_cost(	const T *states,
 									const T *controls,
@@ -11,11 +11,11 @@ template<class T> T lagrange_cost(	const T *states,
 	return 0;// controls[0]*controls[0]/2;
 }
 
-template<class T> T endpoint_cost (	SMatrix<T> ini_states,
-									SMatrix<T> fin_states,
-									SMatrix<T> param,
-									SMatrix<T> t0,
-									SMatrix<T> tf,
+template<class T> T endpoint_cost (	const T* ini_states,
+									const T* fin_states,
+									const T* param,
+									const T& t0,
+									const T& tf,
 									uint phase) {
 
 
@@ -88,6 +88,7 @@ int main(int argv, char* argc[])
 	problem.config.NLP_tol		= 1e-8;
 	problem.config.opt_oder		= first_order;
 	problem.config.with_mgl		= false;
+	problem.config.disc_method	= Hermite_Simpson;
 
 	status = problem.set_OCP_structure();
 

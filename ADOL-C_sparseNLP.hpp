@@ -116,7 +116,7 @@ public:
 	template<class T>
 	void 	OCP_var_2_NLP_g(SMatrix<T>defects, SMatrix<T>events, SMatrix<T>path, SMatrix<T>linkages, T* g);
 	template<class T>
-	void 	NLP_x_2_OCP_var(const T* x, SMatrix<T>&sf, SMatrix<T>&states, SMatrix<T>&controls, SMatrix<T>&param, SMatrix<T>&t0, SMatrix<T>&tf);
+	void 	NLP_x_2_OCP_var(const T* x, const T* sf, T** states, T** controls, T* param, T& t0, T& tf);
 	template<class T>
 	void 	NLP_g_2_OCP_var(const T* g, SMatrix<T>sf, SMatrix<T>defects, SMatrix<T>events, SMatrix<T>path, SMatrix<T>linkages );
 	Index 	getNLP_n	() 				{ return NLP_n;}
@@ -128,8 +128,8 @@ public:
 	void 	setguess	(	SMatrix<double> x_guess)	{NLP_x_guess = x_guess;}
 	void	setnodestr	(	SMatrix<double> str) 		{node_str = str;}
 	SMatrix<double> getnode_str() 		{ return node_str;}
-	double (*d_e_cost) 	(SMatrix< double> ini_states, SMatrix< double> fin_states, SMatrix< double> param, SMatrix< double> t0, SMatrix< double> tf, uint phase);
-	adouble (*ad_e_cost)(SMatrix<adouble> ini_states, SMatrix<adouble> fin_states, SMatrix<adouble> param, SMatrix<adouble> t0, SMatrix<adouble> tf, uint phase);
+	double (*d_e_cost) 	(const  double* ini_states, const  double* fin_states, const  double* param, const  double& t0, const  double& tf, uint phase);
+	adouble (*ad_e_cost)(const adouble* ini_states, const adouble* fin_states, const adouble* param, const adouble& t0, const adouble& tf, uint phase);
 	double  (*d_l_cost)	(const  double *states, const  double *controls, const  double *param, const  double &time,	uint phase);
 	adouble	(*ad_l_cost)(const adouble *states, const adouble *controls, const adouble *param, const adouble &time,	uint phase);
 	void 	(*d_derv)	( double *states_dot,  double *path, const  double *states, const  double *controls, const  double *param, const  double &time, uint phase);
@@ -167,7 +167,7 @@ private:
 	double *hessval;             /* values */
 
 	int nnz_jac;
-	int nnz_L;
+	int nnz_L;//
 	int nnz_L_total;
 	int options_g[4];
 	int options_L[2];
@@ -178,7 +178,10 @@ private:
 	Index n_nodes, n_states, n_controls, n_param, n_events, n_path, n_phases, n_linkages;
 	APPROX disc_method;
 	SMatrix<double> NLP_x_lb, NLP_x_ub, NLP_x_sf, NLP_x_guess, NLP_g_lb, NLP_g_ub, NLP_g_sf, NLP_lam_guess;
-	SMatrix<double>	states, states_dot, controls, param, events, path, t0, tf, t, t_m, delta;
+	double *y0, *yf, **y, **u, *param, *x_sf, tf, t0;
+
+
+
 	SMatrix<double> node_str;
 	SMatrix<uint> OCP_structure;
 	SMatrix<double> NLP_x_opt, NLP_lam_opt;
@@ -269,57 +272,57 @@ void 	MyADOLC_sparseNLP::OCP_var_2_NLP_g(SMatrix<T>defects, SMatrix<T>events, SM
 }
 
 template<class T>
-void 	MyADOLC_sparseNLP::NLP_x_2_OCP_var(const T* x, SMatrix<T>&sf, SMatrix<T>&states, SMatrix<T>&controls, SMatrix<T>&param, SMatrix<T>&t0, SMatrix<T>&tf) {
+void 	MyADOLC_sparseNLP::NLP_x_2_OCP_var(const T* x, const T* sf, T** states, T** controls, T* param, T& t0, T& tf) {
 	if (disc_method == trapezoidal) {
 		Index idx_n = 0;
-		for (Index i = 1; i <= n_nodes; i += 1)	{
-			for (Index j = 1; j <= n_states; j += 1){
-				states(i,j) 	= x[idx_n]*sf(idx_n+1);
+		for (Index i = 0; i < n_nodes; i += 1)	{
+			for (Index j = 0; j < n_states; j += 1){
+				states[i][j] 	= x[idx_n]*sf[idx_n];
 				idx_n++;
 			}
-			for (Index j = 1; j <= n_controls; j += 1){
-				controls(i,j) 	= x[idx_n]*sf(idx_n+1);
+			for (Index j = 0; j < n_controls; j += 1){
+				controls[i][j] 	= x[idx_n]*sf[idx_n];
 				idx_n++;
 			}
 		}
-		for (Index i = 1; i <= n_param; i += 1)
+		for (Index i = 0; i < n_param; i += 1)
 		{
-			param(i)			= x[idx_n]*sf(idx_n+1);
+			param[i]			= x[idx_n]*sf[idx_n];
 			idx_n++;
 		}
-		t0(1) 					= x[idx_n]*sf(idx_n+1);
+		t0 						= x[idx_n]*sf[idx_n];
 		idx_n++;
-		tf(1)	 				= x[idx_n]*sf(idx_n+1);
+		tf		 				= x[idx_n]*sf[idx_n];
 		idx_n++;
 
 		if (idx_n != NLP_n)
-				printf("something went wrong in NLP_x_2_OCP_var\n");
+			printf("something went wrong in NLP_x_2_OCP_var\n");
 	}
-	else {
+	else if (disc_method == Hermite_Simpson){
 		Index idx_n = 0;
-		for (Index i = 1; i <= n_nodes; i += 1)	{
-			for (Index j = 1; j <= n_states; j += 1){
-				states(i,j) 	= x[idx_n]*sf(idx_n+1);
+		for (Index i = 0; i < n_nodes; i += 1)	{
+			for (Index j = 0; j < n_states; j += 1){
+				states[i][j] 	= x[idx_n]*sf[idx_n];
 				idx_n++;
 			}
-			for (Index j = 1; j <= n_controls; j += 1){
-				controls(i,j) 	= x[idx_n]*sf(idx_n+1);
+			for (Index j = 0; j < n_controls; j += 1){
+				controls[i][j] 	= x[idx_n]*sf[idx_n];
 				idx_n++;
 			}
 		}
-		for (Index i = 1; i <= n_param; i += 1)
+		for (Index i = 0; i < n_param; i += 1)
 		{
-			param(i)			= x[idx_n]*sf(idx_n+1);
+			param[i]			= x[idx_n]*sf[idx_n];
 			idx_n++;
 		}
 
-		t0(1) 					= x[idx_n]*sf(idx_n+1);
+		t0 					= x[idx_n]*sf[idx_n];
 		idx_n++;
-		tf(1)					= x[idx_n]*sf(idx_n+1);
+		tf					= x[idx_n]*sf[idx_n];
 		idx_n++;
 
 		if (idx_n != NLP_n)
-				printf("something went wrong in NLP_x_2_OCP_var\n");
+			printf("something went wrong in NLP_x_2_OCP_var\n");
 	}
 }
 
