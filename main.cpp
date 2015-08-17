@@ -8,7 +8,7 @@ template<class T> T lagrange_cost(	const T *states,
 									const T *param,
 									const T &time,
 									uint phase) {
-	return controls[0]*controls[0]/2;
+	return 0;// controls[0]*controls[0]/2;
 }
 
 template<class T> T endpoint_cost (	const T* ini_states,
@@ -18,7 +18,7 @@ template<class T> T endpoint_cost (	const T* ini_states,
 									const T& tf,
 									uint phase) {
 
-	return 0;//fin_states[2];
+	return tf;//fin_states[2];
 }
 
 
@@ -83,7 +83,7 @@ int main(int argv, char* argc[])
 	problem.config.max_iter 	= 5000;
 	problem.config.NLP_solver 	= ma27;
 	problem.config.warmstart 	= false;
-	problem.config.NLP_tol		= 1e-6;
+	problem.config.NLP_tol		= 1e-8;
 	problem.config.opt_oder		= first_order;
 	problem.config.with_mgl		= false;
 
@@ -95,26 +95,26 @@ int main(int argv, char* argc[])
 	problem.ub_states(1)	= 2.0;
 	problem.ub_states(2)	= 10.0;
 
-	problem.lb_controls(1)	=-5.0;
-	problem.ub_controls(1)	= 5.0;
+	problem.lb_controls(1)	=-1.0;
+	problem.ub_controls(1)	= 1.0;
 
 	problem.lb_t0 			= 0.0;
 	problem.ub_t0 			= 0.0;
 
 	problem.lb_tf			= 1.0;
-	problem.ub_tf			= 1.0;
+	problem.ub_tf			= 10.0;
 
 	problem.lb_events(1)	= -0.0;
 	problem.ub_events(1)	= -0.0;
 
-	problem.lb_events(2)	= 1.0;
-	problem.ub_events(2)	= 1.0;
+	problem.lb_events(2)	= 0.0;
+	problem.ub_events(2)	= 0.0;
 	
-	problem.lb_events(3)	= 0.0;
-	problem.ub_events(3)	= 0.0;
+	problem.lb_events(3)	= 1.0;
+	problem.ub_events(3)	= 1.0;
 
-	problem.lb_events(4)	= -1.0;
-	problem.ub_events(4)	= -1.0;
+	problem.lb_events(4)	= -0.0;
+	problem.ub_events(4)	= -0.0;
 /*
 	SVector guess_nodes = linspace(0,1,N_NODES);
 	SVector guess_x1	= linspace(0,1,N_NODES);
