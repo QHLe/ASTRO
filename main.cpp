@@ -1,7 +1,7 @@
 #include "OCP.hpp"
 #include "ADOL-C_sparseNLP.hpp"
 
-#define N_NODES		150
+#define N_NODES		3
 
 template<class T> T lagrange_cost(	const T *states,
 									const T *controls,

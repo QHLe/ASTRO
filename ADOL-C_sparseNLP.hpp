@@ -114,7 +114,7 @@ public:
 	template<class T>
 	void 	OCP_var_2_NLP_x(SMatrix<T>states, SMatrix<T>controls, SMatrix<T>param, SMatrix<T>t0, SMatrix<T>tf, T* x);
 	template<class T>
-	void 	OCP_var_2_NLP_g(SMatrix<T>defects, SMatrix<T>events, SMatrix<T>path, SMatrix<T>linkages, T* g);
+	void 	OCP_var_2_NLP_g( T*const* path, T*const* defects, const T* events, T* g, const T* g_sf);
 	template<class T>
 	void 	NLP_x_2_OCP_var(const T* x, const T* sf, T** states, T** controls, T* param, T& t0, T& tf);
 	template<class T>
@@ -178,7 +178,7 @@ private:
 	Index n_nodes, n_states, n_controls, n_param, n_events, n_path, n_phases, n_linkages;
 	APPROX disc_method;
 	SMatrix<double> NLP_x_lb, NLP_x_ub, NLP_x_sf, NLP_x_guess, NLP_g_lb, NLP_g_ub, NLP_g_sf, NLP_lam_guess;
-	double *y0, *yf, **y, **u, *param, *x_sf, tf, t0, **f, **path, *e, *t, *delta;
+	double *y0, *yf, **y, **u, *param, *x_sf, *g_sf, tf, t0, **f, **path, **defects, *e, *t, *delta;
 
 
 
@@ -248,25 +248,33 @@ void 	MyADOLC_sparseNLP::OCP_var_2_NLP_x(SMatrix<T>states, SMatrix<T>controls, S
 }
 
 template<class T>
-void 	MyADOLC_sparseNLP::OCP_var_2_NLP_g(SMatrix<T>defects, SMatrix<T>events, SMatrix<T>path, SMatrix<T>linkages, T* g) {
+void 	MyADOLC_sparseNLP::OCP_var_2_NLP_g(T*const* path, T*const* defects, const T* events, T* g, const T* g_sf) {
+
 	Index idx_m = 0;
-	for (Index i = 1; i <= n_nodes; i += 1) {
-		for (Index j = 1; j <= n_path; j += 1) {
-			g[idx_m]	= 	path(i,j);///NLP_g_sf(idx_m+1) + 1;	//need to be implemented
+
+	for (Index i = 0; i < n_nodes; i += 1) {
+		for (Index j = 0; j < n_path; j += 1) {
+			g[idx_m]	= 	path[i][j]/g_sf[idx_m] + 1;
 			idx_m++;
 		}
-		for (Index j = 1; j <= n_states; j += 1) {
+		for (Index j = 0; j < n_states; j += 1) {
 			if(i < n_nodes - 1) {
-				g[idx_m]	= 	defects(i,j);///(NLP_g_sf(idx_m+1)) + 1;
+//					printf("defect[%d][%d];\t idx_m = %d\n",i,j,idx_m);
+				//trapezoidal
+//					g[idx_m]	= 	y[i+1][j] - y[i][j] - delta[i]/2.0*(f[i][j] + f[i+1][j])/(NLP_g_sf(idx_m+1)) + 1;
+				//hermite simpson
+				g[idx_m] 		= 	defects[i][j]/g_sf[idx_m] + 1;
 				idx_m++;
 			}
 		}
 	}
-	for (Index i = 1; i <= n_events; i += 1)
+	for (Index i = 0; i < n_events; i += 1)
 	{
-		g[idx_m]	= 	events(i);///NLP_g_sf(idx_m+1) + 1;
+//			printf("events[%d];\t idx_m = %d\n",i,idx_m);
+		g[idx_m]	= 	events[i]/g_sf[idx_m] + 1;
 		idx_m++;
 	}
+
 	if (idx_m !=NLP_m)
 		printf("something went wrong in OCP_var_2_NLP_g\n");
 }

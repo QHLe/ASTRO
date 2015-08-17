@@ -46,7 +46,7 @@ OCP::~OCP() {
 }
 
 ApplicationReturnStatus OCP::set_OCP_structure() {
-
+	printf("Setting structure \n");
 	Index NLP_n, NLP_m;
 
 	if(config.disc_method == trapezoidal) {
@@ -113,11 +113,11 @@ ApplicationReturnStatus OCP::set_OCP_structure() {
   	if (status != Solve_Succeeded) {
   		printf("\n\n*** Error during initialization!\n");
   	}
+	printf("Structure successful set\n");
   	return status;
 }
 
 ApplicationReturnStatus OCP::NLP_solve() {
-
 	OCPBounds2NLPBounds();
 
 	mglGraph* gr 	= new mglGraph;
@@ -408,7 +408,7 @@ void OCP::determine_scaling_factors() {
 
 void OCP::OCPBounds2NLPBounds() {
 	determine_scaling_factors();
-
+	printf("Transcribing bounces to NLP bounces\n");
 	Index NLP_n 		= myadolc_nlp->getNLP_n();
 	Index NLP_m 		= myadolc_nlp->getNLP_m();
 	SMatrix<double> x_l(NLP_n,1);
@@ -524,6 +524,7 @@ void OCP::OCPBounds2NLPBounds() {
 	myadolc_nlp->setguess(x_guess);
 	myadolc_nlp->setnodestr(node_str);
 
+	printf("NLP bounces successful set\n");
 }
 
 void OCP::auto_guess_gen() {
