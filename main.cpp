@@ -58,7 +58,7 @@ template<class T> void events(	T *events,
 	events [0]	= ini_states[0];
 	events [1]	= ini_states[1];
 	events [2]	= fin_states[0];
-	events [2]	= fin_states[1];
+	events [3]	= fin_states[1];
 
 }
 

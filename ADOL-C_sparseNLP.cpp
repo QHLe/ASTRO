@@ -92,7 +92,7 @@ bool  MyADOLC_sparseNLP::ad_eval_obj(Index n, const adouble *x, adouble& obj_val
 	NLP_x_2_OCP_var(x,ad_x_sf,ad_states,ad_controls,ad_param,ad_t0,ad_tf);
 
 	cout<<"here3?\n";
-	obj_value = ad_e_cost (states.getRow(1), states.getRow(n_nodes), param, t0, tf, 1);
+	obj_value = ad_e_cost (ad_states.getRow(1), ad_states.getRow(n_nodes), ad_param, ad_t0, ad_tf, 1);
 
 /*
 	for (Index i = 0; i < n_nodes; i += 1) {
@@ -860,7 +860,7 @@ void MyADOLC_sparseNLP::generate_tapes(Index n, Index m, Index& nnz_jac_g, Index
 	gradient(tag_f,n,xp,grad_f);
 
 	double enorm_grad_f = 0;
-	for (uint i = 0; i < n ; i++)
+	for (Index i = 0; i < n ; i++)
 		enorm_grad_f = enorm_grad_f + grad_f[i]*grad_f[i];
 	enorm_grad_f = sqrt(enorm_grad_f);
 	printf("norm_grad_f = %e\n",enorm_grad_f);

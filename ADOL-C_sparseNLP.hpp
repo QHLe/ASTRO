@@ -116,7 +116,7 @@ public:
 	template<class T>
 	void 	OCP_var_2_NLP_g(SMatrix<T>defects, SMatrix<T>events, SMatrix<T>path, SMatrix<T>linkages, T* g);
 	template<class T>
-	void 	NLP_x_2_OCP_var(const T* x, SMatrix<T>sf, SMatrix<T>states, SMatrix<T>controls, SMatrix<T>param, SMatrix<T>t0, SMatrix<T>tf);
+	void 	NLP_x_2_OCP_var(const T* x, SMatrix<T>&sf, SMatrix<T>&states, SMatrix<T>&controls, SMatrix<T>&param, SMatrix<T>&t0, SMatrix<T>&tf);
 	template<class T>
 	void 	NLP_g_2_OCP_var(const T* g, SMatrix<T>sf, SMatrix<T>defects, SMatrix<T>events, SMatrix<T>path, SMatrix<T>linkages );
 	Index 	getNLP_n	() 				{ return NLP_n;}
@@ -269,7 +269,7 @@ void 	MyADOLC_sparseNLP::OCP_var_2_NLP_g(SMatrix<T>defects, SMatrix<T>events, SM
 }
 
 template<class T>
-void 	MyADOLC_sparseNLP::NLP_x_2_OCP_var(const T* x, SMatrix<T>sf, SMatrix<T>states, SMatrix<T>controls, SMatrix<T>param, SMatrix<T>t0, SMatrix<T>tf) {
+void 	MyADOLC_sparseNLP::NLP_x_2_OCP_var(const T* x, SMatrix<T>&sf, SMatrix<T>&states, SMatrix<T>&controls, SMatrix<T>&param, SMatrix<T>&t0, SMatrix<T>&tf) {
 	if (disc_method == trapezoidal) {
 		Index idx_n = 0;
 		for (Index i = 1; i <= n_nodes; i += 1)	{
