@@ -410,14 +410,7 @@ void OCP::OCPBounds2NLPBounds() {
 	printf("Transcribing bounces to NLP bounces\n");
 	Index NLP_n 		= myadolc_nlp->getNLP_n();
 	Index NLP_m 		= myadolc_nlp->getNLP_m();
-	SMatrix<double> x_l(NLP_n,1);
-	SMatrix<double> x_u(NLP_n,1);
-	SMatrix<double> g_l(NLP_m,1);
-	SMatrix<double> g_u(NLP_m,1);
-	SMatrix<double> x_guess(NLP_n,1);
 	SMatrix<double> node_str(n_nodes - 1,1);
-	SMatrix<double> sf_NLP_x(NLP_n,1);
-	SMatrix<double> sf_NLP_g(NLP_m,1);
 
 	if ((guess.nodes.getRowDim() != (uint)n_nodes) 	||
 		(guess.param.getRowDim() != (uint)n_param) 	||
@@ -441,16 +434,26 @@ void OCP::OCPBounds2NLPBounds() {
 	double* d_g_sf		= new double[NLP_m];
 
 	double** states		= new double* [n_nodes];
-	double** controls	= new double* [n_nodes];
+	double** controls;
 	double* param		= new double [n_param];
 
 	double** path		= new double* [n_nodes];
 	double** defects	= new double* [n_nodes-1];
 	double* events		= new double [n_events];
 
+	if(config.disc_method == Hermite_Simpson) {
+		controls	= new double* [2*n_nodes - 1];
+		for (Index i = 0; i < 2*n_nodes - 1; i++)
+			controls[i]		= new double [n_controls];
+	}
+	else {
+		controls	= new double* [n_nodes];
+		for (Index i = 0; i < n_nodes; i++)
+			controls[i]		= new double [n_controls];
+	}
+
 	for (Index i = 0; i < n_nodes; i++){
 		states[i]		= new double [n_states];
-		controls[i]		= new double [n_controls];
 		path[i]			= new double [n_path];
 		if (i < n_nodes - 1)
 			defects[i]	= new double [n_states];
@@ -465,12 +468,22 @@ void OCP::OCPBounds2NLPBounds() {
 		d_g_sf[i] = 1.0;
 	}
 
+
 	for (Index i = 0; i < n_nodes; i++) {
 		for (Index j = 0; j < n_states; j++) {
 			states[i][j] = sf_x(j+1);
 		}
-		for (Index j = 0; j < n_controls; j++) {
-			controls[i][j] = sf_u(j+1);
+		if (config.disc_method == Hermite_Simpson) {
+			for (Index j = 0; j < n_controls; j++) {
+				controls[2*i][j] = sf_u(j+1);
+				if (i < n_nodes - 1)
+					controls[2*i+1][j] = sf_u(j+1);
+			}
+		}
+		else {
+			for (Index j = 0; j < n_controls; j++) {
+				controls[i][j] = sf_u(j+1);
+			}
 		}
 	}
 
@@ -487,8 +500,17 @@ void OCP::OCPBounds2NLPBounds() {
 		for (Index j = 0; j < n_states; j++) {
 			states[i][j] = lb_states(j+1);
 		}
-		for (Index j = 0; j < n_controls; j++) {
-			controls[i][j] = lb_controls(j+1);
+		if (config.disc_method == Hermite_Simpson) {
+			for (Index j = 0; j < n_controls; j++) {
+				controls[2*i][j] = lb_controls(j+1);
+				if (i < n_nodes - 1)
+					controls[2*i+1][j] = lb_controls(j+1);
+			}
+		}
+		else {
+			for (Index j = 0; j < n_controls; j++) {
+				controls[i][j] = lb_controls(j+1);
+			}
 		}
 	}
 
@@ -505,8 +527,17 @@ void OCP::OCPBounds2NLPBounds() {
 		for (Index j = 0; j < n_states; j++) {
 			states[i][j] = ub_states(j+1);
 		}
-		for (Index j = 0; j < n_controls; j++) {
-			controls[i][j] = ub_controls(j+1);
+		if (config.disc_method == Hermite_Simpson) {
+			for (Index j = 0; j < n_controls; j++) {
+				controls[2*i][j] = ub_controls(j+1);
+				if (i < n_nodes - 1)
+					controls[2*i+1][j] = ub_controls(j+1);
+			}
+		}
+		else {
+			for (Index j = 0; j < n_controls; j++) {
+				controls[i][j] = ub_controls(j+1);
+			}
 		}
 	}
 
@@ -523,8 +554,17 @@ void OCP::OCPBounds2NLPBounds() {
 		for (Index j = 0; j < n_states; j++) {
 			states[i][j] = guess.x(i+1,j+1);
 		}
-		for (Index j = 0; j < n_controls; j++) {
-			controls[i][j] = guess.u(i+1,j+1);
+		if (config.disc_method == Hermite_Simpson) {
+			for (Index j = 0; j < n_controls; j++) {
+				controls[2*i][j] = guess.u(i+1,j+1);
+				if (i < n_nodes - 1)
+					controls[2*i+1][j] = guess.u(i+1,j+1);
+			}
+		}
+		else {
+			for (Index j = 0; j < n_controls; j++) {
+				controls[i][j] = guess.u(i+1,j+1);
+			}
 		}
 	}
 
@@ -605,6 +645,31 @@ void OCP::OCPBounds2NLPBounds() {
 	myadolc_nlp->setSF(d_x_sf, d_g_sf);
 	myadolc_nlp->setguess(d_x_guess);
 	myadolc_nlp->setnodestr(node_str);
+
+	for (Index i = 0; i < n_nodes; i++){
+		delete[] states[i];
+		delete[] path[i];
+		if (i < n_nodes - 1)
+			delete[] defects[i];
+	}
+
+	if (config.disc_method == Hermite_Simpson){
+		for (Index i = 0; i < 2*n_nodes - 1; i++){
+			delete[] controls[i];
+		}
+	}
+	else {
+		for (Index i = 0; i < n_nodes; i++){
+			delete[] controls[i];
+		}
+	}
+
+	delete[] states;
+	delete[] controls;
+	delete[] param;
+	delete[] path;
+	delete[] defects;
+	delete[] events;
 
 	printf("NLP bounces successful set\n");
 }
@@ -689,5 +754,5 @@ Config::Config() {
 	NLP_tol			= 1e-6;
 	opt_oder		= first_order;
 	with_mgl		= false;
-	disc_method 	= Hermite_Simpson;
+	disc_method 	= trapezoidal;
 }

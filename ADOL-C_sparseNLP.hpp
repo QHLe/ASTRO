@@ -192,17 +192,22 @@ void 	MyADOLC_sparseNLP::OCP_var_2_NLP_x(T*const* states, T*const* controls, con
 
 	Index idx = 0;
 
-	if (disc_method == trapezoidal) {
+	if (disc_method == Hermite_Simpson) {
 		for (Index i = 0; i < n_nodes; i += 1) {
 			for (Index j = 0; j < n_states; j += 1) {
 				x[idx]		= states[i][j]/sf[idx];
 				idx++;
 			}
 			for (Index j = 0; j < n_controls; j += 1) {
-				x[idx]		= controls[i][j]/sf[idx];
+				x[idx]		= controls[2*i][j]/sf[idx];
 				idx++;
+				if (i < n_nodes - 1) {
+					x[idx]		= controls[2*i+1][j]/sf[idx];
+					idx++;
+				}
 			}
 		}
+
 		for (Index i = 0; i < n_param; i += 1)	{
 			x[idx]		= param[i]/sf[idx];
 			idx++;
@@ -210,15 +215,13 @@ void 	MyADOLC_sparseNLP::OCP_var_2_NLP_x(T*const* states, T*const* controls, con
 
 		x[idx]			= t0/sf[idx];
 		idx++;
-
 		x[idx]			= tf/sf[idx];
 		idx++;
 
 		if (idx != NLP_n)
 			printf("something went wrong in OCP_var_2_NLP_x\n");
-
 	}
-	else if (disc_method == Hermite_Simpson) {
+	else {
 		for (Index i = 0; i < n_nodes; i += 1) {
 			for (Index j = 0; j < n_states; j += 1) {
 				x[idx]		= states[i][j]/sf[idx];
@@ -229,7 +232,6 @@ void 	MyADOLC_sparseNLP::OCP_var_2_NLP_x(T*const* states, T*const* controls, con
 				idx++;
 			}
 		}
-
 		for (Index i = 0; i < n_param; i += 1)	{
 			x[idx]		= param[i]/sf[idx];
 			idx++;
@@ -237,11 +239,13 @@ void 	MyADOLC_sparseNLP::OCP_var_2_NLP_x(T*const* states, T*const* controls, con
 
 		x[idx]			= t0/sf[idx];
 		idx++;
+
 		x[idx]			= tf/sf[idx];
 		idx++;
 
 		if (idx != NLP_n)
 			printf("something went wrong in OCP_var_2_NLP_x\n");
+
 	}
 }
 
@@ -257,10 +261,6 @@ void 	MyADOLC_sparseNLP::OCP_var_2_NLP_g(T*const* path, T*const* defects, const 
 		}
 		for (Index j = 0; j < n_states; j += 1) {
 			if(i < n_nodes - 1) {
-//					printf("defect[%d][%d];\t idx_m = %d\n",i,j,idx_m);
-				//trapezoidal
-//					g[idx_m]	= 	y[i+1][j] - y[i][j] - delta[i]/2.0*(f[i][j] + f[i+1][j])/(NLP_g_sf(idx_m+1)) + 1;
-				//hermite simpson
 				g[idx_m] 		= 	defects[i][j]/g_sf[idx_m];
 				idx_m++;
 			}
@@ -278,8 +278,39 @@ void 	MyADOLC_sparseNLP::OCP_var_2_NLP_g(T*const* path, T*const* defects, const 
 
 template<class T>
 void 	MyADOLC_sparseNLP::NLP_x_2_OCP_var(const T* x, const T* sf, T** states, T** controls, T* param, T& t0, T& tf) {
-	if (disc_method == trapezoidal) {
-		Index idx_n = 0;
+
+	Index idx_n = 0;
+
+	if (disc_method == Hermite_Simpson){
+		for (Index i = 0; i < n_nodes; i += 1)	{
+			for (Index j = 0; j < n_states; j += 1){
+				states[i][j] 	= x[idx_n]*sf[idx_n];
+				idx_n++;
+			}
+			for (Index j = 0; j < n_controls; j += 1){
+				controls[2*i][j] 	= x[idx_n]*sf[idx_n];
+				idx_n++;
+				if (i < n_nodes - 1) {
+					controls[2*i+1][j] 	= x[idx_n]*sf[idx_n];
+					idx_n++;
+				}
+			}
+		}
+		for (Index i = 0; i < n_param; i += 1)
+		{
+			param[i]			= x[idx_n]*sf[idx_n];
+			idx_n++;
+		}
+
+		t0 					= x[idx_n]*sf[idx_n];
+		idx_n++;
+		tf					= x[idx_n]*sf[idx_n];
+		idx_n++;
+
+		if (idx_n != NLP_n)
+			printf("something went wrong in NLP_x_2_OCP_var\n");
+	}
+	else {
 		for (Index i = 0; i < n_nodes; i += 1)	{
 			for (Index j = 0; j < n_states; j += 1){
 				states[i][j] 	= x[idx_n]*sf[idx_n];
@@ -298,32 +329,6 @@ void 	MyADOLC_sparseNLP::NLP_x_2_OCP_var(const T* x, const T* sf, T** states, T*
 		t0 						= x[idx_n]*sf[idx_n];
 		idx_n++;
 		tf		 				= x[idx_n]*sf[idx_n];
-		idx_n++;
-
-		if (idx_n != NLP_n)
-			printf("something went wrong in NLP_x_2_OCP_var\n");
-	}
-	else if (disc_method == Hermite_Simpson){
-		Index idx_n = 0;
-		for (Index i = 0; i < n_nodes; i += 1)	{
-			for (Index j = 0; j < n_states; j += 1){
-				states[i][j] 	= x[idx_n]*sf[idx_n];
-				idx_n++;
-			}
-			for (Index j = 0; j < n_controls; j += 1){
-				controls[i][j] 	= x[idx_n]*sf[idx_n];
-				idx_n++;
-			}
-		}
-		for (Index i = 0; i < n_param; i += 1)
-		{
-			param[i]			= x[idx_n]*sf[idx_n];
-			idx_n++;
-		}
-
-		t0 					= x[idx_n]*sf[idx_n];
-		idx_n++;
-		tf					= x[idx_n]*sf[idx_n];
 		idx_n++;
 
 		if (idx_n != NLP_n)
