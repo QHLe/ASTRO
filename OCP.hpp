@@ -46,8 +46,7 @@ public:
 	~OCP();
 
 	Index n_nodes, n_states, n_controls, n_param, n_events, n_path, n_phases, n_linkages;
-	SMatrix<double> lb_states, ub_states, lb_controls, ub_controls, lb_param, ub_param, lb_path, ub_path, lb_events, ub_events;
-	Number lb_t0, ub_t0, lb_tf, ub_tf;
+	SMatrix<double> lb_states, ub_states, lb_controls, ub_controls, lb_param, ub_param, lb_path, ub_path, lb_events, ub_events, lb_t0, ub_t0, lb_tf, ub_tf;
 
 	Guess 	guess;
 	Guess 	results;

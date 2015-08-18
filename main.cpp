@@ -1,7 +1,7 @@
 #include "OCP.hpp"
 #include "ADOL-C_sparseNLP.hpp"
 
-#define N_NODES		3
+#define N_NODES		300
 
 template<class T> T lagrange_cost(	const T *states,
 									const T *controls,
@@ -88,7 +88,7 @@ int main(int argv, char* argc[])
 	problem.config.NLP_tol		= 1e-8;
 	problem.config.opt_oder		= first_order;
 	problem.config.with_mgl		= false;
-	problem.config.disc_method	= Hermite_Simpson;
+	problem.config.disc_method	= trapezoidal;
 
 	status = problem.set_OCP_structure();
 

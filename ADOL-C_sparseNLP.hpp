@@ -112,7 +112,7 @@ public:
 	//***************    end   ADOL-C part ***********************************
 	void 	setNLP_structure(Index n, Index m, SMatrix<uint> structure, APPROX method);
 	template<class T>
-	void 	OCP_var_2_NLP_x(SMatrix<T>states, SMatrix<T>controls, SMatrix<T>param, SMatrix<T>t0, SMatrix<T>tf, T* x);
+	void 	OCP_var_2_NLP_x(T*const* states, T*const* controls, const T* param, const T& t0, const T& tf, T* x, const T* sf);
 	template<class T>
 	void 	OCP_var_2_NLP_g( T*const* path, T*const* defects, const T* events, T* g, const T* g_sf);
 	template<class T>
@@ -123,9 +123,9 @@ public:
 	Index 	getNLP_m	() 				{ return NLP_m;}
 	SMatrix<double> get_x_opt	()				{ return NLP_x_opt;}
 	SMatrix<double> get_lam_opt	()				{ return NLP_lam_opt;}
-	void 	setBounds	(	SMatrix<double> x_lb, SMatrix<double> x_ub, SMatrix<double> g_lb, SMatrix<double> g_ub);
-	void 	setSF		(	SMatrix<double> x_sf, SMatrix<double> g_sf);
-	void 	setguess	(	SMatrix<double> x_guess)	{NLP_x_guess = x_guess;}
+	void 	setBounds	( double* x_lb, double* x_ub, double* g_lb, double* g_ub);
+	void 	setSF		( double* x_sf, double* g_sf);
+	void 	setguess	( double* x_guess)	{NLP_x_guess = x_guess;}
 	void	setnodestr	(	SMatrix<double> str) 		{node_str = str;}
 	SMatrix<double> getnode_str() 		{ return node_str;}
 	double (*d_e_cost) 	(const  double* ini_states, const  double* fin_states, const  double* param, const  double& t0, const  double& tf, uint phase);
@@ -177,9 +177,9 @@ private:
 	Index NLP_n, NLP_m;
 	Index n_nodes, n_states, n_controls, n_param, n_events, n_path, n_phases, n_linkages;
 	APPROX disc_method;
-	SMatrix<double> NLP_x_lb, NLP_x_ub, NLP_x_sf, NLP_x_guess, NLP_g_lb, NLP_g_ub, NLP_g_sf, NLP_lam_guess;
-	double *y0, *yf, **y, **u, *param, *x_sf, *g_sf, tf, t0, **f, **path, **defects, *e, *t, *delta;
-
+	SMatrix<double> NLP_lam_guess;
+	double *y0, *yf, **y, **u, *param, tf, t0, **f, **path, **defects, *e, *t, *delta;
+	double  *NLP_x_lb, *NLP_x_ub, *NLP_x_sf, *NLP_x_guess, *NLP_g_lb, *NLP_g_ub, *NLP_g_sf;
 
 
 	SMatrix<double> node_str;
@@ -188,62 +188,60 @@ private:
 };
 
 template<class T>
-void 	MyADOLC_sparseNLP::OCP_var_2_NLP_x(SMatrix<T>states, SMatrix<T>controls, SMatrix<T>param, SMatrix<T>t0, SMatrix<T>tf, T* x) {
+void 	MyADOLC_sparseNLP::OCP_var_2_NLP_x(T*const* states, T*const* controls, const T* param, const T& t0, const T& tf, T* x, const T* sf) {
+
+	Index idx = 0;
+
 	if (disc_method == trapezoidal) {
-		Index idx = 1;
-		for (Index i = 1; i <= n_nodes; i += 1) {
-			for (Index j = 1; j <= n_states; j += 1) {
-				x(idx)		= states(i,j);
+		for (Index i = 0; i < n_nodes; i += 1) {
+			for (Index j = 0; j < n_states; j += 1) {
+				x[idx]		= states[i][j]/sf[idx];
 				idx++;
 			}
-			for (Index j = 1; j <= n_controls; j += 1) {
-				x(idx)		= controls(i,j);//sf_u(j);
+			for (Index j = 0; j < n_controls; j += 1) {
+				x[idx]		= controls[i][j]/sf[idx];
 				idx++;
 			}
 		}
-
-		for (Index i = 1; i <= n_param; i += 1)	{
-			x(idx)		= param(i,1);
+		for (Index i = 0; i < n_param; i += 1)	{
+			x[idx]		= param[i]/sf[idx];
 			idx++;
 		}
 
-		x(idx)			= t0(1);
+		x[idx]			= t0/sf[idx];
 		idx++;
-		x(idx)			= tf(1);
+
+		x[idx]			= tf/sf[idx];
 		idx++;
 
 		if (idx != NLP_n)
 			printf("something went wrong in OCP_var_2_NLP_x\n");
 
 	}
-	else  {
-		if (disc_method == trapezoidal) {
-			Index idx = 1;
-			for (Index i = 1; i <= n_nodes; i += 1) {
-				for (Index j = 1; j <= n_states; j += 1) {
-					x(idx)		= states(i,j);
-					idx++;
-				}
-				for (Index j = 1; j <= n_controls; j += 1) {
-					x(idx)		= controls(i,j);//sf_u(j);
-					idx++;
-				}
-			}
-
-			for (Index i = 1; i <= n_param; i += 1)	{
-				x(idx)		= param(i,1);
+	else if (disc_method == Hermite_Simpson) {
+		for (Index i = 0; i < n_nodes; i += 1) {
+			for (Index j = 0; j < n_states; j += 1) {
+				x[idx]		= states[i][j]/sf[idx];
 				idx++;
 			}
-
-			x(idx)			= t0(1);
-			idx++;
-			x(idx)			= tf(1);
-			idx++;
-
-			if (idx != NLP_n)
-				printf("something went wrong in OCP_var_2_NLP_x\n");
-
+			for (Index j = 0; j < n_controls; j += 1) {
+				x[idx]		= controls[i][j]/sf[idx];
+				idx++;
+			}
 		}
+
+		for (Index i = 0; i < n_param; i += 1)	{
+			x[idx]		= param[i]/sf[idx];
+			idx++;
+		}
+
+		x[idx]			= t0/sf[idx];
+		idx++;
+		x[idx]			= tf/sf[idx];
+		idx++;
+
+		if (idx != NLP_n)
+			printf("something went wrong in OCP_var_2_NLP_x\n");
 	}
 }
 
@@ -254,7 +252,7 @@ void 	MyADOLC_sparseNLP::OCP_var_2_NLP_g(T*const* path, T*const* defects, const 
 
 	for (Index i = 0; i < n_nodes; i += 1) {
 		for (Index j = 0; j < n_path; j += 1) {
-			g[idx_m]	= 	path[i][j]/g_sf[idx_m] + 1;
+			g[idx_m]	= 	path[i][j]/g_sf[idx_m];
 			idx_m++;
 		}
 		for (Index j = 0; j < n_states; j += 1) {
@@ -263,15 +261,14 @@ void 	MyADOLC_sparseNLP::OCP_var_2_NLP_g(T*const* path, T*const* defects, const 
 				//trapezoidal
 //					g[idx_m]	= 	y[i+1][j] - y[i][j] - delta[i]/2.0*(f[i][j] + f[i+1][j])/(NLP_g_sf(idx_m+1)) + 1;
 				//hermite simpson
-				g[idx_m] 		= 	defects[i][j]/g_sf[idx_m] + 1;
+				g[idx_m] 		= 	defects[i][j]/g_sf[idx_m];
 				idx_m++;
 			}
 		}
 	}
 	for (Index i = 0; i < n_events; i += 1)
 	{
-//			printf("events[%d];\t idx_m = %d\n",i,idx_m);
-		g[idx_m]	= 	events[i]/g_sf[idx_m] + 1;
+		g[idx_m]	= 	events[i]/g_sf[idx_m];
 		idx_m++;
 	}
 

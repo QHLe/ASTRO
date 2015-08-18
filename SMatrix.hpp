@@ -380,6 +380,7 @@ public:
 	uint 			getColDim	()	const 	{return n_col;}
 	void 			setRow		(uint row_idx, SMatrix<double> row);
 	void 			setCol		(uint col_idx, SMatrix<double> col);
+	double**		getDataPointer	();
 
 	double 			operator()	(uint row, uint col)				const;
 	double&			operator()	(uint row, uint col);
@@ -442,6 +443,7 @@ public:
 	uint 			getColDim	()	const 	{return n_col;}
 	void 			setRow		(uint row_idx, SMatrix<adouble> row);
 	void 			setCol		(uint col_idx, SMatrix<adouble> col);
+	adouble**		getDataPointer	();
 
 	adouble 		operator()	(uint row, uint col)				const;
 	adouble& 		operator()	(uint row, uint col);
@@ -1183,6 +1185,15 @@ inline void SMatrix<adouble>::setCol	(uint col_idx, SMatrix<adouble> col){
 	for (uint i = 0; i < n_row; i++)
 		data[col_idx-1][i] 	= col(i+1);
 }
+
+inline double** SMatrix<double>::getDataPointer() {
+	return data;
+}
+
+inline adouble** SMatrix<adouble>::getDataPointer() {
+	return data;
+}
+
 
 inline SMatrix<adouble>::SMatrix() {
 	n_col = 0;

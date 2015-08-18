@@ -53,8 +53,8 @@ ApplicationReturnStatus OCP::set_OCP_structure() {
 		NLP_n = (n_states + n_controls)*n_nodes + n_param + 2;
 		NLP_m = ((n_nodes - 1)*n_states + n_events + n_path*n_nodes);
 	}
-	else {
-		NLP_n = (n_states + n_controls)*n_nodes + n_param + 2;
+	else if (config.disc_method == Hermite_Simpson){
+		NLP_n = (n_states + 2*n_controls)*n_nodes - n_controls + n_param + 2;
 		NLP_m = ((n_nodes - 1)*n_states + n_events + n_path*n_nodes);
 	}
 
@@ -99,7 +99,6 @@ ApplicationReturnStatus OCP::set_OCP_structure() {
 	app->Options()->SetStringValue("mu_strategy", "adaptive");
 //	app->Options()->SetStringValue("output_file", "ipopt.out");
 //	app->Options()->SetStringValue("nlp_scaling_method","gradient-based");
-	app->Options()->SetStringValue("linear_solver", "mumps");//	ma86 & ma57 with memmory leakage
 	app->Options()->SetStringValue("linear_solver", nlp_solver(config.NLP_solver));//	ma86 & ma57 with memmory leakage
 	app->Options()->SetIntegerValue("max_iter", config.max_iter);
 	if (config.warmstart) {
@@ -432,49 +431,165 @@ void OCP::OCPBounds2NLPBounds() {
 		auto_guess_gen();
 	}
 
-	// structure of x
-	// [..x_1(t_k),..x_n(t_k), u_1(t_k)..u_m(t_k), x_1(t_k+1), ..x_n(t_k+1), u_1(t_k+1), ..u_m(t_k+1), p_1,..p_nparam..]
+	double* d_x_l		= new double[NLP_n];
+	double* d_x_u		= new double[NLP_n];
+	double* d_x_guess	= new double[NLP_n];
+	double* d_x_sf		= new double[NLP_n];
 
-	Index idx = 1;
-	for (Index i = 1; i <= n_nodes; i += 1)
-	{
-		for (Index j = 1; j <= n_states; j += 1)
-		{
-			x_l(idx)		= lb_states(j)/sf_x(j);
-			x_u(idx)		= ub_states(j)/sf_x(j);
-			sf_NLP_x(idx)	= sf_x(j);
-			x_guess(idx)	= guess.x(i,j)/sf_x(j);
-			idx++;
+	double* d_g_l		= new double[NLP_m];
+	double* d_g_u		= new double[NLP_m];
+	double* d_g_sf		= new double[NLP_m];
+
+	double** states		= new double* [n_nodes];
+	double** controls	= new double* [n_nodes];
+	double* param		= new double [n_param];
+
+	double** path		= new double* [n_nodes];
+	double** defects	= new double* [n_nodes-1];
+	double* events		= new double [n_events];
+
+	for (Index i = 0; i < n_nodes; i++){
+		states[i]		= new double [n_states];
+		controls[i]		= new double [n_controls];
+		path[i]			= new double [n_path];
+		if (i < n_nodes - 1)
+			defects[i]	= new double [n_states];
+	}
+
+	double t0, tf;
+
+	for (Index i = 0; i < NLP_n; i++) {
+		d_x_sf[i] = 1.0;
+	}
+	for (Index i = 0; i < NLP_m; i++) {
+		d_g_sf[i] = 1.0;
+	}
+
+	for (Index i = 0; i < n_nodes; i++) {
+		for (Index j = 0; j < n_states; j++) {
+			states[i][j] = sf_x(j+1);
 		}
-		for (Index j = 1; j <= n_controls; j += 1)
-		{
-			x_l(idx)		= lb_controls(j)/sf_u(j);
-			x_u(idx)		= ub_controls(j)/sf_u(j);
-			sf_NLP_x(idx)	= sf_u(j);
-			x_guess(idx)	= guess.u(i,j)/sf_u(j);
-			idx++;
+		for (Index j = 0; j < n_controls; j++) {
+			controls[i][j] = sf_u(j+1);
 		}
 	}
 
-	for (Index i = 1; i <= n_param; i += 1)
-	{
-		x_l(idx)		= lb_param(i)/sf_param(i);
-		x_u(idx)		= ub_param(i)/sf_param(i);
-		sf_NLP_x(idx)	= sf_param(i);
-		x_guess(idx)	= guess.param(i,1)/sf_param(i);
-		idx++;
+	for (Index i = 0; i < n_param; i++) {
+			param[i] = sf_param(i+1);
 	}
 
-	x_l(idx)		= lb_t0/sf_t(1);
-	x_u(idx)		= ub_t0/sf_t(1);
-	sf_NLP_x(idx)	= sf_t(1);
-	x_guess(idx)	= guess.nodes(1,1)/sf_t(1);
-	idx++;
+	t0 = sf_t;
+	tf = sf_t;
 
-	x_l(idx)		= lb_tf/sf_t(1);
-	x_u(idx)		= ub_tf/sf_t(1);
-	sf_NLP_x(idx)	= sf_t(1);
-	x_guess(idx)	= guess.nodes(n_nodes,1)/sf_t(1);
+	myadolc_nlp->OCP_var_2_NLP_x(states,controls,param,t0,tf, d_x_sf, d_x_sf);
+
+	for (Index i = 0; i < n_nodes; i++) {
+		for (Index j = 0; j < n_states; j++) {
+			states[i][j] = lb_states(j+1);
+		}
+		for (Index j = 0; j < n_controls; j++) {
+			controls[i][j] = lb_controls(j+1);
+		}
+	}
+
+	for (Index i = 0; i < n_param; i++) {
+			param[i] = lb_param(i+1);
+	}
+
+	t0 = lb_t0;
+	tf = lb_tf;
+
+	myadolc_nlp->OCP_var_2_NLP_x(states,controls,param,t0,tf, d_x_l, d_x_sf);
+
+	for (Index i = 0; i < n_nodes; i++) {
+		for (Index j = 0; j < n_states; j++) {
+			states[i][j] = ub_states(j+1);
+		}
+		for (Index j = 0; j < n_controls; j++) {
+			controls[i][j] = ub_controls(j+1);
+		}
+	}
+
+	for (Index i = 0; i < n_param; i++) {
+			param[i] = ub_param(i+1);
+	}
+
+	t0 = ub_t0;
+	tf = ub_tf;
+
+	myadolc_nlp->OCP_var_2_NLP_x(states,controls,param,t0,tf, d_x_u, d_x_sf);
+
+	for (Index i = 0; i < n_nodes; i++) {
+		for (Index j = 0; j < n_states; j++) {
+			states[i][j] = guess.x(i+1,j+1);
+		}
+		for (Index j = 0; j < n_controls; j++) {
+			controls[i][j] = guess.u(i+1,j+1);
+		}
+	}
+
+	for (Index i = 0; i < n_param; i++) {
+			param[i] = guess.param(i+1);
+	}
+
+	t0 = guess.nodes(1);
+	tf = guess.nodes(n_nodes);
+
+	myadolc_nlp->OCP_var_2_NLP_x(states,controls,param,t0,tf, d_x_guess, d_x_sf);
+
+	for (Index i = 0; i < n_nodes; i++) {
+		for (Index j = 0; j < n_path; j++) {
+			path[i][j] = sf_path(j+1);
+		}
+		if ( i < n_nodes - 1)
+			for (Index j = 0; j < n_states; j++) {
+				defects[i][j] = 1.0;
+			}
+	}
+
+	for (Index i = 0; i < n_events; i++) {
+			events[i] = sf_events(i+1);
+	}
+
+	myadolc_nlp->OCP_var_2_NLP_g(path, defects, events, d_g_sf, d_g_sf);
+
+	for (Index i = 0; i < n_nodes; i++) {
+		for (Index j = 0; j < n_path; j++) {
+			path[i][j] = lb_path(j+1);
+		}
+		if ( i < n_nodes - 1)
+			for (Index j = 0; j < n_states; j++) {
+				defects[i][j] = 0.0;
+			}
+	}
+
+	for (Index i = 0; i < n_events; i++) {
+			events[i] = lb_events(i+1);
+	}
+
+	myadolc_nlp->OCP_var_2_NLP_g(path, defects, events, d_g_l, d_g_sf);
+
+	for (Index i = 0; i < n_nodes; i++) {
+		for (Index j = 0; j < n_path; j++) {
+			path[i][j] = ub_path(j+1);
+		}
+		if ( i < n_nodes - 1)
+			for (Index j = 0; j < n_states; j++) {
+				defects[i][j] = 0.0;
+			}
+	}
+
+	for (Index i = 0; i < n_events; i++) {
+			events[i] = ub_events(i+1);
+	}
+
+	myadolc_nlp->OCP_var_2_NLP_g(path, defects, events, d_g_u, d_g_sf);
+
+	for ( Index i = 0; i < NLP_m; i++) {
+		d_g_l[i]	= d_g_l[i] + 1;
+		d_g_u[i]	= d_g_u[i] + 1;
+	}
+
 
 	double delta_t 	= guess.nodes(n_nodes,1) - guess.nodes(1,1);
 
@@ -484,51 +599,18 @@ void OCP::OCPBounds2NLPBounds() {
 
   	// structure of g
   	// [..defect(t_k), h1(t_k), .. h_npath(t_k), defect(t_k+1), h1(t_k+1), ..h_npath(t_k+1), events_1, ..events_nevents,..]
-	idx = 1;
-	for (Index i =1; i <= n_nodes; i += 1)
-	{
-		for (Index j = 1; j <= n_path; j += 1)
-		{
-			g_l(idx)		= lb_path(j)/sf_path(j) + 1;
-			g_u(idx)		= ub_path(j)/sf_path(j) + 1;
-			sf_NLP_g(idx)	= sf_path(j);
-			idx++;
-		}
-		for (Index j = 1; j <= n_states; j += 1)
-		{
-			if(i < n_nodes) {
-				g_l(idx)		= 1.0;
-				g_u(idx)		= 1.0;
-				sf_NLP_g(idx)	= 1.0;
-				idx++;
-			}
-		}
-	}
-	for (Index i = 1; i <= n_events; i += 1)
-	{
-		g_l(idx)	= lb_events(i)/sf_events(i) + 1;
-		g_u(idx)	= ub_events(i)/sf_events(i) + 1;
-		sf_NLP_g(idx)	= sf_events(i);
-		idx++;
-	}
-/*
-	for( Index i = 0; i < NLP_n; i++) {
-		sf_NLP_x[i] 	= 1.0;
-	}
-	for( Index i = 0; i < NLP_m; i++) {
-		sf_NLP_g[i]		= 1.0;
-	}
-	*/
-	myadolc_nlp->setBounds(x_l, x_u, g_l, g_u);
-	myadolc_nlp->setSF(sf_NLP_x, sf_NLP_g);
-	myadolc_nlp->setguess(x_guess);
+
+
+	myadolc_nlp->setBounds(d_x_l, d_x_u, d_g_l, d_g_u);
+	myadolc_nlp->setSF(d_x_sf, d_g_sf);
+	myadolc_nlp->setguess(d_x_guess);
 	myadolc_nlp->setnodestr(node_str);
 
 	printf("NLP bounces successful set\n");
 }
 
 void OCP::auto_guess_gen() {
-	SMatrix<double> nodes = linspace<double>((lb_t0+ub_t0)/2,(lb_tf+ub_tf)/2,n_nodes);
+	SMatrix<double> nodes = linspace<double>((lb_t0+ub_t0)/2.0,(lb_tf+ub_tf)/2.0,n_nodes);
 	guess.nodes = nodes;
 
 	SMatrix<double>* states = new SMatrix<double>[n_states];
