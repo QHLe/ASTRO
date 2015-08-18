@@ -198,6 +198,7 @@ ApplicationReturnStatus OCP::NLP_solve() {
 		Number final_obj = app->Statistics()->FinalObjective();
 		printf("\n\n*** The final value of the objective function is %e.\n", final_obj);
 	}
+
 	SMatrix<double> NLP_x 		= myadolc_nlp->get_x_opt();
 	SMatrix<double> NLP_lam 	= myadolc_nlp->get_lam_opt();
 	Index NLP_n					= myadolc_nlp->getNLP_n();
@@ -217,14 +218,20 @@ ApplicationReturnStatus OCP::NLP_solve() {
 	double* d_x_sf		= new double[NLP_n];
 	double* g 			= new double[NLP_m];
 	double* d_g_sf		= new double[NLP_m];
-
-	double** states		= new double* [n_nodes];
-	double** controls;
 	double* param		= new double [n_param];
-
-	double** path		= new double* [n_nodes - 1];
+	double* events		= new double [n_events];
+	double** states		= new double* [n_nodes];
+	double** path		= new double* [n_nodes];
 	double** defects	= new double* [n_nodes - 1];
-	double*  events		= new double  [n_events];
+	double** controls;
+
+	for (Index i = 0; i < n_nodes; i++){
+		states[i]		= new double [n_states];
+		path[i]			= new double [n_path];
+		if (i < n_nodes - 1)
+			defects[i] 	= new double [n_states];
+	}
+
 
 	if(config.disc_method == Hermite_Simpson) {
 		controls	= new double* [2*n_nodes - 1];
@@ -235,14 +242,6 @@ ApplicationReturnStatus OCP::NLP_solve() {
 		controls	= new double* [n_nodes];
 		for (Index i = 0; i < n_nodes; i++)
 			controls[i]		= new double [n_controls];
-	}
-
-	for (Index i = 0; i < n_nodes; i++){
-		states[i]		= new double [n_states];
-		path[i]			= new double [n_path];
-		if (i < n_nodes - 1){
-			defects[i] 	= new double [n_states];
-		}
 	}
 
 	double t0, tf;
@@ -322,6 +321,33 @@ ApplicationReturnStatus OCP::NLP_solve() {
 	}
 	x0_opt.save("results_x0.dat");
 	xf_opt.save("results_xf.dat");
+
+	if(config.disc_method == Hermite_Simpson) {
+		for (Index i = 0; i < 2*n_nodes - 1; i++)
+			delete[] controls[i];
+	}
+	else {
+		for (Index i = 0; i < n_nodes; i++)
+			delete[] controls[i];
+	}
+
+	for (Index i = 0; i < n_nodes; i++){
+		delete[] states[i];
+		delete[] path[i];
+	if (i < n_nodes - 1){
+		delete[] defects[i];
+	}
+}
+	delete[] x;
+	delete[] d_x_sf;
+	delete[] g;
+	delete[] d_g_sf;
+	delete[] param;
+	delete[] events;
+	delete[] states;
+	delete[] path;
+	delete[] defects;
+	delete[] controls;
 /*
 	if (config.with_mgl) {
 		for (Index i = 0; i < n_nodes; ++i) {
@@ -385,6 +411,9 @@ ApplicationReturnStatus OCP::NLP_solve() {
 
 	delete gr;
 	*/
+
+
+
   	return status;
 }
 

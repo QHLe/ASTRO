@@ -347,8 +347,8 @@ void 	MyADOLC_sparseNLP::NLP_g_2_OCP_var(const T* g, const T* sf, T** path, T** 
 		}
 		for (Index j = 0; j < n_states; j += 1) {
 			if(i < n_nodes - 1) {
-			defects[i][j]	= g[idx_m]*sf[idx_m];
-			idx_m++;
+				defects[i][j]	= g[idx_m]*sf[idx_m];
+				idx_m++;
 			}
 		}
 	}

@@ -49,12 +49,6 @@ template<class T> void events(	T *events,
 								const T &tf,
 								uint phase) {
 
-/*	events [0]	= ini_states[0];
-	events [1]	= ini_states[1];
-	events [2]	= ini_states[2];
-	events [3]	= fin_states[0];
-	events [4]	= fin_states[1];*/
-
 	events [0]	= ini_states[0];
 	events [1]	= ini_states[1];
 	events [2]	= fin_states[0];
@@ -89,7 +83,6 @@ int main(int argv, char* argc[])
 	problem.config.opt_oder		= first_order;
 	problem.config.with_mgl		= false;
 	problem.config.disc_method	= Hermite_Simpson;
-	problem.config.disc_method	= trapezoidal;
 
 	status = problem.set_OCP_structure();
 
