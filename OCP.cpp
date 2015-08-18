@@ -49,12 +49,12 @@ ApplicationReturnStatus OCP::set_OCP_structure() {
 	printf("Setting structure \n");
 	Index NLP_n, NLP_m;
 
-	if(config.disc_method == trapezoidal) {
-		NLP_n = (n_states + n_controls)*n_nodes + n_param + 2;
+	if (config.disc_method == Hermite_Simpson){
+		NLP_n = (n_states + 2*n_controls)*n_nodes - n_controls + n_param + 2;
 		NLP_m = ((n_nodes - 1)*n_states + n_events + n_path*n_nodes);
 	}
-	else if (config.disc_method == Hermite_Simpson){
-		NLP_n = (n_states + 2*n_controls)*n_nodes - n_controls + n_param + 2;
+	else {
+		NLP_n = (n_states + n_controls)*n_nodes + n_param + 2;
 		NLP_m = ((n_nodes - 1)*n_states + n_events + n_path*n_nodes);
 	}
 
@@ -119,6 +119,7 @@ ApplicationReturnStatus OCP::set_OCP_structure() {
 ApplicationReturnStatus OCP::NLP_solve() {
 	OCPBounds2NLPBounds();
 
+/*
 	mglGraph* gr 	= new mglGraph;
 	mglData dat_x(n_nodes);
 	mglData dat_y(n_nodes);
@@ -186,7 +187,7 @@ ApplicationReturnStatus OCP::NLP_solve() {
 		gr->WriteEPS("guess_u.eps");
 		delete gr;
 	}
-
+*/
 	status = app->OptimizeTNLP(myadolc_nlp);
 
 	if (status == Solve_Succeeded) {
@@ -199,16 +200,61 @@ ApplicationReturnStatus OCP::NLP_solve() {
 	}
 	SMatrix<double> NLP_x 		= myadolc_nlp->get_x_opt();
 	SMatrix<double> NLP_lam 	= myadolc_nlp->get_lam_opt();
-	uint NLP_n					= myadolc_nlp->getNLP_n();
-//	uint NLP_m					= myadolc_nlp->getNLP_m();
-	double t0					= NLP_x(NLP_n - 1);
-	double tf 					= NLP_x(NLP_n);
-	SMatrix<double> delta 		= (tf - t0)*myadolc_nlp->getnode_str();
+	Index NLP_n					= myadolc_nlp->getNLP_n();
+	Index NLP_m					= myadolc_nlp->getNLP_m();
 
 	results.nodes.resize(n_nodes,1);
 	results.x.resize(n_nodes, n_states);
-	results.u.resize(n_nodes, n_controls);
+	if (config.disc_method == Hermite_Simpson){
+		results.u.resize(2*n_nodes - 1, n_controls);
+	}
+	else {
+		results.u.resize(n_nodes, n_controls);
+	}
 	results.param.resize(n_param,1);
+
+	double* x 			= new double[NLP_n];
+	double* d_x_sf		= new double[NLP_n];
+	double* g 			= new double[NLP_m];
+	double* d_g_sf		= new double[NLP_m];
+
+	double** states		= new double* [n_nodes];
+	double** controls;
+	double* param		= new double [n_param];
+
+	double** path		= new double* [n_nodes - 1];
+	double** defects	= new double* [n_nodes - 1];
+	double*  events		= new double  [n_events];
+
+	if(config.disc_method == Hermite_Simpson) {
+		controls	= new double* [2*n_nodes - 1];
+		for (Index i = 0; i < 2*n_nodes - 1; i++)
+			controls[i]		= new double [n_controls];
+	}
+	else {
+		controls	= new double* [n_nodes];
+		for (Index i = 0; i < n_nodes; i++)
+			controls[i]		= new double [n_controls];
+	}
+
+	for (Index i = 0; i < n_nodes; i++){
+		states[i]		= new double [n_states];
+		path[i]			= new double [n_path];
+		if (i < n_nodes - 1){
+			defects[i] 	= new double [n_states];
+		}
+	}
+
+	double t0, tf;
+
+	for (Index i = 0; i < NLP_n; i++) {
+		x[i]		= NLP_x(i+1);
+		d_x_sf[i]	= 1.0;
+	}
+
+	myadolc_nlp->NLP_x_2_OCP_var(x,d_x_sf,states,controls,param,t0,tf);
+
+	SMatrix<double> delta 		= (tf - t0)*myadolc_nlp->getnode_str();
 
 	results.nodes(1,1) = t0;
 	for (Index i = 2; i < n_nodes; i++) {
@@ -217,46 +263,47 @@ ApplicationReturnStatus OCP::NLP_solve() {
 	results.nodes(n_nodes,1) = tf;
 	results.nodes.save("results_nodes.dat");
 
-	Index idx = 1;
-	while (idx < n_nodes*(n_states + n_controls) + n_param) {
-		for (Index i = 1; i <= n_nodes; i += 1)	{
-			for (Index j = 1; j <= n_states; j += 1){
-				results.x(i,j) 	= NLP_x(idx);
-				idx++;
-			}
-			for (Index j = 1; j <= n_controls; j += 1){
-				results.u(i,j) 	= NLP_x(idx);
-				idx++;
-			}
-		}
-		for (Index i = 1; i <= n_param; i += 1)
-		{
-			results.param(i,1)			= NLP_x(idx);
-			idx++;
+	for (Index i = 0; i < n_nodes; i++) {
+		for (Index j = 0; j < n_states; j++) {
+			results.x(i+1,j+1) = states[i][j];
 		}
 	}
+
+	for (Index i = 0; i < n_param; i++) {
+		results.param(i+1) = param[i];
+	}
+
+	if (config.disc_method == Hermite_Simpson) {
+		for (Index i = 0; i < 2*n_nodes - 1; i++) {
+			for (Index j = 0; j < n_controls; j++) {
+				results.u(i+1,j+1) = controls[i][j];
+			}
+		}
+	}
+	for (Index i = 0; i < NLP_m; i++) {
+		g[i]		= -NLP_lam(i+1);
+		d_g_sf[i]	= 1.0;
+	}
+
+	myadolc_nlp->NLP_g_2_OCP_var(g,d_g_sf,path,defects,events);
 
 	results.lam_x.resize(n_nodes - 1, n_states);
 	results.lam_path.resize(n_nodes, n_path);
 	results.lam_events.resize(n_events, 1);
 
-	Index idx_m = 1;
-	for (Index i = 1; i <= n_nodes; i += 1) {
-		for (Index j = 1; j <= n_path; j += 1) {
-			results.lam_path(i,j)	= -NLP_lam(idx_m);
-			idx_m++;
+	for (Index i = 0; i < n_nodes; i++) {
+		for (Index j = 0; j < n_path; j++) {
+			results.lam_path(i+1,j+1) = path[i][j];
 		}
-		for (Index j = 1; j <= n_states; j += 1) {
-			if(i < n_nodes) {
-				results.lam_x(i,j)	= -NLP_lam(idx_m);
-				idx_m++;
+		if( i < n_nodes - 1) {
+			for (Index j = 0; j < n_states; j++) {
+				results.lam_x(i+1,j+1) = defects[i][j];
 			}
 		}
 	}
 
-	for (Index i = 1; i <= n_events; i += 1)	{
-		results.lam_events(i,1)		= -NLP_lam(idx_m);
-		idx_m++;
+	for (Index i = 0; i < n_events; i++) {
+		results.lam_events(i+1,1) = events[i];
 	}
 
 	results.x.save("results_x.dat");
@@ -275,7 +322,7 @@ ApplicationReturnStatus OCP::NLP_solve() {
 	}
 	x0_opt.save("results_x0.dat");
 	xf_opt.save("results_xf.dat");
-
+/*
 	if (config.with_mgl) {
 		for (Index i = 0; i < n_nodes; ++i) {
 			dat_x[i]	= results.nodes(i+1,1);
@@ -314,7 +361,6 @@ ApplicationReturnStatus OCP::NLP_solve() {
 		x_range.a[0] = min(results.nodes);
 		x_range.a[1] = max(results.nodes);
 
-		cout<<"omg\n";
 		if (min(results.u) > 0)
 			y_range.a[0] = min(results.u)*0.9;
 		else
@@ -338,6 +384,7 @@ ApplicationReturnStatus OCP::NLP_solve() {
 	}
 
 	delete gr;
+	*/
   	return status;
 }
 

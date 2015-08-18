@@ -118,7 +118,7 @@ public:
 	template<class T>
 	void 	NLP_x_2_OCP_var(const T* x, const T* sf, T** states, T** controls, T* param, T& t0, T& tf);
 	template<class T>
-	void 	NLP_g_2_OCP_var(const T* g, SMatrix<T>sf, SMatrix<T>defects, SMatrix<T>events, SMatrix<T>path, SMatrix<T>linkages );
+	void 	NLP_g_2_OCP_var(const T* g, const T* sf, T** path, T** defects, T* events);
 	Index 	getNLP_n	() 				{ return NLP_n;}
 	Index 	getNLP_m	() 				{ return NLP_m;}
 	SMatrix<double> get_x_opt	()				{ return NLP_x_opt;}
@@ -337,23 +337,24 @@ void 	MyADOLC_sparseNLP::NLP_x_2_OCP_var(const T* x, const T* sf, T** states, T*
 }
 
 template<class T>
-void 	MyADOLC_sparseNLP::NLP_g_2_OCP_var(const T* g, SMatrix<T>sf, SMatrix<T>defects, SMatrix<T>events, SMatrix<T>path, SMatrix<T>linkages ) {
+void 	MyADOLC_sparseNLP::NLP_g_2_OCP_var(const T* g, const T* sf, T** path, T** defects, T* events) {
+
 	Index idx_m = 0;
-	for (Index i = 1; i <= n_nodes; i += 1) {
-		for (Index j = 1; j <= n_path; j += 1) {
-			path(i,j)	= g(idx_m)*sf(idx_m+1);
+	for (Index i = 0; i < n_nodes; i += 1) {
+		for (Index j = 0; j < n_path; j += 1) {
+			path[i][j]	= g[idx_m]*sf[idx_m];
 			idx_m++;
 		}
-		for (Index j = 1; j <= n_states; j += 1) {
-			if(i < n_nodes) {
-			defects(i,j)	= g(idx_m)*sf(idx_m+1);
+		for (Index j = 0; j < n_states; j += 1) {
+			if(i < n_nodes - 1) {
+			defects[i][j]	= g[idx_m]*sf[idx_m];
 			idx_m++;
 			}
 		}
 	}
 
-	for (Index i = 1; i <= n_events; i += 1)	{
-		events(i,1)		= g(idx_m)*sf(idx_m+1);
+	for (Index i = 0; i < n_events; i += 1)	{
+		events[i]		= g[idx_m]*sf[idx_m];
 		idx_m++;
 	}
 	if (idx_m != NLP_m)
