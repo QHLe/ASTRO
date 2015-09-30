@@ -29,14 +29,16 @@ public:
 class Config {
 public:
 	Config();
+	~Config();
 	uint max_iter;
-	char* hessian_approximation;
+//	char* hessian_approximation;
 	NLP_SOLVER NLP_solver;
 	bool warmstart;
 	bool with_mgl;
 	double NLP_tol;
 	OPT_ORDER opt_oder;
 	APPROX disc_method;
+	uint print_level;
 
 };
 
@@ -74,48 +76,47 @@ public:
 private:
 	void OCPBounds2NLPBounds();
 	void determine_scaling_factors();
-  	SmartPtr<MyADOLC_sparseNLP> myadolc_nlp;
-  	SmartPtr<IpoptApplication> app;
-  	ApplicationReturnStatus status;
-  	SMatrix<double> sf_u;
-  	SMatrix<double> sf_x;
-  	SMatrix<double> sf_path;
-  	SMatrix<double> sf_param;
-  	SMatrix<double> sf_t;
-  	SMatrix<double> sf_events;
+	SmartPtr<MyADOLC_sparseNLP> myadolc_nlp;
+	SmartPtr<IpoptApplication> app;
+	ApplicationReturnStatus status;
+	SMatrix<double> sf_u;
+	SMatrix<double> sf_x;
+	SMatrix<double> sf_path;
+	SMatrix<double> sf_param;
+	SMatrix<double> sf_t;
+	SMatrix<double> sf_events;
 
 //  	SMatrix sf_f;
 //		SMatrix sf_constraint;
 
 };
-/*template<class T>
+
+template<class T>
 SMatrix<T>	lin_interpol(const SMatrix<T> x, const SMatrix<T> y, const SMatrix<T> x_new) {
-	SMatrix <T> y_new(x_new.getsize());
-	for (uint i = 1; i <= x_new.getsize(); i++) {
-		for(uint j = 1; j < x.getsize(); j++) {
-*//*			if (x_new(i) < x(1) || x(x.getsize()) < x_new(i)) {
+	SMatrix <T> y_new(x_new.getRowDim(),1);
+	for (uint i = 1; i <= x_new.getRowDim(); i++) {
+		for(uint j = 1; j < x.getRowDim(); j++) {
+/*			if (x_new(i) < x(1) || x(x.getsize()) < x_new(i)) {
 				printf("x_new[%d] = %.10e\t	x[%d] = %.10e\n",i,x_new(i),x.getsize(),x(x.getsize()));
 				printf("lin_interpot out of range\n");
 				exit(1);
 			}*/
 
-/*				if (x(j) <= x_new(i) && x(j+1) >= x_new(i)) {
-		//		cout<<i<<"\t"<<j<<endl;
+			if (x(j) <= x_new(i) && x(j+1) >= x_new(i)) {
 				y_new(i)	= y(j) + (y(j+1) - y(j))/(x(j+1) - x(j))*(x_new(i) - x(j));
 				break;
 			}
-			if (j == 1 || j == x.getsize() - 1) {
-				if (x_new(i) < x(1) || x(x.getsize()) < x_new(i)) {
+			if (j == 1 || j == x.getRowDim() - 1) {
+				if (x_new(i) < x(1) || x(x.getRowDim()) < x_new(i)) {
 	//				cout<<i<<"\t"<<j<<endl;
-					printf("x_new[%d] = %.10e\t	x[%d] = %.10e\n",i,x_new(i),j+1,x(j+1));
+					printf("x_new(%d) = %.10e\t	x(%d) = %.10e\t	x(%d) = %.10e\n",i,x_new(i),j,x(j),x.getRowDim(),x(x.getRowDim()));
 					printf("lin_interpot out of range\n");
 					//exit(1);
 				}
 			}
-
 		}
 	}
 	return y_new;
 }
-*/
+
 #endif /* OCP_HPP_ */

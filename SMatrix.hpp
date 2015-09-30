@@ -387,8 +387,18 @@ public:
 	double 			operator()	(uint idx) 							const;
 	double&			operator()	(uint idx);
 
-	SMatrix<double>  getCol		(uint num)							const;
+	SMatrix<double> getCol		(uint num)							const;
 	SMatrix<double>	getRow		(uint num)							const;
+	void			addRow		(SMatrix<double> row){
+		if (row.getColDim() != this->getColDim()) {
+			cout<<"  Error occurred by adding new row to SMatrix  \n"
+				  "Column number of the two Matrixes doesn't match\n";
+		}
+		else {
+			this->resize(n_row+1, n_col);
+			this->setRow(n_row, row);
+		}
+	}
 
 	void 			load		(const char* filename);
 	void 			save		(const char* filename)				const;
@@ -456,38 +466,37 @@ public:
 	void 			load		(const char* filename);
 	void 			save		(const char* filename)				const;
 
-	const SMatrix& 	operator= (const SMatrix& rhs);
-	const SMatrix& 	operator= (const adouble scalar);
-	const SMatrix& 	operator= (const SMatrix<double>& rhs);
-	const SMatrix&	operator= (const double scalar);
+	const SMatrix<adouble>& 	operator= (const SMatrix<adouble>& rhs);
+	const SMatrix<adouble>& 	operator= (const adouble scalar);
+	const SMatrix<adouble>& 	operator= (const SMatrix<double>& rhs);
+	const SMatrix<adouble>&		operator= (const double scalar);
 	operator adouble() const;
 
-	SMatrix			operator,	(const SMatrix& rhs)					const;
+	SMatrix<adouble>			operator,	(const SMatrix<adouble>& rhs)					const;
 
-	SMatrix	 		truncate_col	(uint l_limit, uint u_limit);
-	SMatrix 			truncate_row	(uint l_limit, uint u_limit);
+	SMatrix<adouble> 			truncate_col	(uint l_limit, uint u_limit);
+	SMatrix<adouble> 			truncate_row	(uint l_limit, uint u_limit);
 
-	SMatrix 			operator+ 	(adouble sum)				const;
-	SMatrix 			operator- 	(adouble sum)				const;
-	SMatrix 			operator* 	(adouble factor)			const;
-	SMatrix 			operator/ 	(adouble factor)			const;
+	SMatrix<adouble> 			operator+ 	(adouble sum)				const;
+	SMatrix<adouble> 			operator+ 	(double sum)				const;
+	SMatrix<adouble> 			operator- 	(adouble sum)				const;
+	SMatrix<adouble> 			operator- 	(double sum)				const;
+	SMatrix<adouble> 			operator* 	(adouble factor)			const;
+	SMatrix<adouble> 			operator* 	(double factor)				const;
+	SMatrix<adouble> 			operator/ 	(adouble factor)			const;
+	SMatrix<adouble> 			operator/ 	(double factor)				const;
 
-	SMatrix 			operator+ 	(double sum)				const;
-	SMatrix 			operator- 	(double sum)				const;
-	SMatrix 			operator* 	(double factor)				const;
-	SMatrix 			operator/ 	(double factor)				const;
+	SMatrix<adouble> 			operator- 	()							const;
 
-	SMatrix 			operator- 	()							const;
+	SMatrix<adouble> 			operator+ 	(const SMatrix<adouble>& rhs) 		const;
+	SMatrix<adouble> 			operator- 	(const SMatrix<adouble>& rhs)			const;
+	SMatrix<adouble> 			operator* 	(const SMatrix<adouble>& rhs)			const;
+	SMatrix<adouble> 			operator/ 	(const SMatrix<adouble>& rhs)			const;
 
-	SMatrix 			operator+ 	(const SMatrix& rhs) 		const;
-	SMatrix 			operator- 	(const SMatrix& rhs)			const;
-	SMatrix 			operator* 	(const SMatrix& rhs)			const;
-	SMatrix 			operator/ 	(const SMatrix& rhs)			const;
-
-	SMatrix 			operator+ 	(const SMatrix<double>& rhs) const;
-	SMatrix 			operator- 	(const SMatrix<double>& rhs)	const;
-	SMatrix 			operator* 	(const SMatrix<double>& rhs)	const;
-	SMatrix 			operator/ 	(const SMatrix<double>& rhs)	const;
+	SMatrix<adouble> 			operator+ 	(const SMatrix<double>& rhs) const;
+	SMatrix<adouble> 			operator- 	(const SMatrix<double>& rhs)	const;
+	SMatrix<adouble> 			operator* 	(const SMatrix<double>& rhs)	const;
+	SMatrix<adouble> 			operator/ 	(const SMatrix<double>& rhs)	const;
 
 	adouble 		enorm		();
 
@@ -577,10 +586,13 @@ inline void SMatrix<double>::Print(const char* printline) const {
 }
 
 inline void SMatrix<double>::resize(uint row_num, uint col_num) {
+
 	SMatrix <double> temp_matrix(*this);
-	if (this->data != NULL) {
-		for (uint i = 0; i < n_row; i++)
+
+	if (data != NULL) {
+		for (uint i = 0; i < n_row; i++){
 			delete[] data[i];
+		}
 		delete[] data;
 	}
 	n_row 	= row_num;
@@ -589,12 +601,12 @@ inline void SMatrix<double>::resize(uint row_num, uint col_num) {
 	for (uint i = 0; i<row_num; i++)
 		data[i]	= new double[col_num];
 
-	for (uint i = 0; i < n_row; i++) {
-		for (uint j = 0; j < n_col; j++) {
-			if (i < temp_matrix.getRowDim() && j < temp_matrix.getColDim())
-				data[i][j]	= temp_matrix.data[i][j];
+	for (uint i = 1; i <= n_row; i++) {
+		for (uint j = 1; j <= n_col; j++) {
+			if (i <= temp_matrix.getRowDim() && j <= temp_matrix.getColDim())
+				data[i-1][j-1]	= temp_matrix.data[i-1][j-1];
 			else
-				data[i][j] 	= 0.0;
+				data[i-1][j-1] 	= 0.0;
 		}
 	}
 }
@@ -643,6 +655,11 @@ inline double SMatrix<double>::operator()(uint idx) const{
 			  "=====     Index starts from 1    =====\n";
 		exit(1);
 	}
+	if (idx > n_row*n_col  ) {
+		cout<<"===== Overloading operator (idx) =====\n"
+			  "=====     Index out of range     =====\n";
+		exit(1);
+	}
 	if (n_col == 1)
 		return data[idx-1][0];
 	else
@@ -663,6 +680,11 @@ inline double& SMatrix<double>::operator()(uint idx) {
 	if (idx < 1 ) {
 		cout<<"===== Overloading operator (idx) =====\n"
 			  "=====     Index starts from 1    =====\n";
+		exit(1);
+	}
+	if (idx > n_row*n_col  ) {
+		cout<<"===== Overloading operator (idx) =====\n"
+			  "=====     Index out of range     =====\n";
 		exit(1);
 	}
 	if (n_col == 1)
@@ -842,8 +864,25 @@ inline SMatrix<double> SMatrix<double>::operator* (double factor) const{
 	return temp;
 }
 
+inline SMatrix<adouble> SMatrix<double>::operator* (adouble factor) const{
+	SMatrix<adouble> temp(*this);
+	for(uint i = 1; i <= n_row; i++)
+		for (uint j = 1; j <= n_col; j++)
+			temp(i,j) *= factor;
+	return temp;
+}
+
 inline SMatrix<double> SMatrix<double>::operator/ (double factor) const{
 	SMatrix<double> temp(*this);
+	for(uint i = 1; i <= n_row; i++)
+		for (uint j = 1; j <= n_col; j++)
+			temp(i,j) /= factor;
+	return temp;
+}
+
+
+inline SMatrix<adouble> SMatrix<double>::operator/ (adouble factor) const{
+	SMatrix<adouble> temp(*this);
 	for(uint i = 1; i <= n_row; i++)
 		for (uint j = 1; j <= n_col; j++)
 			temp(i,j) /= factor;
@@ -1133,34 +1172,40 @@ inline void SMatrix<double>::setCol	(uint col_idx, SMatrix<double> col){
 	if (col.getRowDim() != n_row) {
 		cout<<"=====  Error in function setCol   =====\n"
 			  "===== Row dimensions do not match =====\n";
+		exit(1);
 	}
 
 	else if (col.getColDim() != 1) {
 		cout<<"=====        Error in function setCol         =====\n"
 			  "===== Parameter is not a single column matrix =====\n";
+		exit(1);
 	}
 	else if (col_idx < 1 || col_idx > n_col) {
 		cout<<"===== Error in function setCol =====\n"
 			  "=====    col_idx is invalid    =====\n";
+		exit(1);
 	}
 
 	for (uint i = 0; i < n_row; i++)
-		data[col_idx-1][i] 	= col(i+1);
+		data[i][col_idx-1] 	= col(i+1);
 }
 
 inline void SMatrix<adouble>::setRow	(uint row_idx, SMatrix<adouble> row){
 	if (row.getColDim() != n_col) {
 		cout<<"=====    Error in function setRow    =====\n"
 			  "===== Column dimensions do not match =====\n";
+		exit(1);
 	}
 
 	else if (row.getRowDim() != 1) {
 		cout<<"=====       Error in function setRow       =====\n"
 			  "===== Parameter is not a single row matrix =====\n";
+		exit(1);
 	}
 	else if (row_idx < 1 || row_idx > n_row) {
 		cout<<"===== Error in function setRow =====\n"
 			  "=====    Row_idx is invalid    =====\n";
+		exit(1);
 	}
 
 	for (uint i = 0; i < n_col; i++)
@@ -1286,12 +1331,12 @@ inline void SMatrix<adouble>::resize(uint row_num, uint col_num) {
 	for (uint i = 0; i<row_num; i++)
 		data[i]	= new adouble[col_num];
 
-	for (uint i = 0; i < n_row; i++) {
-		for (uint j = 0; j < n_col; j++) {
-			if (i < temp_matrix.getRowDim() && j < temp_matrix.getColDim())
-				data[i][j]	= temp_matrix.data[i][j];
+	for (uint i = 1; i <= n_row; i++) {
+		for (uint j = 1; j <= n_col; j++) {
+			if (i <= temp_matrix.getRowDim() && j <= temp_matrix.getColDim())
+				data[i-1][j-1]	= temp_matrix.data[i-1][j-1];
 			else
-				data[i][j] 	= 0.0;
+				data[i-1][j-1] 	= 0.0;
 		}
 	}
 }
@@ -1340,6 +1385,11 @@ inline adouble SMatrix<adouble>::operator()(uint idx) const{
 			  "=====     Index starts from 1    =====\n";
 		exit(1);
 	}
+	if (idx > n_row*n_col  ) {
+		cout<<"===== Overloading operator (idx) =====\n"
+			  "=====     Index out of range     =====\n";
+		exit(1);
+	}
 	if (n_col == 1)
 		return data[idx-1][0];
 	else
@@ -1362,6 +1412,11 @@ inline adouble& SMatrix<adouble>::operator()(uint idx) {
 			  "=====     Index starts from 1    =====\n";
 		exit(1);
 	}
+	if (idx > n_row*n_col  ) {
+		cout<<"===== Overloading operator (idx) =====\n"
+			  "=====     Index out of range     =====\n";
+		exit(1);
+	}
 	if (n_col == 1)
 		return data[idx-1][0];
 	else
@@ -1377,7 +1432,7 @@ inline void SMatrix<adouble>::load (const char* filename) {
 	for (uint i = 0; i < n_row; i++) {
 		for (uint j = 0; j < n_col; j++) {
 			fscanf(fp,"%le", &val);
-			data[i][j] = val;
+			this->data[i][j] = val;
 		}
 	}
 	fclose(fp);
@@ -1557,7 +1612,7 @@ inline SMatrix<adouble> SMatrix<adouble>::operator* (adouble factor) const{
 	SMatrix<adouble> temp(*this);
 	for(uint i = 1; i <= n_row; i++)
 		for (uint j = 1; j <= n_col; j++)
-			temp(i,j) *= factor;
+			temp(i,j) = temp(i,j)*factor;
 	return temp;
 }
 
@@ -1852,7 +1907,7 @@ inline SMatrix<adouble> SMatrix<adouble>::getRow(uint num) const{
 
 template<class T>
 T min(const SMatrix<T>& matrix) {
-	double val = 0;
+	double val = matrix(1,1);
 
 	for (uint i = 1;i <= matrix.getRowDim(); i++) {
 		for (uint j = 1; j <= matrix.getColDim(); j++)
@@ -1864,7 +1919,7 @@ T min(const SMatrix<T>& matrix) {
 
 template<class T>
 T max(const SMatrix<T>& matrix) {
-	double val = 0;
+	double val = matrix(1,1);
 
 	for (uint i = 1;i <= matrix.getRowDim(); i++) {
 		for (uint j = 1; j <= matrix.getColDim(); j++)
@@ -1920,12 +1975,27 @@ SMatrix<T> operator+ (double sum, const SMatrix<T>& rhs) {
 }
 
 template<class T>
+SMatrix<T> operator+ (adouble sum, const SMatrix<T>& rhs) {
+	return rhs + sum;
+}
+
+template<class T>
 SMatrix<T> operator- (double sum, const SMatrix<T>& rhs){
 	return (-rhs) + sum;
 }
 
 template<class T>
+SMatrix<T> operator- (adouble sum, const SMatrix<T>& rhs){
+	return (-rhs) + sum;
+}
+
+template<class T>
 SMatrix<T> operator* (double factor, const SMatrix<T>& rhs){
+	return rhs * factor;
+}
+
+template<class T>
+SMatrix<T> operator* (adouble factor, const SMatrix<T>& rhs){
 	return rhs * factor;
 }
 
@@ -1938,10 +2008,20 @@ SMatrix<T> operator/ (double factor, const SMatrix<T>& rhs){
 	return temp;
 }
 
+
+template<class T>
+SMatrix<T> operator/ (adouble factor, const SMatrix<T>& rhs){
+	SMatrix<T> temp(rhs.getRowDim(),rhs.getColDim());
+	for(uint i = 1; i <= rhs.getRowDim(); i++)
+		for (uint j = 1; j <= rhs.getColDim(); j++)
+			temp(i,j) = factor/rhs(i,j);
+	return temp;
+}
+
 template<class T>
 SMatrix<T> ones(uint row, uint col) {
 	SMatrix<T> temp(row, col);
-	return temp + 1;
+	return temp + 1.0;
 }
 
 template<class T>
@@ -2021,6 +2101,14 @@ SMatrix<T> transpose (const SMatrix<T>& mat) {
 	for (uint i = 1; i <= mat.getRowDim(); i++)
 		for (uint j = 1; j <= mat.getColDim(); j++)
 			temp(j,i) 	= mat(i,j);
+	return temp;
+}
+template<class T>
+SMatrix<T> abs (const SMatrix<T>& mat) {
+	SMatrix<T> temp(mat.getColDim(),mat.getRowDim());
+	for (uint i = 1; i <= mat.getRowDim(); i++)
+		for (uint j = 1; j <= mat.getColDim(); j++)
+			temp(j,i) 	= fabs(mat(i,j));
 	return temp;
 }
 
