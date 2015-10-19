@@ -20,6 +20,7 @@ public:
 	SMatrix <double> nodes;
 	SMatrix <double> x;
 	SMatrix <double> u;
+	SMatrix <double> u_full;
 	SMatrix <double> param;
 	SMatrix <double> lam_x;
 	SMatrix <double> lam_path;

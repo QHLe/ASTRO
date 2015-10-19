@@ -119,75 +119,6 @@ ApplicationReturnStatus OCP::set_OCP_structure() {
 ApplicationReturnStatus OCP::NLP_solve() {
 	OCPBounds2NLPBounds();
 
-/*
-	mglGraph* gr 	= new mglGraph;
-	mglData dat_x(n_nodes);
-	mglData dat_y(n_nodes);
-	mglData x_range(2);
-	mglData y_range(2);
-	if (config.with_mgl) {
-		for (Index i = 0; i < n_nodes; ++i) {
-			dat_x[i]	= guess.nodes(i+1,1);
-		}
-
-		gr->Box();
-
-		x_range.a[0] = min(guess.nodes);
-		x_range.a[1] = max(guess.nodes);
-
-		if (min(guess.x) > 0)
-			y_range.a[0] = min(guess.x)*0.9;
-		else
-			y_range.a[0] = min(guess.x)*1.1;
-		if (max(guess.x) < 0)
-			y_range.a[1] = max(guess.x)*0.9;
-		else
-			y_range.a[1] = max(guess.x)*1.1;
-
-
-		gr->SetRanges(x_range,y_range);
-		gr->Axis(); gr->Label('x', "time", 0); gr->Label('y', "x_{guess}", 0);
-
-		for (Index j = 0; j < n_states; ++j) {
-			for (Index i = 0; i < n_nodes; ++i) {
-				dat_y[i]	= guess.x(i+1,j+1);
-			}
-			gr->Plot(dat_x,dat_y);
-		}
-
-		gr->WriteEPS("guess_x.eps");
-		delete gr;
-
-		gr = new mglGraph;
-		gr->Box();
-		x_range.a[0] = min(guess.nodes);
-		x_range.a[1] = max(guess.nodes);
-
-		if (min(guess.u) > 0)
-			y_range.a[0] = min(guess.u)*0.9;
-		else
-			y_range.a[0] = min(guess.u)*1.1;
-		if (max(guess.u) < 0)
-			y_range.a[1] = max(guess.u)*0.9;
-		else
-			y_range.a[1] = max(guess.u)*1.1;
-
-		y_range.a[1] = max(guess.u)*1.1;
-		gr->SetRanges(x_range,y_range);
-		gr->Axis(); gr->Label('x', "time", 0); gr->Label('y', "u_{guess}", 0);
-
-		for (Index j = 0; j < n_controls; ++j) {
-			for (Index i = 0; i < n_nodes; ++i) {
-				dat_y[i]	= guess.u(i+1,j+1);
-			}
-			gr->Plot(dat_x,dat_y);
-		}
-
-
-		gr->WriteEPS("guess_u.eps");
-		delete gr;
-	}
-*/
 	status = app->OptimizeTNLP(myadolc_nlp);
 
 	if (status == Solve_Succeeded) {
@@ -207,7 +138,8 @@ ApplicationReturnStatus OCP::NLP_solve() {
 	results.nodes.resize(n_nodes,1);
 	results.x.resize(n_nodes, n_states);
 	if (config.disc_method == Hermite_Simpson){
-		results.u.resize(2*n_nodes - 1, n_controls);
+		results.u_full.resize(2*n_nodes - 1, n_controls);
+		results.u.resize(n_nodes, n_controls);
 	}
 	else {
 		results.u.resize(n_nodes, n_controls);
@@ -280,7 +212,12 @@ ApplicationReturnStatus OCP::NLP_solve() {
 	if (config.disc_method == Hermite_Simpson) {
 		for (Index i = 0; i < 2*n_nodes - 1; i++) {
 			for (Index j = 0; j < n_controls; j++) {
-				results.u(i+1,j+1) = controls[i][j];
+				results.u_full(i+1,j+1) = controls[i][j];
+			}
+			if (i < n_nodes) {
+				for (Index j = 0; j < n_controls; j++) {
+					results.u(i+1,j+1) = controls[2*i][j];
+				}
 			}
 		}
 	}
@@ -319,6 +256,7 @@ ApplicationReturnStatus OCP::NLP_solve() {
 
 	results.x.save("results_x.dat");
 	results.u.save("results_u.dat");
+	results.u_full.save("results_u_full.dat");
 	results.param.save("results_param.dat");
 
 	results.lam_x.save("results_lam_x.dat");
@@ -363,71 +301,6 @@ ApplicationReturnStatus OCP::NLP_solve() {
 	delete[] path;
 	delete[] defects;
 	delete[] controls;
-/*
-	if (config.with_mgl) {
-		for (Index i = 0; i < n_nodes; ++i) {
-			dat_x[i]	= results.nodes(i+1,1);
-		}
-
-		gr = new mglGraph;
-		gr->Box();
-
-		x_range.a[0] = min(results.nodes);
-		x_range.a[1] = max(results.nodes);
-		if (min(results.x) > 0)
-			y_range.a[0] = min(results.x)*0.9;
-		else
-			y_range.a[0] = min(results.x)*1.1;
-		if (max(results.x) < 0)
-			y_range.a[1] = max(results.x)*0.9;
-		else
-			y_range.a[1] = max(results.x)*1.1;
-
-		gr->SetRanges(x_range,y_range);
-		gr->Axis(); gr->Label('x', "time", 0); gr->Label('y', "x_{opt}", 0);
-
-		for (Index j = 0; j < n_states; ++j) {
-			for (Index i = 0; i < n_nodes; ++i) {
-				dat_y[i]	= results.x(i+1,j+1);
-			}
-			gr->Plot(dat_x,dat_y);
-		}
-
-		gr->WriteEPS("results_x.eps");
-		delete gr;
-
-		gr = new mglGraph;
-		gr->Box();
-
-		x_range.a[0] = min(results.nodes);
-		x_range.a[1] = max(results.nodes);
-
-		if (min(results.u) > 0)
-			y_range.a[0] = min(results.u)*0.9;
-		else
-			y_range.a[0] = min(results.u)*1.1;
-		if (max(results.u) < 0)
-			y_range.a[1] = max(results.u)*0.9;
-		else
-			y_range.a[1] = max(results.u)*1.1;
-
-		gr->SetRanges(x_range,y_range);
-		gr->Axis(); gr->Label('x', "time", 0); gr->Label('y', "u_{opt}", 0);
-
-		for (Index j = 0; j < n_controls; ++j) {
-			for (Index i = 0; i < n_nodes; ++i) {
-				dat_y[i]	= results.u(i+1,j+1);
-			}
-			gr->Plot(dat_x,dat_y);
-		}
-
-		gr->WriteEPS("results_u.eps");
-	}
-
-	delete gr;
-	*/
-
-
 
   	return status;
 }
@@ -497,6 +370,10 @@ void OCP::determine_scaling_factors() {
 
 
 void OCP::OCPBounds2NLPBounds() {
+#ifdef DCOPT_DEBUG
+	printf("OCPBounds2NLPBounds()\n");
+#endif
+
 	determine_scaling_factors();
 	Index NLP_n 		= myadolc_nlp->getNLP_n();
 	Index NLP_m 		= myadolc_nlp->getNLP_m();
@@ -550,12 +427,12 @@ void OCP::OCPBounds2NLPBounds() {
 
 	if(config.disc_method == Hermite_Simpson) {
 		SMatrix<double>	u_temp(this->guess.u);
-		this->guess.u.resize(n_nodes*2-1,n_controls);
+		this->guess.u_full.resize(n_nodes*2-1,n_controls);
 		for (Index i = 1; i <= n_nodes; i++) {
 			for (Index j = 1; j <= n_controls; j++){
-				this->guess.u(i*2-1,j)		= u_temp(i,j);
+				this->guess.u_full(i*2-1,j)		= guess.u(i,j);
 				if ( i < n_nodes) {
-					this->guess.u(i*2,j)		= (u_temp(i,j) + u_temp(i+1,j))/2;
+					this->guess.u_full(i*2,j)		= (guess.u(i,j) + guess.u(i+1,j))/2;
 				}
 			}
 		}
@@ -663,9 +540,9 @@ void OCP::OCPBounds2NLPBounds() {
 		}
 		if (config.disc_method == Hermite_Simpson) {
 			for (Index j = 0; j < n_controls; j++) {
-				controls[2*i][j] = guess.u(i+1,j+1);
+				controls[2*i][j] = guess.u_full(i+1,j+1);
 				if (i < n_nodes - 1)
-					controls[2*i+1][j] = guess.u(i+1,j+1);
+					controls[2*i+1][j] = guess.u_full(i+1,j+1);
 			}
 		}
 		else {
@@ -805,10 +682,15 @@ void OCP::OCPBounds2NLPBounds() {
 	delete[] path;
 	delete[] defects;
 	delete[] events;
-
+#ifdef DCOPT_DEBUG
+	printf("end of OCPBounds2NLPBounds()\n");
+#endif
 }
 
 void OCP::auto_guess_gen() {
+#ifdef DCOPT_DEBUG
+	printf("auto_guess_gen()\n");
+#endif
 	SMatrix<double> nodes = linspace<double>((lb_t0+ub_t0)/2.0,(lb_tf+ub_tf)/2.0,n_nodes);
 	guess.nodes = nodes;
 
@@ -850,6 +732,9 @@ void OCP::auto_guess_gen() {
 	if (controls != NULL) {
 		delete[] controls;
 	}
+#ifdef DCOPT_DEBUG
+	printf("end of auto_guess_gen()\n");
+#endif
 }
 
 void OCP::set_endpoint_cost(double (*d_e_cost)	(const  double* ini_states, const  double* fin_states, const  double* param, const  double& t0, const  double& tf, uint phase),

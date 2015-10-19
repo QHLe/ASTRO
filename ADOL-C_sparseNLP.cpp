@@ -32,8 +32,10 @@ MyADOLC_sparseNLP::~MyADOLC_sparseNLP()
 }
 
 bool  MyADOLC_sparseNLP::ad_eval_obj(Index n, const adouble *x, adouble& obj_value) {
-  // return the value of the objective function
-//	cout<<"ad_eval_obj\n";
+
+#ifdef DCOPT_DEBUG
+	printf("ad_eval_obj()\n");
+#endif
 
 	adouble *y0		= new adouble [n_states];
 	adouble *yf		= new adouble [n_states];
@@ -96,13 +98,19 @@ bool  MyADOLC_sparseNLP::ad_eval_obj(Index n, const adouble *x, adouble& obj_val
 	delete[] param;
 	delete[] x_sf;
 
-//	cout<<"end ad_eval_obj\n";
+#ifdef DCOPT_DEBUG
+	printf("end of ad_eval_obj()\n");
+#endif
+
 	return true;
+
 }
 
 bool  MyADOLC_sparseNLP::eval_obj(Index n, const double *x, double& obj_value) {
   // return the value of the objective function
-
+#ifdef DCOPT_DEBUG
+	printf("eval_obj()\n");
+#endif
 	NLP_x_2_OCP_var(x,NLP_x_sf,y,u,param,t0,tf);
 
 	for (Index i = 0; i < n_states; i += 1)
@@ -112,13 +120,17 @@ bool  MyADOLC_sparseNLP::eval_obj(Index n, const double *x, double& obj_value) {
 	}
 
 	obj_value = d_e_cost (y0, yf, param, t0, tf, 1);
-
+#ifdef DCOPT_DEBUG
+	printf("end of eval_obj()\n");
+#endif
 	return true;
 }
 
 bool  MyADOLC_sparseNLP::ad_eval_constraints(Index n, const adouble *x, Index m, adouble* g) {
-	//cout<<"ad_eval_constraints\n";
 
+#ifdef DCOPT_DEBUG
+	printf("ad_eval_constraints()\n");
+#endif
 	adouble *y_start	= new adouble [n_states];
 	adouble *y_end		= new adouble [n_states];
 	adouble **y 		= new adouble *[n_nodes];
@@ -254,12 +266,17 @@ bool  MyADOLC_sparseNLP::ad_eval_constraints(Index n, const adouble *x, Index m,
   	delete[] x_sf;
   	delete[] g_sf;
 
-  	//cout<<"end ad_eval_constraints\n";
+#ifdef DCOPT_DEBUG
+	printf("end of ad_eval_constraints()\n");
+#endif
 	return true;
 }
 
 bool  MyADOLC_sparseNLP::eval_constraints(Index n, const double *x, Index m, double* g) {
 
+#ifdef DCOPT_DEBUG
+	printf("eval_constraints()\n");
+#endif
 	NLP_x_2_OCP_var(x,NLP_x_sf,y,u,param,t0,tf);
 
 	for (Index i = 0; i < n_states; i += 1)
@@ -311,18 +328,28 @@ bool  MyADOLC_sparseNLP::eval_constraints(Index n, const double *x, Index m, dou
 	for (Index i = 0; i < m; i++)
 		g[i]	= g[i] + 1;
 
+#ifdef DCOPT_DEBUG
+	printf("end of eval_constraints()\n");
+#endif
 	return true;
 }
 
 bool MyADOLC_sparseNLP::get_nlp_info(Index& n, Index& m, Index& nnz_jac_g,
                          Index& nnz_h_lag, IndexStyleEnum& index_style)
 {
+
+#ifdef DCOPT_DEBUG
+	printf("get_nlp_info()\n");
+#endif
 	n = NLP_n;
 	m = NLP_m;
 	generate_tapes(n, m, nnz_jac_g, nnz_h_lag);
   // use the C style indexing (0-based)
 	index_style = C_STYLE;
 
+#ifdef DCOPT_DEBUG
+	printf("get_nlp_info()\n");
+#endif
 	return true;
 }
 
@@ -559,6 +586,7 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 	}
 //	cout<<"memory deallocation\n";
 
+	/*
 	for (Index i = 0; i < n_nodes; i += 1) {
 		delete[] y[i];
 		delete[] f[i];
@@ -599,7 +627,7 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 	delete[] NLP_g_lb;
 	delete[] NLP_g_ub;
 	delete[] NLP_g_sf;
-
+*/
 	free(rind_g);
 	free(cind_g);
 	free(jacval);
@@ -617,6 +645,9 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 
 void MyADOLC_sparseNLP::generate_tapes(Index n, Index m, Index& nnz_jac_g, Index& nnz_h_lag)
 {
+#ifdef DCOPT_DEBUG
+	printf("generate_tapes()\n");
+#endif
 	Number *xp    = new double[n];
 	Number *lamp  = new double[m];
 	Number *zl    = new double[m];
@@ -777,6 +808,7 @@ void MyADOLC_sparseNLP::generate_tapes(Index n, Index m, Index& nnz_jac_g, Index
 			idx++;
 		}
 	}
+
 #endif
 
 	delete[] lam;
@@ -787,4 +819,7 @@ void MyADOLC_sparseNLP::generate_tapes(Index n, Index m, Index& nnz_jac_g, Index
 	delete[] lamp;
 	delete[] xp;
 
+#ifdef DCOPT_DEBUG
+	printf("end of generate_tapes()\n");
+#endif
 }
