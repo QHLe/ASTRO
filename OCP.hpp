@@ -32,7 +32,6 @@ public:
 	Config();
 	~Config();
 	uint max_iter;
-//	char* hessian_approximation;
 	NLP_SOLVER NLP_solver;
 	bool warmstart;
 	bool with_mgl;
@@ -50,7 +49,6 @@ public:
 
 	Index n_nodes, n_states, n_controls, n_param, n_events, n_path, n_phases, n_linkages;
 	SMatrix<double> lb_states, ub_states, lb_controls, ub_controls, lb_param, ub_param, lb_path, ub_path, lb_events, ub_events, lb_t0, ub_t0, lb_tf, ub_tf;
-
 	Guess 	guess;
 	Guess 	results;
 	Config 	config;
@@ -60,19 +58,21 @@ public:
 	SMatrix<double> x_opt;
 	SMatrix<double> u_opt;
 	SMatrix<double> param_opt;
+
+	double* constants;
+
 //	char* mgl_marker[5] = 	{"+", "-", "*", "x", "o"};
 
 	void auto_guess_gen();
 	ApplicationReturnStatus set_OCP_structure();
 	ApplicationReturnStatus NLP_solve();
-	void set_endpoint_cost(double (*)	(const  double* ini_states, const  double* fin_states, const double* param, const double& t0, const double& tf, uint phase),
-						  adouble (*)	(const adouble* ini_states, const adouble* fin_states, const adouble* param, const adouble& t0, const adouble& tf, uint phase));
-	void set_lagrange_cost(  double (*)( const  double *states, const  double *controls, const  double *param, const  double &time,	uint phase),
-							adouble (*)( const adouble *states, const adouble *controls, const adouble *param, const adouble &time,	uint phase));
-	void set_derivatives(void (*)( double *states_dot,  double *path, const  double *states, const  double *controls, const  double *param, const  double &time, uint phase),
-						 void (*)(adouble *states_dot, adouble *path, const adouble *states, const adouble *controls, const adouble *param, const adouble &time, uint phase));
-	void set_events(void (*)( double *events, const  double *ini_states, const  double *fin_states, const  double *param, const  double &t0, const  double &tf, uint phase),
-						 void (*)(adouble *events, const adouble *ini_states, const adouble *fin_states, const adouble *param, const adouble &t0, const adouble &tf, uint phase));
+
+	void set_endpoint_cost(double (*)	(const  double* ini_states, const  double* fin_states, const double* param, const double& t0, const double& tf, uint phase, const double* constants),
+						  adouble (*)	(const adouble* ini_states, const adouble* fin_states, const adouble* param, const adouble& t0, const adouble& tf, uint phase, const double* constants));
+	void set_derivatives(void (*)( double *states_dot,  double *path, const  double *states, const  double *controls, const  double *param, const  double &time, uint phase, const double* constants),
+						 void (*)(adouble *states_dot, adouble *path, const adouble *states, const adouble *controls, const adouble *param, const adouble &time, uint phase, const double* constants));
+	void set_events(void (*)( double *events, const  double *ini_states, const  double *fin_states, const  double *param, const  double &t0, const  double &tf, uint phase, const double* constants),
+						 void (*)(adouble *events, const adouble *ini_states, const adouble *fin_states, const adouble *param, const adouble &t0, const adouble &tf, uint phase, const double* constants));
 
 private:
 	void OCPBounds2NLPBounds();

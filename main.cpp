@@ -3,20 +3,12 @@
 
 #define N_NODES		11
 
-template<class T> T lagrange_cost(	const T *states,
-									const T *controls,
-									const T *param,
-									const T &time,
-									uint phase) {
-	return 0;// controls[0]*controls[0]/2;
-}
-
 template<class T> T endpoint_cost (	const T* ini_states,
 									const T* fin_states,
 									const T* param,
 									const T& t0,
 									const T& tf,
-									uint phase) {
+									uint phase, const double* constants) {
 
 
 	return tf;//fin_states[2];
@@ -30,7 +22,7 @@ template<class T> void derivatives(	T *states_dot,
 							 	 	const T *controls,
 							 	 	const T *param,
 							 	 	const T &time,
-							 	 	uint phase) {
+							 	 	uint phase, const double* constants) {
 	T x2 = states[1];
 //	T x3 = states[2];
 
@@ -47,7 +39,7 @@ template<class T> void events(	T *events,
 								const T *param,
 								const T &t0,
 								const T &tf,
-								uint phase) {
+								uint phase, const double* constants) {
 
 	events [0]	= ini_states[0];
 	events [1]	= ini_states[1];
@@ -61,6 +53,7 @@ using namespace Ipopt;
 
 int main(int argv, char* argc[])
 {
+	ApplicationReturnStatus status;
 	OCP problem;
 	problem.n_nodes 		= N_NODES;
 	problem.n_states 		= 2;
@@ -69,12 +62,9 @@ int main(int argv, char* argc[])
 	problem.n_events 		= 4;
 	problem.n_path			= 0;
 
-	problem.set_lagrange_cost(&lagrange_cost, &lagrange_cost);
 	problem.set_endpoint_cost(&endpoint_cost, &endpoint_cost);
 	problem.set_events(&events, &events);
 	problem.set_derivatives(&derivatives, &derivatives);
-
-	ApplicationReturnStatus status;
 
 	problem.config.max_iter 	= 5000;
 	problem.config.NLP_solver 	= ma27;
@@ -113,6 +103,9 @@ int main(int argv, char* argc[])
 	problem.lb_events(4)	= -0.0;
 	problem.ub_events(4)	= -0.0;
 
+	status = problem.NLP_solve();
+
+	status = problem.set_OCP_structure();
 	status = problem.NLP_solve();
 
 	return (int) status;
