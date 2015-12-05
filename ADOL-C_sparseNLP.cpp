@@ -328,8 +328,6 @@ bool  MyADOLC_sparseNLP::eval_constraints(Index n, const double *x, Index m, dou
 		for (Index i = 0; i < m; i++)
 			g[i]	= g[i] + 1;
 
-		delete[] param;
-		delete[] e;
 	}
 	else {
 		NLP_x_2_OCP_var(x,NLP_x_sf,y,u,param,t0,tf);
