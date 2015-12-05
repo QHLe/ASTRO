@@ -183,61 +183,72 @@ template<class T>
 void 	MyADOLC_sparseNLP::OCP_var_2_NLP_x(T*const* states, T*const* controls, const T* param, const T& t0, const T& tf, T* x, const T* sf) {
 
 	Index idx = 0;
+	if (n_nodes == 0 || n_states == 0)
+	{
+		for (Index i = 0; i < n_param; i++) {
+			x[idx]		= param[i];
+			idx++;
+		}
+		if (idx != NLP_n)
+			printf("something went wrong in OCP_var_2_NLP_x (static case)\n");
+	}
+	else {
 
-	if (disc_method == Hermite_Simpson) {
-		for (Index i = 0; i < n_nodes; i += 1) {
-			for (Index j = 0; j < n_states; j += 1) {
-				x[idx]		= states[i][j]/sf[idx];
+		if (disc_method == Hermite_Simpson) {
+			for (Index i = 0; i < n_nodes; i += 1) {
+				for (Index j = 0; j < n_states; j += 1) {
+					x[idx]		= states[i][j]/sf[idx];
+					idx++;
+				}
+				for (Index j = 0; j < n_controls; j += 1) {
+					x[idx]		= controls[2*i][j]/sf[idx];
+					idx++;
+					if (i < n_nodes - 1) {
+						x[idx]		= controls[2*i+1][j]/sf[idx];
+						idx++;
+					}
+				}
+			}
+
+			for (Index i = 0; i < n_param; i += 1)	{
+				x[idx]		= param[i]/sf[idx];
 				idx++;
 			}
-			for (Index j = 0; j < n_controls; j += 1) {
-				x[idx]		= controls[2*i][j]/sf[idx];
-				idx++;
-				if (i < n_nodes - 1) {
-					x[idx]		= controls[2*i+1][j]/sf[idx];
+
+			x[idx]			= t0/sf[idx];
+			idx++;
+			x[idx]			= tf/sf[idx];
+			idx++;
+
+			if (idx != NLP_n)
+				printf("something went wrong in OCP_var_2_NLP_x\n");
+		}
+		else {
+			for (Index i = 0; i < n_nodes; i += 1) {
+				for (Index j = 0; j < n_states; j += 1) {
+					x[idx]		= states[i][j]/sf[idx];
+					idx++;
+				}
+				for (Index j = 0; j < n_controls; j += 1) {
+					x[idx]		= controls[i][j]/sf[idx];
 					idx++;
 				}
 			}
-		}
-
-		for (Index i = 0; i < n_param; i += 1)	{
-			x[idx]		= param[i]/sf[idx];
-			idx++;
-		}
-
-		x[idx]			= t0/sf[idx];
-		idx++;
-		x[idx]			= tf/sf[idx];
-		idx++;
-
-		if (idx != NLP_n)
-			printf("something went wrong in OCP_var_2_NLP_x\n");
-	}
-	else {
-		for (Index i = 0; i < n_nodes; i += 1) {
-			for (Index j = 0; j < n_states; j += 1) {
-				x[idx]		= states[i][j]/sf[idx];
+			for (Index i = 0; i < n_param; i += 1)	{
+				x[idx]		= param[i]/sf[idx];
 				idx++;
 			}
-			for (Index j = 0; j < n_controls; j += 1) {
-				x[idx]		= controls[i][j]/sf[idx];
-				idx++;
-			}
-		}
-		for (Index i = 0; i < n_param; i += 1)	{
-			x[idx]		= param[i]/sf[idx];
+
+			x[idx]			= t0/sf[idx];
 			idx++;
+
+			x[idx]			= tf/sf[idx];
+			idx++;
+
+			if (idx != NLP_n)
+				printf("something went wrong in OCP_var_2_NLP_x\n");
+
 		}
-
-		x[idx]			= t0/sf[idx];
-		idx++;
-
-		x[idx]			= tf/sf[idx];
-		idx++;
-
-		if (idx != NLP_n)
-			printf("something went wrong in OCP_var_2_NLP_x\n");
-
 	}
 }
 
@@ -245,53 +256,63 @@ template<class T>
 void 	MyADOLC_sparseNLP::OCP_var_2_NLP_g(T*const* path, T*const* defects, const T* events, T* g, const T* g_sf) {
 
 	Index idx_m = 0;
-	if (disc_method == Hermite_Simpson){
-		for (Index i = 0; i < n_nodes; i += 1) {
-			for (Index j = 0; j < n_path; j += 1) {
-				g[idx_m]	= 	path[2*i][j]/g_sf[idx_m];
-				idx_m++;
-				if ( i < n_nodes - 1) {
-					g[idx_m]	= 	path[2*i+1][j]/g_sf[idx_m];
-					idx_m++;
-				}
-			}
-			for (Index j = 0; j < n_states; j += 1) {
-				if(i < n_nodes - 1) {
-					g[idx_m] 		= 	defects[i][j]/g_sf[idx_m];
-					idx_m++;
-				}
-			}
-		}
-		for (Index i = 0; i < n_events; i += 1)
-		{
-			g[idx_m]	= 	events[i]/g_sf[idx_m];
+	if (n_nodes == 0 || n_states == 0){
+		for (Index i = 0; i < n_events; i++) {
+			g[idx_m]		= events[i];
 			idx_m++;
 		}
-
-		if (idx_m !=NLP_m)
-			printf("something went wrong in OCP_var_2_NLP_g\n");
+		if (idx_m != NLP_m)
+			printf("something went wrong in OCP_var_2_NLP_g (static case)\n");
 	}
 	else {
-		for (Index i = 0; i < n_nodes; i += 1) {
-			for (Index j = 0; j < n_path; j += 1) {
-				g[idx_m]	= 	path[i][j]/g_sf[idx_m];
-				idx_m++;
-			}
-			for (Index j = 0; j < n_states; j += 1) {
-				if(i < n_nodes - 1) {
-					g[idx_m] 		= 	defects[i][j]/g_sf[idx_m];
+		if (disc_method == Hermite_Simpson){
+			for (Index i = 0; i < n_nodes; i += 1) {
+				for (Index j = 0; j < n_path; j += 1) {
+					g[idx_m]	= 	path[2*i][j]/g_sf[idx_m];
 					idx_m++;
+					if ( i < n_nodes - 1) {
+						g[idx_m]	= 	path[2*i+1][j]/g_sf[idx_m];
+						idx_m++;
+					}
+				}
+				for (Index j = 0; j < n_states; j += 1) {
+					if(i < n_nodes - 1) {
+						g[idx_m] 		= 	defects[i][j]/g_sf[idx_m];
+						idx_m++;
+					}
 				}
 			}
-		}
-		for (Index i = 0; i < n_events; i += 1)
-		{
-			g[idx_m]	= 	events[i]/g_sf[idx_m];
-			idx_m++;
-		}
+			for (Index i = 0; i < n_events; i += 1)
+			{
+				g[idx_m]	= 	events[i]/g_sf[idx_m];
+				idx_m++;
+			}
 
-		if (idx_m !=NLP_m)
-			printf("something went wrong in OCP_var_2_NLP_g\n");
+			if (idx_m !=NLP_m)
+				printf("something went wrong in OCP_var_2_NLP_g\n");
+		}
+		else {
+			for (Index i = 0; i < n_nodes; i += 1) {
+				for (Index j = 0; j < n_path; j += 1) {
+					g[idx_m]	= 	path[i][j]/g_sf[idx_m];
+					idx_m++;
+				}
+				for (Index j = 0; j < n_states; j += 1) {
+					if(i < n_nodes - 1) {
+						g[idx_m] 		= 	defects[i][j]/g_sf[idx_m];
+						idx_m++;
+					}
+				}
+			}
+			for (Index i = 0; i < n_events; i += 1)
+			{
+				g[idx_m]	= 	events[i]/g_sf[idx_m];
+				idx_m++;
+			}
+
+			if (idx_m !=NLP_m)
+				printf("something went wrong in OCP_var_2_NLP_g\n");
+		}
 	}
 }
 
@@ -299,59 +320,69 @@ template<class T>
 void 	MyADOLC_sparseNLP::NLP_x_2_OCP_var(const T* x, const T* sf, T** states, T** controls, T* param, T& t0, T& tf) {
 
 	Index idx_n = 0;
-
-	if (disc_method == Hermite_Simpson){
-		for (Index i = 0; i < n_nodes; i += 1)	{
-			for (Index j = 0; j < n_states; j += 1){
-				states[i][j] 	= x[idx_n]*sf[idx_n];
+	if (n_nodes == 0 || n_states == 0)
+	{
+		for (Index i = 0; i < n_param; i++) {
+			param[i]		= x[idx_n];
+			idx_n++;
+		}
+		if (idx_n != NLP_n)
+			printf("something went wrong in NLP_x_2_OCP_var (static case)\n");
+	}
+	else {
+		if (disc_method == Hermite_Simpson){
+			for (Index i = 0; i < n_nodes; i += 1)	{
+				for (Index j = 0; j < n_states; j += 1){
+					states[i][j] 	= x[idx_n]*sf[idx_n];
+					idx_n++;
+				}
+				for (Index j = 0; j < n_controls; j += 1){
+					controls[2*i][j] 	= x[idx_n]*sf[idx_n];
+					idx_n++;
+					if (i < n_nodes - 1) {
+						controls[2*i+1][j] 	= x[idx_n]*sf[idx_n];
+						idx_n++;
+					}
+				}
+			}
+			for (Index i = 0; i < n_param; i += 1)
+			{
+				param[i]			= x[idx_n]*sf[idx_n];
 				idx_n++;
 			}
-			for (Index j = 0; j < n_controls; j += 1){
-				controls[2*i][j] 	= x[idx_n]*sf[idx_n];
-				idx_n++;
-				if (i < n_nodes - 1) {
-					controls[2*i+1][j] 	= x[idx_n]*sf[idx_n];
+
+			t0 					= x[idx_n]*sf[idx_n];
+			idx_n++;
+			tf					= x[idx_n]*sf[idx_n];
+			idx_n++;
+
+			if (idx_n != NLP_n)
+				printf("something went wrong in NLP_x_2_OCP_var\n");
+		}
+		else {
+			for (Index i = 0; i < n_nodes; i += 1)	{
+				for (Index j = 0; j < n_states; j += 1){
+					states[i][j] 	= x[idx_n]*sf[idx_n];
+					idx_n++;
+				}
+				for (Index j = 0; j < n_controls; j += 1){
+					controls[i][j] 	= x[idx_n]*sf[idx_n];
 					idx_n++;
 				}
 			}
-		}
-		for (Index i = 0; i < n_param; i += 1)
-		{
-			param[i]			= x[idx_n]*sf[idx_n];
-			idx_n++;
-		}
-
-		t0 					= x[idx_n]*sf[idx_n];
-		idx_n++;
-		tf					= x[idx_n]*sf[idx_n];
-		idx_n++;
-
-		if (idx_n != NLP_n)
-			printf("something went wrong in NLP_x_2_OCP_var\n");
-	}
-	else {
-		for (Index i = 0; i < n_nodes; i += 1)	{
-			for (Index j = 0; j < n_states; j += 1){
-				states[i][j] 	= x[idx_n]*sf[idx_n];
+			for (Index i = 0; i < n_param; i += 1)
+			{
+				param[i]			= x[idx_n]*sf[idx_n];
 				idx_n++;
 			}
-			for (Index j = 0; j < n_controls; j += 1){
-				controls[i][j] 	= x[idx_n]*sf[idx_n];
-				idx_n++;
-			}
-		}
-		for (Index i = 0; i < n_param; i += 1)
-		{
-			param[i]			= x[idx_n]*sf[idx_n];
+			t0 						= x[idx_n]*sf[idx_n];
 			idx_n++;
-		}
-		t0 						= x[idx_n]*sf[idx_n];
-		idx_n++;
-		tf		 				= x[idx_n]*sf[idx_n];
-		idx_n++;
+			tf		 				= x[idx_n]*sf[idx_n];
+			idx_n++;
 
-		if (idx_n != NLP_n)
-			printf("something went wrong in NLP_x_2_OCP_var\n");
+			if (idx_n != NLP_n)
+				printf("something went wrong in NLP_x_2_OCP_var\n");
+		}
 	}
 }
 
@@ -359,51 +390,62 @@ template<class T>
 void 	MyADOLC_sparseNLP::NLP_g_2_OCP_var(const T* g, const T* sf, T** path, T** defects, T* events) {
 
 	Index idx_m = 0;
-	if (disc_method == Hermite_Simpson){
-		for (Index i = 0; i < n_nodes; i += 1) {
-			for (Index j = 0; j < n_path; j += 1) {
-				path[2*i][j]	= g[idx_m]*sf[idx_m];
-				idx_m++;
-				if ( i < n_nodes - 1) {
-					path[2*i+1][j]	= g[idx_m]*sf[idx_m];
-					idx_m++;
-				}
-			}
-			for (Index j = 0; j < n_states; j += 1) {
-				if(i < n_nodes - 1) {
-					defects[i][j]	= g[idx_m]*sf[idx_m];
-					idx_m++;
-				}
-			}
-		}
-
-		for (Index i = 0; i < n_events; i += 1)	{
-			events[i]		= g[idx_m]*sf[idx_m];
+	if (n_nodes == 0 || n_states == 0)
+	{
+		for (Index i = 0; i < n_events; i++) {
+			events[i]		= g[idx_m];
 			idx_m++;
 		}
 		if (idx_m != NLP_m)
-			printf("something went wrong in NLP_g_2_OCP_var\n");
+			printf("something went wrong in NLP_g_2_OCP_var (static case)\n");
 	}
 	else {
-		for (Index i = 0; i < n_nodes; i += 1) {
-			for (Index j = 0; j < n_path; j += 1) {
-				path[i][j]	= g[idx_m]*sf[idx_m];
-				idx_m++;
-			}
-			for (Index j = 0; j < n_states; j += 1) {
-				if(i < n_nodes - 1) {
-					defects[i][j]	= g[idx_m]*sf[idx_m];
+		if (disc_method == Hermite_Simpson){
+			for (Index i = 0; i < n_nodes; i += 1) {
+				for (Index j = 0; j < n_path; j += 1) {
+					path[2*i][j]	= g[idx_m]*sf[idx_m];
 					idx_m++;
+					if ( i < n_nodes - 1) {
+						path[2*i+1][j]	= g[idx_m]*sf[idx_m];
+						idx_m++;
+					}
+				}
+				for (Index j = 0; j < n_states; j += 1) {
+					if(i < n_nodes - 1) {
+						defects[i][j]	= g[idx_m]*sf[idx_m];
+						idx_m++;
+					}
 				}
 			}
-		}
 
-		for (Index i = 0; i < n_events; i += 1)	{
-			events[i]		= g[idx_m]*sf[idx_m];
-			idx_m++;
+			for (Index i = 0; i < n_events; i += 1)	{
+				events[i]		= g[idx_m]*sf[idx_m];
+				idx_m++;
+			}
+			if (idx_m != NLP_m)
+				printf("something went wrong in NLP_g_2_OCP_var\n");
 		}
-		if (idx_m != NLP_m)
-			printf("something went wrong in NLP_g_2_OCP_var\n");
+		else {
+			for (Index i = 0; i < n_nodes; i += 1) {
+				for (Index j = 0; j < n_path; j += 1) {
+					path[i][j]	= g[idx_m]*sf[idx_m];
+					idx_m++;
+				}
+				for (Index j = 0; j < n_states; j += 1) {
+					if(i < n_nodes - 1) {
+						defects[i][j]	= g[idx_m]*sf[idx_m];
+						idx_m++;
+					}
+				}
+			}
+
+			for (Index i = 0; i < n_events; i += 1)	{
+				events[i]		= g[idx_m]*sf[idx_m];
+				idx_m++;
+			}
+			if (idx_m != NLP_m)
+				printf("something went wrong in NLP_g_2_OCP_var\n");
+		}
 	}
 }
 

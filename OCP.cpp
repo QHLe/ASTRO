@@ -51,14 +51,19 @@ OCP::~OCP() {
 
 ApplicationReturnStatus OCP::set_OCP_structure() {
 	Index NLP_n, NLP_m;
-
-	if (config.disc_method == Hermite_Simpson){
-		NLP_n = (n_states + 2*n_controls)*n_nodes - n_controls + n_param + 2;
-		NLP_m = ((n_nodes - 1)*n_states + n_events + n_path*(2*n_nodes-1));
+	if (n_states == 0 || n_nodes == 0) {
+		NLP_n 	= n_param;
+		NLP_m 	= n_events;
 	}
 	else {
-		NLP_n = (n_states + n_controls)*n_nodes + n_param + 2;
-		NLP_m = ((n_nodes - 1)*n_states + n_events + n_path*n_nodes);
+		if (config.disc_method == Hermite_Simpson){
+			NLP_n = (n_states + 2*n_controls)*n_nodes - n_controls + n_param + 2;
+			NLP_m = ((n_nodes - 1)*n_states + n_events + n_path*(2*n_nodes-1));
+		}
+		else {
+			NLP_n = (n_states + n_controls)*n_nodes + n_param + 2;
+			NLP_m = ((n_nodes - 1)*n_states + n_events + n_path*n_nodes);
+		}
 	}
 
 	SMatrix<uint> structure(8,1);
@@ -116,11 +121,12 @@ ApplicationReturnStatus OCP::set_OCP_structure() {
   	if (status != Solve_Succeeded) {
   		printf("\n\n*** Error during initialization!\n");
   	}
-	printf("Structure successful set\n");
+	printf("Structure successfully set\n");
   	return status;
 }
 
 ApplicationReturnStatus OCP::NLP_solve() {
+
 	OCPBounds2NLPBounds();
 
 	status = app->OptimizeTNLP(myadolc_nlp);
@@ -139,173 +145,226 @@ ApplicationReturnStatus OCP::NLP_solve() {
 	Index NLP_n					= myadolc_nlp->getNLP_n();
 	Index NLP_m					= myadolc_nlp->getNLP_m();
 
-	results.nodes.resize(n_nodes,1);
-	results.x.resize(n_nodes, n_states);
-	if (config.disc_method == Hermite_Simpson){
-		results.u_full.resize(2*n_nodes - 1, n_controls);
-		results.u.resize(n_nodes, n_controls);
+	NLP_x.save("results_NLP_x.dat");
+	NLP_lam.save("results_NLP_lam.dat");
+
+	if(n_states == 0 || n_nodes == 0) {
+		results.param.resize(n_param,1);
+
+		double* x 			= new double[NLP_n];
+		double* d_x_sf		= new double[NLP_n];
+		double* g 			= new double[NLP_m];
+		double* d_g_sf		= new double[NLP_m];
+		double* param		= new double [n_param];
+		double* events		= new double [n_events];
+
+		double **states, **controls, **path, **defects, t0, tf;
+
+		for (Index i = 0; i < NLP_n; i++) {
+			x[i]		= NLP_x(i+1);
+			d_x_sf[i]	= 1.0;
+		}
+
+		myadolc_nlp->NLP_x_2_OCP_var(x,d_x_sf,states,controls,param,t0,tf);
+
+
+		for (Index i = 0; i < n_param; i++) {
+			results.param(i+1) = param[i];
+		}
+
+		for (Index i = 0; i < NLP_m; i++) {
+			g[i]		= -NLP_lam(i+1);
+			d_g_sf[i]	= 1.0;
+		}
+
+		myadolc_nlp->NLP_g_2_OCP_var(g,d_g_sf,path,defects,events);
+
+		results.lam_events.resize(n_events, 1);
+
+		for (Index i = 0; i < n_events; i++) {
+			results.lam_events(i+1,1) = events[i];
+		}
+
+		results.param.save("results_param.dat");
+		results.lam_events.save("results_lam_events.dat");
+
+		delete[] x;
+		delete[] d_x_sf;
+		delete[] g;
+		delete[] d_g_sf;
+		delete[] param;
+		delete[] events;
 	}
 	else {
-		results.u.resize(n_nodes, n_controls);
-	}
-	results.param.resize(n_param,1);
-
-	double* x 			= new double[NLP_n];
-	double* d_x_sf		= new double[NLP_n];
-	double* g 			= new double[NLP_m];
-	double* d_g_sf		= new double[NLP_m];
-	double* param		= new double [n_param];
-	double* events		= new double [n_events];
-	double** states		= new double* [n_nodes];
-	double** defects	= new double* [n_nodes - 1];
-	double** path;
-	double** controls;
-
-	for (Index i = 0; i < n_nodes; i++){
-		states[i]		= new double [n_states];
-		if (i < n_nodes - 1)
-			defects[i] 	= new double [n_states];
-	}
-
-
-	if(config.disc_method == Hermite_Simpson) {
-		controls	= new double* [2*n_nodes - 1];
-		path		= new double* [2*n_nodes - 1 ];
-		for (Index i = 0; i < 2*n_nodes - 1; i++) {
-			controls[i]		= new double [n_controls];
-			path[i]			= new double [n_path];
+		results.nodes.resize(n_nodes,1);
+		results.x.resize(n_nodes, n_states);
+		if (config.disc_method == Hermite_Simpson){
+			results.u_full.resize(2*n_nodes - 1, n_controls);
+			results.u.resize(n_nodes, n_controls);
 		}
-	}
-	else {
-		controls	= new double* [n_nodes];
-		path		= new double* [n_nodes];
-		for (Index i = 0; i < n_nodes; i++) {
-			controls[i]		= new double [n_controls];
-			path[i]			= new double [n_path];
+		else {
+			results.u.resize(n_nodes, n_controls);
 		}
-	}
+		results.param.resize(n_param,1);
 
-	double t0, tf;
+		double* x 			= new double[NLP_n];
+		double* d_x_sf		= new double[NLP_n];
+		double* g 			= new double[NLP_m];
+		double* d_g_sf		= new double[NLP_m];
+		double* param		= new double [n_param];
+		double* events		= new double [n_events];
+		double** states		= new double* [n_nodes];
+		double** defects	= new double* [n_nodes - 1];
+		double** path;
+		double** controls;
 
-	for (Index i = 0; i < NLP_n; i++) {
-		x[i]		= NLP_x(i+1);
-		d_x_sf[i]	= 1.0;
-	}
-
-	myadolc_nlp->NLP_x_2_OCP_var(x,d_x_sf,states,controls,param,t0,tf);
-
-	SMatrix<double> delta 		= (tf - t0)*myadolc_nlp->getnode_str();
-
-	results.nodes(1,1) = t0;
-	for (Index i = 2; i < n_nodes; i++) {
-		results.nodes(i,1) 	= results.nodes(i-1,1) + delta(i);
-	}
-	results.nodes(n_nodes,1) = tf;
-	results.nodes.save("results_nodes.dat");
-
-	for (Index i = 0; i < n_nodes; i++) {
-		for (Index j = 0; j < n_states; j++) {
-			results.x(i+1,j+1) = states[i][j];
+		for (Index i = 0; i < n_nodes; i++){
+			states[i]		= new double [n_states];
+			if (i < n_nodes - 1)
+				defects[i] 	= new double [n_states];
 		}
-	}
 
-	for (Index i = 0; i < n_param; i++) {
-		results.param(i+1) = param[i];
-	}
 
-	if (config.disc_method == Hermite_Simpson) {
-		for (Index i = 0; i < 2*n_nodes - 1; i++) {
-			for (Index j = 0; j < n_controls; j++) {
-				results.u_full(i+1,j+1) = controls[i][j];
+		if(config.disc_method == Hermite_Simpson) {
+			controls	= new double* [2*n_nodes - 1];
+			path		= new double* [2*n_nodes - 1 ];
+			for (Index i = 0; i < 2*n_nodes - 1; i++) {
+				controls[i]		= new double [n_controls];
+				path[i]			= new double [n_path];
 			}
-			if (i < n_nodes) {
+		}
+		else {
+			controls	= new double* [n_nodes];
+			path		= new double* [n_nodes];
+			for (Index i = 0; i < n_nodes; i++) {
+				controls[i]		= new double [n_controls];
+				path[i]			= new double [n_path];
+			}
+		}
+
+		double t0, tf;
+
+		for (Index i = 0; i < NLP_n; i++) {
+			x[i]		= NLP_x(i+1);
+			d_x_sf[i]	= 1.0;
+		}
+
+		myadolc_nlp->NLP_x_2_OCP_var(x,d_x_sf,states,controls,param,t0,tf);
+
+		SMatrix<double> delta 		= (tf - t0)*myadolc_nlp->getnode_str();
+
+		results.nodes(1,1) = t0;
+		for (Index i = 2; i < n_nodes; i++) {
+			results.nodes(i,1) 	= results.nodes(i-1,1) + delta(i);
+		}
+		results.nodes(n_nodes,1) = tf;
+		results.nodes.save("results_nodes.dat");
+
+		for (Index i = 0; i < n_nodes; i++) {
+			for (Index j = 0; j < n_states; j++) {
+				results.x(i+1,j+1) = states[i][j];
+			}
+		}
+
+		for (Index i = 0; i < n_param; i++) {
+			results.param(i+1) = param[i];
+		}
+
+		if (config.disc_method == Hermite_Simpson) {
+			for (Index i = 0; i < 2*n_nodes - 1; i++) {
 				for (Index j = 0; j < n_controls; j++) {
-					results.u(i+1,j+1) = controls[2*i][j];
+					results.u_full(i+1,j+1) = controls[i][j];
+				}
+				if (i < n_nodes) {
+					for (Index j = 0; j < n_controls; j++) {
+						results.u(i+1,j+1) = controls[2*i][j];
+					}
 				}
 			}
 		}
-	}
-	else {
-		for (Index i = 0; i < n_nodes; i++) {
-			for (Index j = 0; j < n_controls; j++) {
-				results.u(i+1,j+1) = controls[i][j];
+		else {
+			for (Index i = 0; i < n_nodes; i++) {
+				for (Index j = 0; j < n_controls; j++) {
+					results.u(i+1,j+1) = controls[i][j];
+				}
 			}
 		}
-	}
-	for (Index i = 0; i < NLP_m; i++) {
-		g[i]		= -NLP_lam(i+1);
-		d_g_sf[i]	= 1.0;
-	}
-
-	myadolc_nlp->NLP_g_2_OCP_var(g,d_g_sf,path,defects,events);
-
-	results.lam_x.resize(n_nodes - 1, n_states);
-	results.lam_path.resize(n_nodes, n_path);
-	results.lam_events.resize(n_events, 1);
-
-	for (Index i = 0; i < n_nodes; i++) {
-		for (Index j = 0; j < n_path; j++) {
-			results.lam_path(i+1,j+1) = path[i][j];
+		for (Index i = 0; i < NLP_m; i++) {
+			g[i]		= -NLP_lam(i+1);
+			d_g_sf[i]	= 1.0;
 		}
-		if( i < n_nodes - 1) {
-			for (Index j = 0; j < n_states; j++) {
-				results.lam_x(i+1,j+1) = defects[i][j];
+
+		myadolc_nlp->NLP_g_2_OCP_var(g,d_g_sf,path,defects,events);
+
+		results.lam_x.resize(n_nodes - 1, n_states);
+		results.lam_path.resize(n_nodes, n_path);
+		results.lam_events.resize(n_events, 1);
+
+		for (Index i = 0; i < n_nodes; i++) {
+			for (Index j = 0; j < n_path; j++) {
+				results.lam_path(i+1,j+1) = path[i][j];
+			}
+			if( i < n_nodes - 1) {
+				for (Index j = 0; j < n_states; j++) {
+					results.lam_x(i+1,j+1) = defects[i][j];
+				}
 			}
 		}
-	}
 
-	for (Index i = 0; i < n_events; i++) {
-		results.lam_events(i+1,1) = events[i];
-	}
-
-	results.x.save("results_x.dat");
-	results.u.save("results_u.dat");
-	results.u_full.save("results_u_full.dat");
-	results.param.save("results_param.dat");
-
-	results.lam_x.save("results_lam_x.dat");
-	results.lam_path.save("results_lam_path.dat");
-	results.lam_events.save("results_lam_events.dat");
-
-	x0_opt.resize(1,n_states);
-	xf_opt.resize(1,n_states);
-	for (Index i = 1; i <= n_states; i += 1) {
-		x0_opt(1,i) 		= results.x(1,i);
-		xf_opt(1,i)			= results.x(n_nodes,i);
-	}
-	x0_opt.save("results_x0.dat");
-	xf_opt.save("results_xf.dat");
-
-	if(config.disc_method == Hermite_Simpson) {
-		for (Index i = 0; i < 2*n_nodes - 1; i++) {
-			delete[] controls[i];
-			delete[] path[i];
+		for (Index i = 0; i < n_events; i++) {
+			results.lam_events(i+1,1) = events[i];
 		}
-	}
-	else {
-		for (Index i = 0; i < n_nodes; i++) {
-			delete[] controls[i];
-			delete[] path[i];
+
+		results.x.save("results_x.dat");
+		results.u.save("results_u.dat");
+		results.u_full.save("results_u_full.dat");
+		results.param.save("results_param.dat");
+
+		results.lam_x.save("results_lam_x.dat");
+		results.lam_path.save("results_lam_path.dat");
+		results.lam_events.save("results_lam_events.dat");
+
+		x0_opt.resize(1,n_states);
+		xf_opt.resize(1,n_states);
+		for (Index i = 1; i <= n_states; i += 1) {
+			x0_opt(1,i) 		= results.x(1,i);
+			xf_opt(1,i)			= results.x(n_nodes,i);
 		}
-	}
+		x0_opt.save("results_x0.dat");
+		xf_opt.save("results_xf.dat");
 
-	for (Index i = 0; i < n_nodes; i++){
-		delete[] states[i];
-	if (i < n_nodes - 1){
-		delete[] defects[i];
-	}
-}
-	delete[] x;
-	delete[] d_x_sf;
-	delete[] g;
-	delete[] d_g_sf;
-	delete[] param;
-	delete[] events;
-	delete[] states;
-	delete[] path;
-	delete[] defects;
-	delete[] controls;
+		if(config.disc_method == Hermite_Simpson) {
+			for (Index i = 0; i < 2*n_nodes - 1; i++) {
+				delete[] controls[i];
+				delete[] path[i];
+			}
+		}
+		else {
+			for (Index i = 0; i < n_nodes; i++) {
+				delete[] controls[i];
+				delete[] path[i];
+			}
+		}
 
+		for (Index i = 0; i < n_nodes; i++){
+			delete[] states[i];
+
+			if (i < n_nodes - 1){
+				delete[] defects[i];
+			}
+
+		}
+		delete[] x;
+		delete[] d_x_sf;
+		delete[] g;
+		delete[] d_g_sf;
+		delete[] param;
+		delete[] events;
+		delete[] states;
+		delete[] path;
+		delete[] defects;
+		delete[] controls;
+	}
   	return status;
 }
 
@@ -377,12 +436,90 @@ void OCP::OCPBounds2NLPBounds() {
 #ifdef DCOPT_DEBUG
 	printf("OCPBounds2NLPBounds()\n");
 #endif
-
 	determine_scaling_factors();
 	Index NLP_n 		= myadolc_nlp->getNLP_n();
 	Index NLP_m 		= myadolc_nlp->getNLP_m();
-	SMatrix<double> node_str(n_nodes - 1,1);
-	if ((guess.nodes.getRowDim() != (uint)n_nodes) 	||
+	if (n_nodes == 0 || n_states == 0) {
+		if (guess.param.getRowDim() != (uint)n_param)  {
+
+			cout<<"===== No guess provided or guess invalid =====\n"
+				  "=====  Generating guess based on Bounds  =====\n\n";
+			auto_guess_gen();
+		}
+		double* d_x_l		= new double[NLP_n];
+		double* d_x_u		= new double[NLP_n];
+		double* d_x_guess	= new double[NLP_n];
+		double* d_x_sf		= new double[NLP_n];
+
+		double* d_g_l		= new double[NLP_m];
+		double* d_g_u		= new double[NLP_m];
+		double* d_g_sf		= new double[NLP_m];
+
+		double* param		= new double [n_param];
+		double* events		= new double [n_events];
+
+		double t0, tf;
+
+		double **states, **controls, **path, **defects;
+
+		for (Index i = 0; i < NLP_n; i++) {
+			d_x_sf[i] = 1.0;
+		}
+		for (Index i = 0; i < NLP_m; i++) {
+			d_g_sf[i] = 1.0;
+		}
+
+		for (Index i = 0; i < n_param; i++) {
+				param[i] = sf_param(i+1);
+		}
+		myadolc_nlp->OCP_var_2_NLP_x(states,controls,param,t0,tf, d_x_sf, d_x_sf);
+
+		for (Index i = 0; i < n_param; i++) {
+				param[i] = lb_param(i+1);
+		}
+		myadolc_nlp->OCP_var_2_NLP_x(states,controls,param,t0,tf, d_x_l, d_x_sf);
+
+		for (Index i = 0; i < n_param; i++) {
+				param[i] = ub_param(i+1);
+		}
+		myadolc_nlp->OCP_var_2_NLP_x(states,controls,param,t0,tf, d_x_u, d_x_sf);
+
+		for (Index i = 0; i < n_param; i++) {
+				param[i] = guess.param(i+1);
+		}
+		myadolc_nlp->OCP_var_2_NLP_x(states,controls,param,t0,tf, d_x_guess, d_x_sf);
+
+		for (Index i = 0; i < n_events; i++) {
+				events[i] = sf_events(i+1);
+		}
+		myadolc_nlp->OCP_var_2_NLP_g(path, defects, events, d_g_sf, d_g_sf);
+
+		for (Index i = 0; i < n_events; i++) {
+				events[i] = lb_events(i+1);
+		}
+		myadolc_nlp->OCP_var_2_NLP_g(path, defects, events, d_g_l, d_g_sf);
+
+		for (Index i = 0; i < n_events; i++) {
+				events[i] = ub_events(i+1);
+		}
+		myadolc_nlp->OCP_var_2_NLP_g(path, defects, events, d_g_u, d_g_sf);
+
+		for ( Index i = 0; i < NLP_m; i++) {
+			d_g_l[i]	= d_g_l[i] + 1;
+			d_g_u[i]	= d_g_u[i] + 1;
+		}
+
+		myadolc_nlp->setBounds(d_x_l, d_x_u, d_g_l, d_g_u);
+		myadolc_nlp->setSF(d_x_sf, d_g_sf);
+		myadolc_nlp->setguess(d_x_guess);
+
+		delete [] param;
+		delete [] events;
+
+	}
+	else {
+		SMatrix<double> node_str(n_nodes - 1,1);
+		if ((guess.nodes.getRowDim() != (uint)n_nodes) 	||
 			(guess.param.getRowDim() != (uint)n_param) 	||
 			(guess.u.getColDim() != (uint)n_controls)	||
 			(guess.x.getColDim() != (uint)n_states)	||
@@ -390,302 +527,304 @@ void OCP::OCPBounds2NLPBounds() {
 			(guess.x.getRowDim() != (uint)n_nodes)	) {
 
 			cout<<"===== No guess provided or guess invalid =====\n"
-			  "=====  Generating guess based on Bounds  =====\n\n";
+					"=====  Generating guess based on Bounds  =====\n\n";
 			auto_guess_gen();
-	}
-
-	double* d_x_l		= new double[NLP_n];
-	double* d_x_u		= new double[NLP_n];
-	double* d_x_guess	= new double[NLP_n];
-	double* d_x_sf		= new double[NLP_n];
-
-	double* d_g_l		= new double[NLP_m];
-	double* d_g_u		= new double[NLP_m];
-	double* d_g_sf		= new double[NLP_m];
-
-	double** states		= new double* [n_nodes];
-	double** controls;
-	double* param		= new double [n_param];
-
-	double** path;
-	double** defects	= new double* [n_nodes-1];
-	double* events		= new double [n_events];
-
-	if(config.disc_method == Hermite_Simpson) {
-		controls	= new double* [2*n_nodes - 1];
-		path		= new double* [2*n_nodes - 1];
-		for (Index i = 0; i < 2*n_nodes - 1; i++) {
-			controls[i]		= new double [n_controls];
-			path[i]			= new double [n_path];
 		}
 
-	}
-	else {
-		controls	= new double* [n_nodes];
-		path		= new double* [n_nodes];
-		for (Index i = 0; i < n_nodes; i++) {
-			controls[i]		= new double [n_controls];
-			path[i]			= new double [n_path];
-		}
-	}
+		double* d_x_l		= new double[NLP_n];
+		double* d_x_u		= new double[NLP_n];
+		double* d_x_guess	= new double[NLP_n];
+		double* d_x_sf		= new double[NLP_n];
 
-	if(config.disc_method == Hermite_Simpson) {
-		SMatrix<double>	u_temp(this->guess.u);
-		this->guess.u_full.resize(n_nodes*2-1,n_controls);
-		for (Index i = 1; i <= n_nodes; i++) {
-			for (Index j = 1; j <= n_controls; j++){
-				this->guess.u_full(i*2-1,j)		= guess.u(i,j);
-				if ( i < n_nodes) {
-					this->guess.u_full(i*2,j)		= (guess.u(i,j) + guess.u(i+1,j))/2;
+		double* d_g_l		= new double[NLP_m];
+		double* d_g_u		= new double[NLP_m];
+		double* d_g_sf		= new double[NLP_m];
+
+		double** states		= new double* [n_nodes];
+		double** controls;
+		double* param		= new double [n_param];
+
+		double** path;
+		double** defects	= new double* [n_nodes-1];
+		double* events		= new double [n_events];
+
+		if(config.disc_method == Hermite_Simpson) {
+			controls	= new double* [2*n_nodes - 1];
+			path		= new double* [2*n_nodes - 1];
+			for (Index i = 0; i < 2*n_nodes - 1; i++) {
+				controls[i]		= new double [n_controls];
+				path[i]			= new double [n_path];
+			}
+
+		}
+		else {
+			controls	= new double* [n_nodes];
+			path		= new double* [n_nodes];
+			for (Index i = 0; i < n_nodes; i++) {
+				controls[i]		= new double [n_controls];
+				path[i]			= new double [n_path];
+			}
+		}
+
+		if(config.disc_method == Hermite_Simpson) {
+			SMatrix<double>	u_temp(this->guess.u);
+			this->guess.u_full.resize(n_nodes*2-1,n_controls);
+			for (Index i = 1; i <= n_nodes; i++) {
+				for (Index j = 1; j <= n_controls; j++){
+					this->guess.u_full(i*2-1,j)		= guess.u(i,j);
+					if ( i < n_nodes) {
+						this->guess.u_full(i*2,j)		= (guess.u(i,j) + guess.u(i+1,j))/2;
+					}
 				}
 			}
 		}
-	}
 
-	for (Index i = 0; i < n_nodes; i++){
-		states[i]		= new double [n_states];
-		if (i < n_nodes - 1)
-			defects[i]	= new double [n_states];
-	}
-
-	double t0, tf;
-
-	for (Index i = 0; i < NLP_n; i++) {
-		d_x_sf[i] = 1.0;
-	}
-	for (Index i = 0; i < NLP_m; i++) {
-		d_g_sf[i] = 1.0;
-	}
-
-	for (Index i = 0; i < n_nodes; i++) {
-		for (Index j = 0; j < n_states; j++) {
-			states[i][j] = sf_x(j+1);
-		}
-		if (config.disc_method == Hermite_Simpson) {
-			for (Index j = 0; j < n_controls; j++) {
-				controls[2*i][j] = sf_u(j+1);
-				if (i < n_nodes - 1)
-					controls[2*i+1][j] = sf_u(j+1);
-			}
-		}
-		else {
-			for (Index j = 0; j < n_controls; j++) {
-				controls[i][j] = sf_u(j+1);
-			}
-		}
-	}
-
-	for (Index i = 0; i < n_param; i++) {
-			param[i] = sf_param(i+1);
-	}
-
-	t0 = sf_t;
-	tf = sf_t;
-
-	myadolc_nlp->OCP_var_2_NLP_x(states,controls,param,t0,tf, d_x_sf, d_x_sf);
-
-	for (Index i = 0; i < n_nodes; i++) {
-		for (Index j = 0; j < n_states; j++) {
-			states[i][j] = lb_states(j+1);
-		}
-		if (config.disc_method == Hermite_Simpson) {
-			for (Index j = 0; j < n_controls; j++) {
-				controls[2*i][j] = lb_controls(j+1);
-				if (i < n_nodes - 1)
-					controls[2*i+1][j] = lb_controls(j+1);
-			}
-		}
-		else {
-			for (Index j = 0; j < n_controls; j++) {
-				controls[i][j] = lb_controls(j+1);
-			}
-		}
-	}
-
-	for (Index i = 0; i < n_param; i++) {
-			param[i] = lb_param(i+1);
-	}
-
-	t0 = lb_t0;
-	tf = lb_tf;
-
-	myadolc_nlp->OCP_var_2_NLP_x(states,controls,param,t0,tf, d_x_l, d_x_sf);
-
-	for (Index i = 0; i < n_nodes; i++) {
-		for (Index j = 0; j < n_states; j++) {
-			states[i][j] = ub_states(j+1);
-		}
-		if (config.disc_method == Hermite_Simpson) {
-			for (Index j = 0; j < n_controls; j++) {
-				controls[2*i][j] = ub_controls(j+1);
-				if (i < n_nodes - 1)
-					controls[2*i+1][j] = ub_controls(j+1);
-			}
-		}
-		else {
-			for (Index j = 0; j < n_controls; j++) {
-				controls[i][j] = ub_controls(j+1);
-			}
-		}
-	}
-
-	for (Index i = 0; i < n_param; i++) {
-			param[i] = ub_param(i+1);
-	}
-
-	t0 = ub_t0;
-	tf = ub_tf;
-
-	myadolc_nlp->OCP_var_2_NLP_x(states,controls,param,t0,tf, d_x_u, d_x_sf);
-
-	for (Index i = 0; i < n_nodes; i++) {
-		for (Index j = 0; j < n_states; j++) {
-			states[i][j] = guess.x(i+1,j+1);
-		}
-		if (config.disc_method == Hermite_Simpson) {
-			for (Index j = 0; j < n_controls; j++) {
-				controls[2*i][j] = guess.u_full(i+1,j+1);
-				if (i < n_nodes - 1)
-					controls[2*i+1][j] = guess.u_full(i+1,j+1);
-			}
-		}
-		else {
-			for (Index j = 0; j < n_controls; j++) {
-				controls[i][j] = guess.u(i+1,j+1);
-			}
-		}
-	}
-
-	for (Index i = 0; i < n_param; i++) {
-			param[i] = guess.param(i+1);
-	}
-
-	t0 = guess.nodes(1);
-	tf = guess.nodes(n_nodes);
-
-	myadolc_nlp->OCP_var_2_NLP_x(states,controls,param,t0,tf, d_x_guess, d_x_sf);
-
-	for (Index i = 0; i < n_nodes; i++) {
-		if (config.disc_method == Hermite_Simpson) {
-			for (Index j = 0; j < n_path; j++) {
-				path[2*i][j] = sf_path(j+1);
-				if (i < n_nodes - 1)
-					path[2*i+1][j] = sf_path(j+1);
-			}
-		}
-		else {
-			for (Index j = 0; j < n_path; j++) {
-				path[i][j] = sf_path(j+1);
-			}
-		}
-		if ( i < n_nodes - 1)
-			for (Index j = 0; j < n_states; j++) {
-				defects[i][j] = 1.0;
-			}
-	}
-
-	for (Index i = 0; i < n_events; i++) {
-			events[i] = sf_events(i+1);
-	}
-
-	myadolc_nlp->OCP_var_2_NLP_g(path, defects, events, d_g_sf, d_g_sf);
-
-	for (Index i = 0; i < n_nodes; i++) {
-		if (config.disc_method == Hermite_Simpson) {
-			for (Index j = 0; j < n_path; j++) {
-				path[2*i][j] = lb_path(j+1);
-				if (i < n_nodes - 1)
-					path[2*i+1][j] = lb_path(j+1);
-			}
-		}
-		else {
-			for (Index j = 0; j < n_path; j++) {
-				path[i][j] = lb_path(j+1);
-			}
-		}
-		if ( i < n_nodes - 1)
-			for (Index j = 0; j < n_states; j++) {
-				defects[i][j] = 0.0;
-			}
-	}
-
-	for (Index i = 0; i < n_events; i++) {
-			events[i] = lb_events(i+1);
-	}
-
-	myadolc_nlp->OCP_var_2_NLP_g(path, defects, events, d_g_l, d_g_sf);
-
-	for (Index i = 0; i < n_nodes; i++) {
-		if (config.disc_method == Hermite_Simpson) {
-			for (Index j = 0; j < n_path; j++) {
-				path[2*i][j] = ub_path(j+1);
-				if (i < n_nodes - 1)
-					path[2*i+1][j] = ub_path(j+1);
-			}
-		}
-		else {
-			for (Index j = 0; j < n_path; j++) {
-				path[i][j] = ub_path(j+1);
-			}
-		}
-		if ( i < n_nodes - 1)
-			for (Index j = 0; j < n_states; j++) {
-				defects[i][j] = 0.0;
-			}
-	}
-
-	for (Index i = 0; i < n_events; i++) {
-			events[i] = ub_events(i+1);
-	}
-
-	myadolc_nlp->OCP_var_2_NLP_g(path, defects, events, d_g_u, d_g_sf);
-
-	for ( Index i = 0; i < NLP_m; i++) {
-		d_g_l[i]	= d_g_l[i] + 1;
-		d_g_u[i]	= d_g_u[i] + 1;
-	}
-
-
-	double delta_t 	= guess.nodes(n_nodes,1) - guess.nodes(1,1);
-
-	for (Index i = 1; i <= n_nodes - 1; i++) {
-		node_str(i)	= (guess.nodes(i+1,1) - guess.nodes(i,1))/delta_t;
-	}
-
-  	// structure of g
-  	// [..defect(t_k), h1(t_k), .. h_npath(t_k), defect(t_k+1), h1(t_k+1), ..h_npath(t_k+1), events_1, ..events_nevents,..]
-
-
-	myadolc_nlp->setBounds(d_x_l, d_x_u, d_g_l, d_g_u);
-	myadolc_nlp->setSF(d_x_sf, d_g_sf);
-	myadolc_nlp->setguess(d_x_guess);
-	myadolc_nlp->setnodestr(node_str);
-
-	for (Index i = 0; i < n_nodes; i++){
-		delete[] states[i];
-		if (i < n_nodes - 1)
-			delete[] defects[i];
-	}
-
-	if (config.disc_method == Hermite_Simpson){
-		for (Index i = 0; i < 2*n_nodes - 1; i++){
-			delete[] controls[i];
-			delete[] path[i];
-		}
-	}
-	else {
 		for (Index i = 0; i < n_nodes; i++){
-			delete[] controls[i];
-			delete[] path[i];
+			states[i]		= new double [n_states];
+			if (i < n_nodes - 1)
+				defects[i]	= new double [n_states];
 		}
+
+		double t0, tf;
+
+		for (Index i = 0; i < NLP_n; i++) {
+			d_x_sf[i] = 1.0;
+		}
+		for (Index i = 0; i < NLP_m; i++) {
+			d_g_sf[i] = 1.0;
+		}
+
+		for (Index i = 0; i < n_nodes; i++) {
+			for (Index j = 0; j < n_states; j++) {
+				states[i][j] = sf_x(j+1);
+			}
+			if (config.disc_method == Hermite_Simpson) {
+				for (Index j = 0; j < n_controls; j++) {
+					controls[2*i][j] = sf_u(j+1);
+					if (i < n_nodes - 1)
+						controls[2*i+1][j] = sf_u(j+1);
+				}
+			}
+			else {
+				for (Index j = 0; j < n_controls; j++) {
+					controls[i][j] = sf_u(j+1);
+				}
+			}
+		}
+
+		for (Index i = 0; i < n_param; i++) {
+				param[i] = sf_param(i+1);
+		}
+
+		t0 = sf_t;
+		tf = sf_t;
+
+		myadolc_nlp->OCP_var_2_NLP_x(states,controls,param,t0,tf, d_x_sf, d_x_sf);
+
+		for (Index i = 0; i < n_nodes; i++) {
+			for (Index j = 0; j < n_states; j++) {
+				states[i][j] = lb_states(j+1);
+			}
+			if (config.disc_method == Hermite_Simpson) {
+				for (Index j = 0; j < n_controls; j++) {
+					controls[2*i][j] = lb_controls(j+1);
+					if (i < n_nodes - 1)
+						controls[2*i+1][j] = lb_controls(j+1);
+				}
+			}
+			else {
+				for (Index j = 0; j < n_controls; j++) {
+					controls[i][j] = lb_controls(j+1);
+				}
+			}
+		}
+
+		for (Index i = 0; i < n_param; i++) {
+				param[i] = lb_param(i+1);
+		}
+
+		t0 = lb_t0;
+		tf = lb_tf;
+
+		myadolc_nlp->OCP_var_2_NLP_x(states,controls,param,t0,tf, d_x_l, d_x_sf);
+
+		for (Index i = 0; i < n_nodes; i++) {
+			for (Index j = 0; j < n_states; j++) {
+				states[i][j] = ub_states(j+1);
+			}
+			if (config.disc_method == Hermite_Simpson) {
+				for (Index j = 0; j < n_controls; j++) {
+					controls[2*i][j] = ub_controls(j+1);
+					if (i < n_nodes - 1)
+						controls[2*i+1][j] = ub_controls(j+1);
+				}
+			}
+			else {
+				for (Index j = 0; j < n_controls; j++) {
+					controls[i][j] = ub_controls(j+1);
+				}
+			}
+		}
+
+		for (Index i = 0; i < n_param; i++) {
+				param[i] = ub_param(i+1);
+		}
+
+		t0 = ub_t0;
+		tf = ub_tf;
+
+		myadolc_nlp->OCP_var_2_NLP_x(states,controls,param,t0,tf, d_x_u, d_x_sf);
+
+		for (Index i = 0; i < n_nodes; i++) {
+			for (Index j = 0; j < n_states; j++) {
+				states[i][j] = guess.x(i+1,j+1);
+			}
+			if (config.disc_method == Hermite_Simpson) {
+				for (Index j = 0; j < n_controls; j++) {
+					controls[2*i][j] = guess.u_full(i+1,j+1);
+					if (i < n_nodes - 1)
+						controls[2*i+1][j] = guess.u_full(i+1,j+1);
+				}
+			}
+			else {
+				for (Index j = 0; j < n_controls; j++) {
+					controls[i][j] = guess.u(i+1,j+1);
+				}
+			}
+		}
+
+		for (Index i = 0; i < n_param; i++) {
+				param[i] = guess.param(i+1);
+		}
+
+		t0 = guess.nodes(1);
+		tf = guess.nodes(n_nodes);
+
+		myadolc_nlp->OCP_var_2_NLP_x(states,controls,param,t0,tf, d_x_guess, d_x_sf);
+
+		for (Index i = 0; i < n_nodes; i++) {
+			if (config.disc_method == Hermite_Simpson) {
+				for (Index j = 0; j < n_path; j++) {
+					path[2*i][j] = sf_path(j+1);
+					if (i < n_nodes - 1)
+						path[2*i+1][j] = sf_path(j+1);
+				}
+			}
+			else {
+				for (Index j = 0; j < n_path; j++) {
+					path[i][j] = sf_path(j+1);
+				}
+			}
+			if ( i < n_nodes - 1)
+				for (Index j = 0; j < n_states; j++) {
+					defects[i][j] = 1.0;
+				}
+		}
+
+		for (Index i = 0; i < n_events; i++) {
+				events[i] = sf_events(i+1);
+		}
+
+		myadolc_nlp->OCP_var_2_NLP_g(path, defects, events, d_g_sf, d_g_sf);
+
+		for (Index i = 0; i < n_nodes; i++) {
+			if (config.disc_method == Hermite_Simpson) {
+				for (Index j = 0; j < n_path; j++) {
+					path[2*i][j] = lb_path(j+1);
+					if (i < n_nodes - 1)
+						path[2*i+1][j] = lb_path(j+1);
+				}
+			}
+			else {
+				for (Index j = 0; j < n_path; j++) {
+					path[i][j] = lb_path(j+1);
+				}
+			}
+			if ( i < n_nodes - 1)
+				for (Index j = 0; j < n_states; j++) {
+					defects[i][j] = 0.0;
+				}
+		}
+
+		for (Index i = 0; i < n_events; i++) {
+				events[i] = lb_events(i+1);
+		}
+
+		myadolc_nlp->OCP_var_2_NLP_g(path, defects, events, d_g_l, d_g_sf);
+
+		for (Index i = 0; i < n_nodes; i++) {
+			if (config.disc_method == Hermite_Simpson) {
+				for (Index j = 0; j < n_path; j++) {
+					path[2*i][j] = ub_path(j+1);
+					if (i < n_nodes - 1)
+						path[2*i+1][j] = ub_path(j+1);
+				}
+			}
+			else {
+				for (Index j = 0; j < n_path; j++) {
+					path[i][j] = ub_path(j+1);
+				}
+			}
+			if ( i < n_nodes - 1)
+				for (Index j = 0; j < n_states; j++) {
+					defects[i][j] = 0.0;
+				}
+		}
+
+		for (Index i = 0; i < n_events; i++) {
+				events[i] = ub_events(i+1);
+		}
+
+		myadolc_nlp->OCP_var_2_NLP_g(path, defects, events, d_g_u, d_g_sf);
+
+		for ( Index i = 0; i < NLP_m; i++) {
+			d_g_l[i]	= d_g_l[i] + 1;
+			d_g_u[i]	= d_g_u[i] + 1;
+		}
+
+
+		double delta_t 	= guess.nodes(n_nodes,1) - guess.nodes(1,1);
+
+		for (Index i = 1; i <= n_nodes - 1; i++) {
+			node_str(i)	= (guess.nodes(i+1,1) - guess.nodes(i,1))/delta_t;
+		}
+
+	  	// structure of g
+	  	// [..defect(t_k), h1(t_k), .. h_npath(t_k), defect(t_k+1), h1(t_k+1), ..h_npath(t_k+1), events_1, ..events_nevents,..]
+
+
+		myadolc_nlp->setBounds(d_x_l, d_x_u, d_g_l, d_g_u);
+		myadolc_nlp->setSF(d_x_sf, d_g_sf);
+		myadolc_nlp->setguess(d_x_guess);
+		myadolc_nlp->setnodestr(node_str);
+
+		for (Index i = 0; i < n_nodes; i++){
+			delete[] states[i];
+			if (i < n_nodes - 1)
+				delete[] defects[i];
+		}
+
+		if (config.disc_method == Hermite_Simpson){
+			for (Index i = 0; i < 2*n_nodes - 1; i++){
+				delete[] controls[i];
+				delete[] path[i];
+			}
+		}
+		else {
+			for (Index i = 0; i < n_nodes; i++){
+				delete[] controls[i];
+				delete[] path[i];
+			}
+		}
+
+		delete[] states;
+		delete[] controls;
+		delete[] param;
+		delete[] path;
+		delete[] defects;
+		delete[] events;
 	}
 
-	delete[] states;
-	delete[] controls;
-	delete[] param;
-	delete[] path;
-	delete[] defects;
-	delete[] events;
 #ifdef DCOPT_DEBUG
 	printf("end of OCPBounds2NLPBounds()\n");
 #endif
@@ -695,46 +834,61 @@ void OCP::auto_guess_gen() {
 #ifdef DCOPT_DEBUG
 	printf("auto_guess_gen()\n");
 #endif
-	SMatrix<double> nodes = linspace<double>((lb_t0+ub_t0)/2.0,(lb_tf+ub_tf)/2.0,n_nodes);
-	guess.nodes = nodes;
 
-	SMatrix<double>* states = new SMatrix<double>[n_states];
-	for (Index i = 0; i < n_states; i++) {
-			states[i] = linspace<double>(lb_states(i+1), ub_states(i+1),n_nodes);
+	if( n_nodes == 0 || n_states == 0) {
+		SMatrix<double> param;
+		if(n_param > 0) {
+			cout<<"ldjf\n";
+			param.resize((uint) n_param,1);
+			for (Index i = 0; i < n_param; i++) {
+				param(i+1) 	= (double)(lb_param(i+1) + ub_param(i+1))/2;
+			}
 		}
-	guess.x		= states[0];
-	for (Index i = 1; i < n_states; i++) {
-		guess.x = (guess.x,states[i]);
-	}
-
-	SMatrix<double>* controls = NULL;
-	if (n_controls > 0) {
-		controls = new SMatrix<double>[n_controls];
-		for (Index i = 0; i < n_controls; i++) {
-			controls[i] = linspace<double>(lb_controls(i+1), ub_controls(i+1),n_nodes);
-		}
-		guess.u		= controls[0];
-		for (Index i = 1; i < n_controls; i++) {
-			guess.u = (guess.u,controls[i]);
-		}
+		guess.param = param;
 	}
 	else {
-		SMatrix<double> Null_vector;
-		guess.u = Null_vector;
-	}
 
-	SMatrix<double> param;
-	if(n_param > 0) {
-		param.resize((uint) n_param,1);
-		for (Index i = 0; i < n_param; i++) {
-			param(i+1) 	= (double)(lb_param(i+1) + ub_param(i+1))/2;
+		SMatrix<double> nodes = linspace<double>((lb_t0+ub_t0)/2.0,(lb_tf+ub_tf)/2.0,n_nodes);
+		guess.nodes = nodes;
+
+		SMatrix<double>* states = new SMatrix<double>[n_states];
+		for (Index i = 0; i < n_states; i++) {
+				states[i] = linspace<double>(lb_states(i+1), ub_states(i+1),n_nodes);
+			}
+		guess.x		= states[0];
+		for (Index i = 1; i < n_states; i++) {
+			guess.x = (guess.x,states[i]);
 		}
-	}
-	guess.param = param;
 
-	delete[] states;
-	if (controls != NULL) {
-		delete[] controls;
+		SMatrix<double>* controls = NULL;
+		if (n_controls > 0) {
+			controls = new SMatrix<double>[n_controls];
+			for (Index i = 0; i < n_controls; i++) {
+				controls[i] = linspace<double>(lb_controls(i+1), ub_controls(i+1),n_nodes);
+			}
+			guess.u		= controls[0];
+			for (Index i = 1; i < n_controls; i++) {
+				guess.u = (guess.u,controls[i]);
+			}
+		}
+		else {
+			SMatrix<double> Null_vector;
+			guess.u = Null_vector;
+		}
+
+		SMatrix<double> param;
+		if(n_param > 0) {
+			param.resize((uint) n_param,1);
+			for (Index i = 0; i < n_param; i++) {
+				param(i+1) 	= (double)(lb_param(i+1) + ub_param(i+1))/2;
+			}
+		}
+		guess.param = param;
+
+		delete[] states;
+		if (controls != NULL) {
+			delete[] controls;
+		}
 	}
 #ifdef DCOPT_DEBUG
 	printf("end of auto_guess_gen()\n");
