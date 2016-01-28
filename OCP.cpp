@@ -17,6 +17,7 @@ const char* nlp_solver(int enumval) {
 	return solver_string[enumval];
 }
 
+
 OCP::OCP() {
 
 	  // Create an instance of your nlp...
@@ -114,14 +115,17 @@ ApplicationReturnStatus OCP::set_OCP_structure() {
 		app->Options()->SetStringValue("warm_start_init_point", "yes");
 	}
 
-#ifndef SPARSE_HESS
-	app->Options()->SetStringValue("hessian_approximation", "limited-memory");
-#endif
-  	status = app->Initialize();
+	if (config.H_approximation)
+		app->Options()->SetStringValue("hessian_approximation", "limited-memory");
+	else
+		app->Options()->SetStringValue("hessian_approximation", "exact");
+
+	status = app->Initialize();
   	if (status != Solve_Succeeded) {
   		printf("\n\n*** Error during initialization!\n");
   	}
 	printf("Structure successfully set\n");
+	myadolc_nlp->setH_approx(config.H_approximation);
   	return status;
 }
 
@@ -469,11 +473,13 @@ void OCP::OCPBounds2NLPBounds() {
 			d_g_sf[i] = 1.0;
 		}
 
+		//setting param scaling factors
 		for (Index i = 0; i < n_param; i++) {
 				param[i] = sf_param(i+1);
 		}
 		myadolc_nlp->OCP_var_2_NLP_x(states,controls,param,t0,tf, d_x_sf, d_x_sf);
 
+		//setting param lower bounce
 		for (Index i = 0; i < n_param; i++) {
 				param[i] = lb_param(i+1);
 		}
@@ -929,6 +935,7 @@ Config::Config() {
 	with_mgl		= false;
 	disc_method		= Hermite_Simpson;
 	print_level		= 5;
+	H_approximation = true;
 }
 
 Config::~Config() {

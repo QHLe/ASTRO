@@ -536,6 +536,9 @@ bool MyADOLC_sparseNLP::eval_jac_g(Index n, const Number* x, bool new_x,
                        Number* values)
 {
 
+#ifdef DCOPT_DEBUG
+	cout<<"call eval_jac_g\n";
+#endif
 	if (values == NULL) {
 	// return the structure of the jacobian
 		for(Index idx=0; idx<nnz_jac; idx++) {
@@ -587,6 +590,9 @@ bool MyADOLC_sparseNLP::eval_jac_g(Index n, const Number* x, bool new_x,
 	}
 #endif
 
+#ifdef DCOPT_DEBUG
+	cout<<"return eval_jac_g\n";
+#endif
 	return true;
 }
 
@@ -596,40 +602,59 @@ bool MyADOLC_sparseNLP::eval_h(Index n, const Number* x, bool new_x,
                    Index* jCol, Number* values)
 {
 
-#ifdef SPARSE_HESS
-
-	if (values == NULL) {
-	    // return the structure. This is a symmetric matrix, fill the lower left
-	    // triangle only.
-
-		for(Index idx=0; idx<nnz_L; idx++) {
-			iRow[idx] = rind_L[idx];
-			jCol[idx] = cind_L[idx];
-		}
-	}
-	else {
-	    // return the values. This is a symmetric matrix, fill the lower left
-	    // triangle only
-
-		for(Index idx = 0; idx<n ; idx++)
-			x_lam[idx] = x[idx];
-		for(Index idx = 0; idx<m ; idx++)
-	    	x_lam[n+idx] = lambda[idx];
-		x_lam[n+m] = obj_factor;
-
-		sparse_hess(tag_L, n+m+1, 1, x_lam, &nnz_L_total, &rind_L_total, &cind_L_total, &hessval, options_L);
-
-		Index idx = 0;
-		for(Index idx_total = 0; idx_total <nnz_L_total; idx_total++) {
-			if((rind_L_total[idx_total] < (unsigned int) n) && (cind_L_total[idx_total] < (unsigned int) n)) {
-				values[idx] = hessval[idx_total];
-				idx++;
-			}
-		}
-	}
-	return true;
+#ifdef DCOPT_DEBUG
+	cout<<"call eval_h\n";
 #endif
-	return false;
+	if (H_approx) {
+		#ifdef DCOPT_DEBUG
+				cout<<"end eval_h\n";
+		#endif
+		return false;
+	}
+	else{
+		if (values == NULL) {
+			// return the structure. This is a symmetric matrix, fill the lower left
+			// triangle only.
+
+			for(Index idx=0; idx<nnz_L; idx++) {
+				iRow[idx] = rind_L[idx];
+				jCol[idx] = cind_L[idx];
+			}
+
+			//cout<<"nele_hess = "<<nele_hess<<"\n";
+
+		}
+		else {
+			// return the values. This is a symmetric matrix, fill the lower left
+			// triangle only
+
+			for(Index idx = 0; idx<n ; idx++)
+				x_lam[idx] = x[idx];
+			for(Index idx = 0; idx<m ; idx++)
+				x_lam[n+idx] = lambda[idx];
+			x_lam[n+m] = obj_factor;
+
+			sparse_hess(tag_L, n+m+1, 1, x_lam, &nnz_L_total, &rind_L_total, &cind_L_total, &hessval, options_L);
+
+			Index idx = 0;
+			for(Index idx_total = 0; idx_total <nnz_L_total; idx_total++) {
+				if((rind_L_total[idx_total] < (unsigned int) n) && (cind_L_total[idx_total] < (unsigned int) n)) {
+					values[idx] = hessval[idx_total];
+					idx++;
+		//			cout<<"rind_L_total["<<rind_L_total[idx_total]<<"]\t";
+		//			cout<<"cind_L_total["<<cind_L_total[idx_total]<<"]\t";
+		//			cout<<hessval[idx_total]<<endl;
+				}
+			}
+	//		cout<<"nnz_h_lag = "<<idx<<"\n";
+
+		}
+
+		#ifdef DCOPT_DEBUG
+			cout<<"end eval_h\n";
+		#endif
+		return true;
+	}
 }
 
 void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
@@ -703,14 +728,13 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 	free(jacval);
 
 
-
-#ifdef SPARSE_HESS
-	delete[] (rind_L);
-	delete[] (cind_L);
-	free(cind_L_total);
-	free(rind_L_total);
-	free(hessval);
-#endif
+	if (!H_approx) {
+		delete[] (rind_L);
+		delete[] (cind_L);
+		free(cind_L_total);
+		free(rind_L_total);
+		free(hessval);
+	}
 
 //	cout<<"memory deallocation done \n";
 }
@@ -757,31 +781,8 @@ void MyADOLC_sparseNLP::generate_tapes(Index n, Index m, Index& nnz_jac_g, Index
     for(Index idx=0;idx<m;idx++)
 		g[idx] >>= dummy;
     trace_off();
-
-#ifdef SPARSE_HESS
-
-    trace_on(tag_L);
     
-    for(Index idx=0;idx<n;idx++)
-    	xa[idx] <<= xp[idx];
-    for(Index idx=0;idx<m;idx++)
-    	lam[idx] <<= 1.0;
-    sig <<= 1.0;
-
-    ad_eval_obj(n,xa,obj_value);
-
-    obj_value = obj_value*sig;
-    ad_eval_constraints(n,xa,m,g);
- 
-    for(Index idx=0;idx<m;idx++)
-		obj_value = obj_value + g[idx]*lam[idx];
-
-    obj_value >>= dummy;
-
-    trace_off();
-#endif
-
-	rind_g = NULL;
+    rind_g = NULL;
 	cind_g = NULL;
 
 	options_g[0] = 0;          /* sparsity pattern by index domains (default) */
@@ -855,33 +856,59 @@ void MyADOLC_sparseNLP::generate_tapes(Index n, Index m, Index& nnz_jac_g, Index
 
 	delete[] grad_f;
 */
-#ifdef SPARSE_HESS
-	hessval			= NULL;
-	cind_L_total	= NULL;
-	rind_L_total	= NULL;
-	options_L[0]= 0;
-	options_L[1]= 0;
-	sparse_hess(tag_L, n+m+1, 0, x_lam, &nnz_L_total, &rind_L_total, &cind_L_total, &hessval, options_L);
-	nnz_L = 0;
-	for(Index idx_total = 0; idx_total <nnz_L_total ; idx_total++) {
-		if((rind_L_total[idx_total] < (unsigned int) n) && (cind_L_total[idx_total] < (unsigned int) n)) {
-			nnz_L++;
+	if (!H_approx) {
+		trace_on(tag_L);
+
+		for(Index idx=0;idx<n;idx++)
+			xa[idx] <<= xp[idx];
+		for(Index idx=0;idx<m;idx++)
+			lam[idx] <<= 1.0;
+
+		sig <<= 1.0;
+
+		ad_eval_obj(n,xa,obj_value);
+
+		obj_value = obj_value*sig;
+		ad_eval_constraints(n,xa,m,g);
+
+		for(Index idx=0;idx<m;idx++)
+			obj_value = obj_value + g[idx]*lam[idx];
+
+		obj_value >>= dummy;
+
+		trace_off();
+
+		hessval			= NULL;
+		cind_L_total	= NULL;
+		rind_L_total	= NULL;
+		options_L[0]= 0;
+		options_L[1]= 0;
+		cout<<"bla"<<endl;
+		sparse_hess(tag_L, n+m+1, 0, x_lam, &nnz_L_total, &rind_L_total, &cind_L_total, &hessval, options_L);
+		nnz_L = 0;
+
+		cout<<"bla"<<endl;
+		for(Index idx_total = 0; idx_total < nnz_L_total ; idx_total++) {
+			if((rind_L_total[idx_total] < (unsigned int) n) && (cind_L_total[idx_total] < (unsigned int) n)) {
+				nnz_L++;
+			}
 		}
-	}
-	nnz_h_lag = nnz_L;
-	cout<<"nnz_h_lag = "<<nnz_h_lag<<"\n";
-	rind_L 		= new unsigned int [nnz_L];
-	cind_L 		= new unsigned int [nnz_L];
-	Index idx 	= 0;
-	for(Index idx_total = 0; idx_total <nnz_L_total ; idx_total++) {
-		if((rind_L_total[idx_total] < (unsigned int) n) && (cind_L_total[idx_total] < (unsigned int) n)) {
-			rind_L[idx]		= rind_L_total[idx_total];
-			cind_L[idx]		= cind_L_total[idx_total];
-			idx++;
+
+		cout<<"bla"<<endl;
+		nnz_h_lag = nnz_L;
+		cout<<"nnz_h_lag = "<<nnz_h_lag<<"\n";
+		rind_L 		= new unsigned int [nnz_L];
+		cind_L 		= new unsigned int [nnz_L];
+		Index idx 	= 0;
+		for(Index idx_total = 0; idx_total <nnz_L_total ; idx_total++) {
+			if((rind_L_total[idx_total] < (unsigned int) n) && (cind_L_total[idx_total] < (unsigned int) n)) {
+				rind_L[idx]		= rind_L_total[idx_total];
+				cind_L[idx]		= cind_L_total[idx_total];
+				idx++;
+			}
 		}
 	}
 
-#endif
 
 	delete[] lam;
 	delete[] g;

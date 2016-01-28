@@ -39,6 +39,7 @@ public:
 	OPT_ORDER opt_oder;
 	APPROX disc_method;
 	uint print_level;
+	bool H_approximation;
 
 };
 
