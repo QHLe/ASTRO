@@ -1,4 +1,4 @@
-//#define SPARSE_HESS
+#define SPARSE_HESS
 //#define RETAPE
 
 //#define DCOPT_DEBUG

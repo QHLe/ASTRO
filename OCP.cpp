@@ -115,17 +115,21 @@ ApplicationReturnStatus OCP::set_OCP_structure() {
 		app->Options()->SetStringValue("warm_start_init_point", "yes");
 	}
 
-	if (config.H_approximation)
+	if (config.H_approximation){
+		myadolc_nlp->setH_approx(config.H_approximation);
 		app->Options()->SetStringValue("hessian_approximation", "limited-memory");
-	else
+	}
+	else {
+		myadolc_nlp->setH_approx(config.H_approximation);
 		app->Options()->SetStringValue("hessian_approximation", "exact");
+	}
+
 
 	status = app->Initialize();
   	if (status != Solve_Succeeded) {
   		printf("\n\n*** Error during initialization!\n");
   	}
 	printf("Structure successfully set\n");
-	myadolc_nlp->setH_approx(config.H_approximation);
   	return status;
 }
 
@@ -931,7 +935,6 @@ Config::Config() {
 	NLP_solver	 	= mumps;
 	warmstart 		= false;
 	NLP_tol			= 1e-6;
-	opt_oder		= first_order;
 	with_mgl		= false;
 	disc_method		= Hermite_Simpson;
 	print_level		= 5;

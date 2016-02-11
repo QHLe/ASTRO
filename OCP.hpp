@@ -36,7 +36,6 @@ public:
 	bool warmstart;
 	bool with_mgl;
 	double NLP_tol;
-	OPT_ORDER opt_oder;
 	APPROX disc_method;
 	uint print_level;
 	bool H_approximation;
