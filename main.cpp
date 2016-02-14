@@ -11,7 +11,7 @@ template<class T> T endpoint_cost (	const T* ini_states,
 									Index phase, const double* constants) {
 
 
-	return fin_states[2];
+	return tf;//fin_states[2];
 
 }
 
@@ -57,12 +57,12 @@ int main(int argv, char* argc[])
 	ApplicationReturnStatus status;
 	SmartPtr<MyADOLC_sparseNLP> problem = new MyADOLC_sparseNLP();
 
-	problem->n_nodes 		= N_NODES;
-	problem->n_states 		= 3;
-	problem->n_controls		= 1;
-	problem->n_parameters	= 0;
-	problem->n_events 		= 5;
-	problem->n_path_constraints			= 0;
+	problem->n_nodes 			= N_NODES;
+	problem->n_states 			= 3;
+	problem->n_controls			= 1;
+	problem->n_parameters		= 0;
+	problem->n_events 			= 5;
+	problem->n_path_constraints	= 0;
 
 	problem->set_endpoint_cost(&endpoint_cost, &endpoint_cost);
 	problem->set_events(&events, &events);
@@ -85,38 +85,37 @@ int main(int argv, char* argc[])
 	problem->ub_states(2)	= 10.0;
 	problem->ub_states(3)	= 10.0;
 
-	problem->lb_controls(1)	=-10.0;
-	problem->ub_controls(1)	= 10.0;
+	problem->lb_controls(1)	=-1.0;
+	problem->ub_controls(1)	= 1.0;
 
 	problem->lb_t0 			= 0.0;
 	problem->ub_t0 			= 0.0;
 
 	problem->lb_tf			= 1.0;
-	problem->ub_tf			= 1.0;
+	problem->ub_tf			= 3.0;
 
 	problem->lb_events(1)	= -0.0;
 	problem->ub_events(1)	= -0.0;
 
-	problem->lb_events(2)	= 1.0;
-	problem->ub_events(2)	= 1.0;
+	problem->lb_events(2)	= 0.0;
+	problem->ub_events(2)	= 0.0;
 	
-	problem->lb_events(3)	= 0.0;
-	problem->ub_events(3)	= 0.0;
+	problem->lb_events(3)	= 1.0;
+	problem->ub_events(3)	= 1.0;
 
-	problem->lb_events(4)	= -1.0;
-	problem->ub_events(4)	= -1.0;
+	problem->lb_events(4)	= -0.0;
+	problem->ub_events(4)	= -0.0;
 
 	problem->lb_events(5)	= -0.0;
 	problem->ub_events(5)	= -0.0;
-
-	SMatrix<double>	node_str(N_NODES,1);
-	node_str = (1.+node_str)/(double)(N_NODES-1);
-	problem->setnodestr(node_str);
 
 	status = problem->initialization();
 
 	status = problem->solve();
 
+	problem->results.x.save("x.dat");
+	problem->results.u.save("u.dat");
+	problem->results.nodes.save("nodes.dat");
 	return 0;
 
 }

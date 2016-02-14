@@ -29,7 +29,8 @@ public:
 	SMatrix <double> x;
 	SMatrix <double> u;
 	SMatrix <double> u_full;
-	SMatrix <double> param;
+	SMatrix <double> parameters;
+	SMatrix <double> lam_z;
 	SMatrix <double> lam_x;
 	SMatrix <double> lam_path;
 	SMatrix <double> lam_events;
@@ -143,8 +144,7 @@ public:
 	Guess 	guess;
 	Guess 	results;
 	Config 	config;
-
-	SMatrix<double> 	node_str;
+	double 	*constants;
 
 	template<class T>
 	void 	OCP_var_2_NLP_x(T*const* states, T*const* controls, const T* param, const T& t0, const T& tf, T* x, const T* sf);
@@ -155,13 +155,7 @@ public:
 	template<class T>
 	void 	NLP_g_2_OCP_var(const T* g, T** path, T** defects, T* events);
 
-	void	setnodestr	(	SMatrix<double> str) 		{node_str = str;}
-	SMatrix<double> getnode_str() 		{ return node_str;}
-
 	void 	mem_allocation();
-	void 	set_indexes();
-	void 	set_sf();
-	void 	set_bounces();
 	ApplicationReturnStatus 	initialization();
 	ApplicationReturnStatus 	solve();
 
@@ -198,9 +192,14 @@ private:
 	void 	(*ad_events)(adouble *events, const adouble *ini_states, const adouble *fin_states, const adouble *param, const adouble &t0, const adouble &tf, Index phase, const double* constants);
 
 	Index				nlp_n, nlp_m;
-	double 				*nlp_sf_x, *nlp_sf_g, *nlp_lb_x, *nlp_ub_x, *nlp_lb_g, *nlp_ub_g;
+	double 				*nlp_sf_x, *nlp_sf_g, *nlp_lb_x, *nlp_ub_x, *nlp_lb_g, *nlp_ub_g, *nlp_guess_x;
 	Index 				**state_idx, **control_idx, *parameter_idx, t0_idx, tf_idx,
 						**defect_idx, **path_constraint_idx, *event_idx;
+
+	double 				**states, **controls, *parameters, t0, tf,
+						**defects, **path_constraints, *events;
+
+	SMatrix<double> 	node_str;
 
 	double 				*x_lam;
 
@@ -212,7 +211,6 @@ private:
 	unsigned int	 	*rind_L_total;  /* row indices    */
 	unsigned int	 	*cind_L_total;  /* column indices */
 	double 				*hessval;             /* values */
-	double 				*constants;
 
 	int nnz_jac;
 	int nnz_L;//
@@ -220,8 +218,13 @@ private:
 	int options_g[4];
 	int options_L[2];
 
-//	double *y0, *yf, **y, **u, *param, tf, t0, **f, **path, **defects, *e, *t, *delta;
-//	double  *NLP_x_lb, *NLP_x_ub, *NLP_x_sf, *NLP_x_guess, *NLP_g_lb, *NLP_g_ub, *NLP_g_sf;
+	void 	set_indexes();
+	void 	set_sf();
+	void 	set_bounces();
+	void 	set_guess();
+	void 	guess_gen();
+	//	double *y0, *yf, **y, **u, *param, tf, t0, **f, **path, **defects, *e, *t, *delta;
+	//	double  *NLP_x_lb, *NLP_x_ub, *NLP_x_sf, *NLP_x_guess, *NLP_g_lb, *NLP_g_ub, *NLP_g_sf;
 };
 
 template<class T>
@@ -332,7 +335,7 @@ void 	MyADOLC_sparseNLP::NLP_x_2_OCP_var(const T* x, T** states, T** controls, T
 
 template<class T>
 void 	MyADOLC_sparseNLP::NLP_g_2_OCP_var(const T* g, T** path, T** defects, T* events) {
-
+	cout<<"nlp2ocp\n";
 	for (Index i = 0; i < n_events; i++) {
 		events[i]		= g[event_idx[i]]*nlp_sf_g[event_idx[i]];
 	}
@@ -340,7 +343,7 @@ void 	MyADOLC_sparseNLP::NLP_g_2_OCP_var(const T* g, T** path, T** defects, T* e
 	if (config.disc_method == Hermite_Simpson){
 		for (Index i = 0; i < n_nodes; i += 1) {
 			for (Index j = 0; j < n_path_constraints; j += 1) {
-				path[2*i][j]	= g[path_constraint_idx[2*i][j]]*nlp_sf_g[path_constraint_idx[2*i][j]];
+				path[2*i][j]		= g[path_constraint_idx[2*i][j]]*nlp_sf_g[path_constraint_idx[2*i][j]];
 				if ( i < n_nodes - 1) {
 					path[2*i+1][j]	= g[path_constraint_idx[2*i][j]]*nlp_sf_g[path_constraint_idx[2*i][j]];
 				}
@@ -364,6 +367,34 @@ void 	MyADOLC_sparseNLP::NLP_g_2_OCP_var(const T* g, T** path, T** defects, T* e
 			}
 		}
 	}
+	cout<<"end nlp2ocp\n";
 }
 
+template<class T>
+SMatrix<T>	lin_interpol(const SMatrix<T> x, const SMatrix<T> y, const SMatrix<T> x_new) {
+	SMatrix <T> y_new(x_new.getRowDim(),1);
+	for (uint i = 1; i <= x_new.getRowDim(); i++) {
+		for(uint j = 1; j < x.getRowDim(); j++) {
+/*			if (x_new(i) < x(1) || x(x.getsize()) < x_new(i)) {
+				printf("x_new[%d] = %.10e\t	x[%d] = %.10e\n",i,x_new(i),x.getsize(),x(x.getsize()));
+				printf("lin_interpot out of range\n");
+				exit(1);
+			}*/
+
+			if (x(j) <= x_new(i) && x(j+1) >= x_new(i)) {
+				y_new(i)	= y(j) + (y(j+1) - y(j))/(x(j+1) - x(j))*(x_new(i) - x(j));
+				break;
+			}
+			if (j == 1 || j == x.getRowDim() - 1) {
+				if (x_new(i) < x(1) || x(x.getRowDim()) < x_new(i)) {
+	//				cout<<i<<"\t"<<j<<endl;
+					printf("x_new(%d) = %.10e\t	x(%d) = %.10e\t	x(%d) = %.10e\n",i,x_new(i),j,x(j),x.getRowDim(),x(x.getRowDim()));
+					printf("lin_interpot out of range\n");
+					//exit(1);
+				}
+			}
+		}
+	}
+	return y_new;
+}
 #endif

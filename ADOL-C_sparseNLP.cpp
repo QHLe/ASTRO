@@ -56,7 +56,9 @@ void MyADOLC_sparseNLP::set_events(	void (*d_events)(  double *events, const  do
 }
 
 void MyADOLC_sparseNLP::mem_allocation(){
+#ifdef DCOPT_DEBUG
 	cout<<"start mem_alloc\n";
+#endif
 	if (n_states == 0 || n_nodes == 0) {
 		nlp_n 	= n_parameters;
 		nlp_m 	= n_events;
@@ -88,6 +90,7 @@ void MyADOLC_sparseNLP::mem_allocation(){
 
 	app 				= new IpoptApplication();
 
+	nlp_guess_x 		= new double [nlp_n];
 	nlp_sf_x 			= new double [nlp_n];
 	nlp_sf_g	 		= new double [nlp_m];
 
@@ -96,33 +99,59 @@ void MyADOLC_sparseNLP::mem_allocation(){
 	nlp_lb_g			= new double[nlp_m];
 	nlp_ub_g			= new double[nlp_m];
 
-	state_idx 			= new Index *[n_nodes];
-	control_idx			= new Index *[n_nodes];
-	parameter_idx		= new Index [n_parameters];
+	if (n_nodes) {
+		state_idx 			= new Index *[n_nodes];
+		states  			= new double*[n_nodes];
+		control_idx			= new Index *[n_nodes];
+		controls			= new double*[n_nodes];
 
-	for (Index i = 0; i < n_nodes; i++) {
-		state_idx[i]	= new Index[n_states];
-		control_idx[i]	= new Index[n_controls];
+		path_constraint_idx	= new Index *[n_nodes];
+		path_constraints	= new double*[n_nodes];
+		defect_idx			= new Index *[n_nodes - 1];
+		defects				= new double*[n_nodes - 1];
 	}
 
-	path_constraint_idx	= new Index *[n_nodes];
-	defect_idx			= new Index *[n_nodes-1];
-	event_idx			= new Index [n_events];
-
-	for (Index i = 0; i < n_nodes; i++) {
-		path_constraint_idx[i]	= new Index [n_path_constraints];
-		if (i < n_nodes - 1)
-			defect_idx[i]		= new Index [n_states];
+	if (n_parameters) {
+		parameter_idx		= new Index [n_parameters];
+		parameters			= new double[n_parameters];
 	}
 
+	if (n_events) {
+		event_idx			= new Index [n_events];
+		events				= new double[n_events];
+	}
+
+	for (Index i = 0; i < n_nodes; i++) {
+		if (n_states) {
+			state_idx[i]	= new Index[n_states];
+			states[i]		= new double[n_states];
+			if (i < n_nodes - 1) {
+				defect_idx[i]		= new Index [n_states];
+				defects[i]			= new double [n_states];
+			}
+		}
+		if (n_controls) {
+			control_idx[i]	= new Index[n_controls];
+			controls[i]		= new double[n_controls];
+		}
+		if (n_path_constraints) {
+			path_constraint_idx[i]	= new Index [n_path_constraints];
+			path_constraints[i]		= new double [n_path_constraints];
+		}
+	}
+#ifdef DCOPT_DEBUG
 	cout<<"end mem_alloc\n";
+#endif
 }
 
 ApplicationReturnStatus MyADOLC_sparseNLP::initialization(){
+#ifdef DCOPT_DEBUG
 	cout<<"start ini\n";
+#endif
 	this->set_indexes();
 	this->set_sf();
 	this->set_bounces();
+	this->set_guess();
 
 	app->Options()->SetNumericValue("tol", 1e-6);
 	app->Options()->SetStringValue("mu_strategy", "adaptive");
@@ -147,11 +176,15 @@ ApplicationReturnStatus MyADOLC_sparseNLP::initialization(){
   		printf("\n\n*** Error during initialization!\n");
   	}
   	return status;
+#ifdef DCOPT_DEBUG
 	cout<<"end ini\n";
+#endif
 }
 
 void MyADOLC_sparseNLP::set_indexes() {
+#ifdef DCOPT_DEBUG
 	cout<<"start indexing\n";
+#endif
 	Index idx_n = 0;
 
 	if (n_nodes == 0 || n_states == 0) {
@@ -187,7 +220,7 @@ void MyADOLC_sparseNLP::set_indexes() {
 
 	Index idx_m = 0;
 	if (n_nodes == 0 || n_states == 0) {
-		for (Index i = 1; i < n_events; i++) {
+		for (Index i = 0; i < n_events; i++) {
 			event_idx[i]		= idx_m;
 			idx_m++;
 		}
@@ -214,11 +247,15 @@ void MyADOLC_sparseNLP::set_indexes() {
 		if (idx_m != nlp_m)
 			printf("something went wrong in NLP_g_2_OCP_var\n");
 	}
+#ifdef DCOPT_DEBUG
 	cout<<"end indexing\n";
+#endif
 }
 
 void MyADOLC_sparseNLP::set_sf(){
+#ifdef DCOPT_DEBUG
 	cout<<"start set_sf\n";
+#endif
 	for (Index j = 1; j <= n_states; j++) {
 		if(lb_states(j) != 0 || ub_states(j) != 0) {
 			for (Index i = 0; i < n_nodes; i++)
@@ -249,13 +286,15 @@ void MyADOLC_sparseNLP::set_sf(){
 			nlp_sf_x[parameter_idx[i-1]] = 1;
 		}
 	}
-	if(lb_t0 != 0 || ub_tf != 0) {
-		nlp_sf_x[t0_idx] = max(fabs(lb_t0(1)), fabs(ub_tf(1)));
-		nlp_sf_x[tf_idx] = max(fabs(lb_t0(1)), fabs(ub_tf(1)));
-	}
-	else {
-		nlp_sf_x[t0_idx] = 1;
-		nlp_sf_x[tf_idx] = 1;
+	if (n_nodes && n_states) {
+		if(lb_t0 != 0 || ub_tf != 0) {
+			nlp_sf_x[t0_idx] = max(fabs(lb_t0(1)), fabs(ub_tf(1)));
+			nlp_sf_x[tf_idx] = max(fabs(lb_t0(1)), fabs(ub_tf(1)));
+		}
+		else {
+			nlp_sf_x[t0_idx] = 1;
+			nlp_sf_x[tf_idx] = 1;
+		}
 	}
 
 	for (Index j = 1; j <= n_path_constraints; j++) {
@@ -281,8 +320,19 @@ void MyADOLC_sparseNLP::set_sf(){
 			nlp_sf_g[event_idx[j-1]] = 1;
 		}
 	}
+/*
+	for (Index i = 0; i < nlp_n; i++) {
+		nlp_sf_x[i] 	= 1;
+	}
 
+	for (Index i = 0; i < nlp_m; i++) {
+		nlp_sf_g[i] 	= 1;
+	}
+	//*/
+
+#ifdef DCOPT_DEBUG
 	cout<<"end set_sf\n";
+#endif
 }
 
 void MyADOLC_sparseNLP::set_bounces() {
@@ -292,7 +342,7 @@ void MyADOLC_sparseNLP::set_bounces() {
 		nlp_ub_x[parameter_idx[i]] = ub_parameters(i+1)/nlp_sf_x[parameter_idx[i]];
 	}
 
-	if (n_nodes != 0 && n_states != 0) {
+	if (n_nodes && n_states) {
 		nlp_lb_x[t0_idx] 		= lb_t0/nlp_sf_x[t0_idx];
 		nlp_lb_x[tf_idx] 		= lb_tf/nlp_sf_x[tf_idx];
 		nlp_ub_x[t0_idx] 		= ub_t0/nlp_sf_x[t0_idx];
@@ -353,6 +403,109 @@ void MyADOLC_sparseNLP::set_bounces() {
 	}
 }
 
+void MyADOLC_sparseNLP::set_guess() {
+	if (n_nodes == 0 || n_states == 0) {
+		if (guess.parameters.getRowDim() != (uint)n_parameters)  {
+
+			cout<<"===== No guess provided or invalid guess =====\n"
+				  "=====  Generating guess based on Bounds  =====\n\n";
+			guess_gen();
+		}
+		for (Index i = 0; i < n_parameters; i++) {
+			nlp_guess_x[parameter_idx[i]] = guess.parameters(i+1)/nlp_sf_x[parameter_idx[i]];
+		}
+	}
+	else {
+		if ((guess.nodes.getRowDim() != (uint)n_nodes) 	||
+			(guess.parameters.getRowDim() != (uint)n_parameters) 	||
+			(guess.u.getColDim() != (uint)n_controls)	||
+			(guess.x.getColDim() != (uint)n_states)	||
+			(guess.u.getRowDim() != (uint)n_nodes)	||
+			(guess.x.getRowDim() != (uint)n_nodes)	) {
+
+			cout<<"===== No guess provided or invalid guess =====\n"
+					"=====  Generating guess based on Bounds  =====\n\n";
+			guess_gen();
+		}
+
+		double delta_t 	= guess.nodes(n_nodes,1) - guess.nodes(1,1);
+
+		node_str.resize(n_nodes-1,1);
+		for (Index i = 1; i <= n_nodes - 1; i++) {
+			node_str(i)	= (guess.nodes(i+1,1) - guess.nodes(i,1))/delta_t;
+		}
+
+		for (Index i = 0; i < n_parameters; i++) {
+			nlp_guess_x[parameter_idx[i]] = guess.parameters(i+1)/nlp_sf_x[parameter_idx[i]];
+		}
+
+		for (Index i = 0; i < n_nodes; i++) {
+			for (Index j = 0; j < n_states; j++) {
+				nlp_guess_x[state_idx[i][j]] = guess.x(i+1,j+1)/nlp_sf_x[state_idx[i][j]];
+			}
+			if (config.disc_method == Hermite_Simpson) {
+				for (Index j = 0; j < n_controls; j++) {
+					nlp_guess_x[control_idx[2*i][j]] = guess.u_full(2*i+1,j+1)/nlp_sf_x[control_idx[2*i][j]];
+					if (i < n_nodes - 1) {
+						nlp_guess_x[control_idx[2*i][j]] = guess.u_full(2*i+2,j+1)/nlp_sf_x[control_idx[2*i+1][j]];
+					}
+					nlp_guess_x[control_idx[2*i][j]] = guess.u(i+1,j+1)/nlp_sf_x[control_idx[2*i][j]];
+				}
+			}
+			else {
+				for (Index j = 0; j < n_controls; j++) {
+					nlp_guess_x[control_idx[i][j]] = guess.u(i+1,j+1)/nlp_sf_x[control_idx[i][j]];
+				}
+			}
+		}
+	}
+
+}
+
+void MyADOLC_sparseNLP::guess_gen() {
+#ifdef DCOPT_DEBUG
+	cout<<"guess generation\n";
+#endif
+	if( n_nodes == 0 || n_states == 0) {
+		if(n_parameters > 0) {
+			guess.parameters.resize(n_parameters,1);
+			for (Index i = 1; i <= n_parameters; i++) {
+				guess.parameters(i) 	= (lb_parameters(i) + ub_parameters(i))/2;
+			}
+		}
+	}
+	else {
+
+		guess.nodes = linspace<double>((lb_t0+ub_t0)/2.0,(lb_tf+ub_tf)/2.0,n_nodes);
+
+		guess.x.resize(n_nodes, n_states);
+		for (Index i = 1; i <= n_states; i++) {
+				guess.x.setCol(i,linspace<double>(lb_states(i), ub_states(i),n_nodes));
+			}
+
+		if (n_controls > 0) {
+			guess.u.resize(n_nodes,n_controls);
+			for (Index i = 1; i <= n_controls; i++) {
+				guess.u.setCol(i,linspace<double>(lb_controls(i), ub_controls(i),n_nodes));
+			}
+		}
+		else {
+			SMatrix<double> Null_vector;
+			guess.u = Null_vector;
+		}
+
+		if(n_parameters > 0) {
+			guess.parameters.resize(n_parameters,1);
+			for (Index i = 1; i <= n_parameters; i++) {
+				guess.parameters(i) 	= (double)(lb_parameters(i) + ub_parameters(i))/2;
+			}
+		}
+	}
+#ifdef DCOPT_DEBUG
+	cout<<"end guess generation\n";
+#endif
+}
+
 ApplicationReturnStatus MyADOLC_sparseNLP::solve(){
 
 	status = app->OptimizeTNLP(this);
@@ -375,19 +528,17 @@ bool  MyADOLC_sparseNLP::ad_eval_obj(Index n, const adouble *z, adouble& obj_val
 	printf("ad_eval_obj()\n");
 #endif
 	if ( n_states == 0 || n_nodes == 0){
-		adouble *y0, *yf, **y, **u, t0, tf;
+		adouble *dummy;
 		adouble *param	= new adouble [n_parameters];
 
-		this->NLP_x_2_OCP_var(z, y, u, param, t0, tf);
+		NLP_x_2_OCP_var(z, &dummy, &dummy, param, *dummy, *dummy);
 
-		obj_value = ad_e_cost (y0, yf, param, t0, tf, 1, constants);
+		obj_value = ad_e_cost (dummy, dummy, param, *dummy, *dummy, 1, constants);
 
 		delete[] param;
 	}
 	else {
 
-		adouble *y0		= new adouble [n_states];
-		adouble *yf		= new adouble [n_states];
 		adouble **y 	= new adouble *[n_nodes];
 		adouble **u;
 		adouble *param	= new adouble [n_parameters];
@@ -412,13 +563,7 @@ bool  MyADOLC_sparseNLP::ad_eval_obj(Index n, const adouble *z, adouble& obj_val
 		}
 		NLP_x_2_OCP_var(z, y, u, param, t0, tf);
 
-		for (Index i = 0; i < n_states; i += 1)
-		{
-			y0[i] 		= y[0][i];
-			yf[i]		= y[n_nodes - 1][i];
-		}
-
-		obj_value = ad_e_cost (y0, yf, param, t0, tf, 1, constants);
+		obj_value = ad_e_cost (y[0], y[n_nodes-1], param, t0, tf, 1, constants);
 
 		for (Index i = 0; i < n_nodes; i += 1) {
 			delete[] y[i];
@@ -437,8 +582,6 @@ bool  MyADOLC_sparseNLP::ad_eval_obj(Index n, const adouble *z, adouble& obj_val
 
 		delete[] y;
 		delete[] u;
-		delete[] y0;
-		delete[] yf;
 		delete[] param;
 	}
 
@@ -455,81 +598,14 @@ bool  MyADOLC_sparseNLP::eval_obj(Index n, const double *z, double& obj_value) {
 #ifdef DCOPT_DEBUG
 	printf("eval_obj()\n");
 #endif
-
-	if ( n_states == 0 || n_nodes == 0){
-		double *y0, *yf, **y, **u, t0, tf;
-		double *param	= new double [n_parameters];
-
-		this->NLP_x_2_OCP_var(z, y, u, param, t0, tf);
-
-		obj_value = d_e_cost (y0, yf, param, t0, tf, 1, constants);
-
-		delete[] param;
+	if(n_states == 0 || n_nodes == 0) {
+		double dummy;
+		NLP_x_2_OCP_var(z, states, controls, parameters, t0, tf);
+		obj_value = d_e_cost (&dummy, &dummy, parameters, t0, tf, 1, constants);
 	}
 	else {
-
-		double *y0		= new double [n_states];
-		double *yf		= new double [n_states];
-		double **y 		= new double *[n_nodes];
-		double **u;
-		double *param	= new double [n_parameters];
-
-		double tf, t0;
-
-		if (config.disc_method == Hermite_Simpson) {
-			u 	= new double *[2*n_nodes - 1];
-			for (Index i = 0; i < 2*n_nodes - 1; i += 1) {
-				u[i]	= new double [n_controls];
-			}
-		}
-		else {
-			u 	= new double *[n_nodes];
-			for (Index i = 0; i < n_nodes; i += 1) {
-				u[i]	= new double [n_controls];
-			}
-		}
-
-		for (Index i = 0; i < n_nodes; i += 1) {
-			y[i]	= new double [n_states];
-		}
-
-		NLP_x_2_OCP_var(z, y, u, param, t0, tf);
-
-		for (Index i = 0; i < n_states; i += 1)
-		{
-			y0[i] 		= y[0][i];
-			yf[i]		= y[n_nodes - 1][i];
-		}
-		this->NLP_x_2_OCP_var(z,y,u,param,t0,tf);
-
-		for (Index i = 0; i < n_states; i += 1)
-		{
-			y0[i] 		= y[0][i];
-			yf[i]		= y[n_nodes - 1][i];
-		}
-
-		obj_value = this->d_e_cost (y0, yf, param, t0, tf, 1, constants);
-
-		for (Index i = 0; i < n_nodes; i += 1) {
-			delete[] y[i];
-		}
-
-		if (config.disc_method == Hermite_Simpson) {
-			for (Index i = 0; i < 2*n_nodes - 1; i += 1) {
-				delete[] u[i];
-			}
-		}
-		else {
-			for (Index i = 0; i < n_nodes; i += 1) {
-				delete[] u[i];
-			}
-		}
-
-		delete[] y;
-		delete[] u;
-		delete[] y0;
-		delete[] yf;
-		delete[] param;
+		NLP_x_2_OCP_var(z, states, controls, parameters, t0, tf);
+		obj_value = d_e_cost (states[0], states[n_nodes-1], parameters, t0, tf, 1, constants);
 	}
 
 #ifdef DCOPT_DEBUG
@@ -544,20 +620,22 @@ bool  MyADOLC_sparseNLP::ad_eval_constraints(Index n, const adouble *z, Index m,
 	printf("ad_eval_constraints()\n");
 #endif
 	if(n_states == 0 || n_nodes == 0) {
-		adouble *y_start, *y_end, **path, **defects, t0, tf;
+		adouble *dummy;
 
-		adouble *param		= new adouble [n_parameters];
-		adouble *e			= new adouble [n_events];
+		adouble *a_param		= new adouble [n_parameters];
+		adouble *a_events		= new adouble [n_events];
 
-		ad_events(e, y_start, y_end, param, t0, tf, 1, constants);
-		OCP_var_2_NLP_g(path, defects, e, g);
+		NLP_x_2_OCP_var(z,&dummy,&dummy,a_param,*dummy,*dummy);
+		ad_events(a_events, dummy, dummy, a_param, *dummy, *dummy, 1, constants);
+		OCP_var_2_NLP_g(&dummy, &dummy, a_events, g);
+		for (Index i = 0; i < nlp_m; i++) {
+			g[i] = g[i] + 1;
+		}
 
-		delete[] param;
-		delete[] e;
+		delete[] a_param;
+		delete[] a_events;
 	}
 	else {
-		adouble *y_start	= new adouble [n_states];
-		adouble *y_end		= new adouble [n_states];
 		adouble **y 		= new adouble *[n_nodes];
 		adouble **f		 	= new adouble *[n_nodes];
 		adouble **u;
@@ -566,8 +644,8 @@ bool  MyADOLC_sparseNLP::ad_eval_constraints(Index n, const adouble *z, Index m,
 		adouble *e			= new adouble [n_events];
 		adouble **defects	= new adouble *[n_nodes-1];
 
-		adouble *y_m		= new adouble [n_states];
-		adouble *f_m		= new adouble [n_states];
+		adouble *y_m		= new adouble [n_states-1];
+		adouble *f_m		= new adouble [n_states-1];
 
 		adouble *delta	 	= new adouble [n_nodes - 1];
 		adouble *t	 		= new adouble [n_nodes];
@@ -608,13 +686,8 @@ bool  MyADOLC_sparseNLP::ad_eval_constraints(Index n, const adouble *z, Index m,
 		}
 		t[n_nodes - 1]	= tf;
 
-		for (Index i = 0; i < n_states; i += 1) {
-				y_start[i] 		= y[0][i];
-				y_end[i]		= y[n_nodes - 1][i];
-		}
 
-
-		ad_events(e, y_start, y_end, param, t0, tf, 1, constants);
+		ad_events(e, y[0], y[n_nodes-1], param, t0, tf, 1, constants);
 
 		if (config.disc_method == Hermite_Simpson) {
 			ad_derv(f[0], path[0], y[0], u[0], param, t[0], 1, constants);
@@ -638,6 +711,9 @@ bool  MyADOLC_sparseNLP::ad_eval_constraints(Index n, const adouble *z, Index m,
 		}
 
 		OCP_var_2_NLP_g(path, defects, e, g);
+		for (Index i = 0; i < nlp_m; i++) {
+			g[i] = g[i] + 1;
+		}
 
 		if (config.disc_method == Hermite_Simpson) {
 			for (Index i = 0; i < 2*n_nodes - 1; i += 1) {
@@ -670,8 +746,6 @@ bool  MyADOLC_sparseNLP::ad_eval_constraints(Index n, const adouble *z, Index m,
 
 		delete[] u;
 		delete[] f;
-		delete[] y_start;
-		delete[] y_end;
 		delete[] param;
 		delete[] e;
 		delete[] delta;
@@ -691,70 +765,32 @@ bool  MyADOLC_sparseNLP::eval_constraints(Index n, const double *x, Index m, dou
 	printf("eval_constraints()\n");
 #endif
 	if(n_states == 0 || n_nodes == 0) {
-		double *y0, *yf, **path, **defects, t0, tf;
-
-		double *param		= new double [n_parameters];
-		double *e			= new double [n_events];
-
-		d_events(e, y0, yf, param, t0, tf, 1, constants);
-		OCP_var_2_NLP_g(path, defects, e, g);
-
+		double *dummy;
+		NLP_x_2_OCP_var(x,states,controls,parameters,t0,tf);
+		d_events(events, dummy, dummy, parameters, t0, tf, 1, constants);
+		OCP_var_2_NLP_g(path_constraints, defects, events, g);
+		for (Index i = 0; i < nlp_m; i++) {
+			g[i] = g[i] + 1;
+		}
 	}
 	else {
-		double *y0		= new double [n_states];
-		double *yf		= new double [n_states];
-		double **y 			= new double *[n_nodes];
 		double **f		 	= new double *[n_nodes];
-		double **u;
-		double **path;
-		double *param		= new double [n_parameters];
-		double *e			= new double [n_events];
-		double **defects	= new double *[n_nodes-1];
 
-		double *delta	 	= new double [n_nodes - 1];
 		double *t	 		= new double [n_nodes];
-
-		double tf, t0;
-
-		if (config.disc_method == Hermite_Simpson) {
-			u 		= new double* [2*n_nodes - 1];
-			path	= new double* [2*n_nodes - 1];
-			for (Index i = 0; i < 2*n_nodes - 1; i += 1) {
-				u[i]		= new double [n_controls];
-				path[i]		= new double [n_path_constraints];
-			}
-		}
-		else {
-			u 		= new double *[n_nodes];
-			path	= new double *[n_nodes];
-			for (Index i = 0; i < n_nodes; i += 1) {
-				u[i]		= new double [n_controls];
-				path[i]		= new double [n_path_constraints];
-			}
-		}
+		double *delta		= new double [n_nodes - 1];
 
 		for (Index i = 0; i < n_nodes; i += 1) {
-			y[i]		= new double [n_states];
 			f[i] 		= new double [n_states];
 		}
 
-		for (Index i = 0; i < n_nodes - 1; i++) {
-			defects[i]	= new double [n_states];
-		}
-		NLP_x_2_OCP_var(x,y,u,param,t0,tf);
+		NLP_x_2_OCP_var(x,states,controls,parameters,t0,tf);
 
-		for (Index i = 0; i < n_states; i += 1)
-		{
-			y0[i] 		= y[0][i];
-			yf[i]		= y[n_nodes - 1][i];
-		}
-
-		d_events(e, y0, yf, param, t0, tf, 1, constants);
+		d_events(events, states[0], states[n_nodes-1], parameters, t0, tf, 1, constants);
 
 		t[0]				= t0;
 		for (Index i = 0; i < n_nodes - 1; i++) {
-			delta[i]	= (tf-t0)*node_str(i+1);
-			t[i+1]		= t[i] + delta[i];
+			delta[i] 		= (tf-t0)*node_str(i+1);
+			t[i+1]			= t[i] + (tf-t0)*node_str(i+1);
 		}
 		t[n_nodes - 1]	= tf;
 
@@ -762,16 +798,16 @@ bool  MyADOLC_sparseNLP::eval_constraints(Index n, const double *x, Index m, dou
 			double* y_m			= new double [n_states];
 			double* f_m			= new double [n_states];
 
-			d_derv(f[0], path[0], y[0], u[0], param, t[0], 1, constants);
+			d_derv(f[0], path_constraints[0], states[0], controls[0], parameters, t[0], 1, constants);
 
 			for (Index i = 0; i < n_nodes - 1; i += 1)	{
-				d_derv(f[i+1], path[2*(i+1)], y[i+1], u[2*(i+1)], param, t[i+1], 1, constants);
+				d_derv(f[i+1], path_constraints[2*(i+1)], states[i+1], controls[2*(i+1)], parameters, t[i+1], 1, constants);
 				for (Index j = 0; j < n_states; j += 1){
-					y_m[j] 	= (y[i][j]+y[i+1][j])/2. + delta[i]/8.*(f[i][j]-f[i+1][j]);
+					y_m[j] 	= (states[i][j]+states[i+1][j])/2. + delta[i]/8.*(f[i][j]-f[i+1][j]);
 				}
-				d_derv(f_m, path[2*i+1], y_m, u[2*i+1], param, (t[i] + t[i+1])/2., 1, constants);
+				d_derv(f_m, path_constraints[2*i+1], y_m, controls[2*i+1], parameters, (t[i] + t[i+1])/2., 1, constants);
 				for (Index j = 0; j < n_states; j++)
-					defects[i][j]	= (y[i+1][j] - y[i][j] - delta[i]/6.*(f[i][j]+4.*f_m[j]+f[i+1][j]));
+					defects[i][j]	= (states[i+1][j] - states[i][j] - delta[i]/6.*(f[i][j]+4.*f_m[j]+f[i+1][j]));
 			}
 
 			delete[] y_m;
@@ -780,15 +816,22 @@ bool  MyADOLC_sparseNLP::eval_constraints(Index n, const double *x, Index m, dou
 		}
 		else if (config.disc_method == trapezoidal) {
 			for (Index i = 0; i < n_nodes; i += 1)	{
-				d_derv(f[i], path[i], y[i], u[i], param, t[i], 1, constants);
+				d_derv(f[i], path_constraints[i], states[i], controls[i], parameters, t[i], 1, constants);
 			}
 			for (Index i = 0; i < n_nodes - 1; i++)
 				for (Index j = 0; j < n_states; j++)
-					defects[i][j] 	= y[i+1][j] - y[i][j] - delta[i]/2.0*(f[i][j] + f[i+1][j]);
+					defects[i][j] 	= states[i+1][j] - states[i][j] - delta[i]/2.0*(f[i][j] + f[i+1][j]);
 		}
 
-		OCP_var_2_NLP_g(path, defects, e, g);
+		OCP_var_2_NLP_g(path_constraints, defects, events, g);
 
+		for (Index i = 0; i < nlp_m; i++) {
+			g[i] = g[i] + 1;
+		}
+
+		delete[] f;
+		delete[] t;
+		delete[] delta;
 	}
 
 #ifdef DCOPT_DEBUG
@@ -825,10 +868,11 @@ bool MyADOLC_sparseNLP::get_bounds_info(Index n, Number* x_l, Number* x_u,
 		x_l[i] = nlp_lb_x[i];
 		x_u[i] = nlp_ub_x[i];
 	}
+	cout<<"\n";
 
 	for (Index i = 0; i < nlp_m; i += 1) {
-		g_l[i] = nlp_lb_g[i];
-		g_u[i] = nlp_ub_g[i];
+		g_l[i] = nlp_lb_g[i]+1;
+		g_u[i] = nlp_ub_g[i]+1;
 	}
 
 	return true;
@@ -844,7 +888,7 @@ bool MyADOLC_sparseNLP::get_starting_point(Index n, bool init_x, Number* x,
 	assert(init_lambda == false);
 
 	for (Index i = 0; i < n; i += 1) {
-		x[i]	= 0;//NLP_x_guess[i];
+		x[i]	= nlp_guess_x[i];
 	}
 	return true;
 }
@@ -1003,47 +1047,83 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 			      IpoptCalculatedQuantities* ip_cq)
 {
 
-	/*
-	NLP_x_opt.resize(n,1);
-	for (Index i = 0; i < n; i++) {
-		NLP_x_opt(i+1) 	= x[i]*NLP_x_sf[i];
+	results.z.resize(nlp_n,1);
+	results.x.resize(n_nodes, n_states);
+	results.u.resize(n_nodes, n_controls);
+	results.parameters.resize(n_parameters,1);
+	results.nodes.resize(n_nodes, 1);
+
+	for (Index i = 0; i < nlp_n; i++) {
+		results.z(i+1) 	= x[i];
 	}
-	NLP_lam_opt.resize(m,1);
-	for (Index i = 0; i < m; i++) {
-		NLP_lam_opt(i+1) 	= lambda[i]*NLP_g_sf[i];
+
+	NLP_x_2_OCP_var(x, states, controls, parameters, t0, tf);
+
+	for (Index i = 0; i < n_nodes; i++)
+		for (Index j = 0; j < n_states; j++)
+			results.x(i+1,j+1) 		= states[i][j];
+
+	for (Index i = 0; i < n_nodes; i++)
+		for (Index j = 0; j < n_controls; j++){
+			if (config.disc_method == Hermite_Simpson){
+				results.u_full	(2*i+1,j+1) 		= controls[2*i][j];
+				if (i < n_nodes - 1)
+					results.u_full(2*i+2,j+1) 		= controls[2*i+1][j];
+				results.u(2*i+1,j+1) 		= controls[2*i][j];
+			}
+			else
+				results.u(i+1,j+1) 		= controls[i][j];
+		}
+
+	for (Index i = 0; i < n_parameters; i++)
+		results.parameters(i+1)		= parameters[i];
+
+	if (n_nodes && n_states) {
+		for (Index i = 2; i < n_nodes; i++) {
+			results.nodes(i,1) 	= results.nodes(i-1,1) + (tf - t0)*node_str(i-1);
+		}
+		results.nodes(n_nodes,1) = tf;
 	}
-	*/
 //	cout<<"memory deallocation\n";
-
-//	delete[] app;
-
-	delete[] nlp_sf_x;
-	delete[] nlp_sf_g;
-	delete[] nlp_lb_x;
-	delete[] nlp_ub_x;
-	delete[] nlp_lb_g;
-	delete[] nlp_ub_g;
-
-	delete[] parameter_idx;
-	delete[] event_idx;
-
 
 	for (Index i = 0; i < n_nodes; i++) {
 		delete[] state_idx[i];
+		delete[] states[i];
 		delete[] control_idx[i];
-	}
-
-	for (Index i = 0; i < n_nodes; i++) {
+		delete[] controls[i];
 		delete[] path_constraint_idx[i];
-		if (i < n_nodes - 1)
+		delete[] path_constraints[i];
+		if (i< n_nodes - 1) {
 			delete[] defect_idx[i];
+			delete[] defects[i];
+		}
 	}
 
+	if (n_states) {
+		delete[] state_idx;
+		delete[] states;
+		delete[] defect_idx;
+		delete[] defects;
+	}
 
-	delete[] state_idx;
-	delete[] control_idx;
-	delete[] path_constraint_idx;
-	delete[] defect_idx;
+	if (n_controls) {
+		delete[] control_idx;
+		delete[] controls;
+	}
+
+	if (n_path_constraints) {
+		delete[] path_constraint_idx;
+		delete[] path_constraints;
+	}
+
+	if (n_parameters) {
+		delete[] parameters;
+		delete[] parameter_idx;
+	}
+	if (n_events) {
+		delete[] events;
+		delete[] event_idx;
+	}
 
 	free(rind_g);
 	free(cind_g);
@@ -1056,6 +1136,14 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 		free(rind_L_total);
 		free(hessval);
 	}
+
+	delete[] nlp_sf_x;
+	delete[] nlp_sf_g;
+	delete[] nlp_guess_x;
+	delete[] nlp_lb_x;
+	delete[] nlp_ub_x;
+	delete[] nlp_lb_g;
+	delete[] nlp_ub_g;
 
 //	cout<<"memory deallocation done \n";
 }
