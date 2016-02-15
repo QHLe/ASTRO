@@ -102,11 +102,21 @@ void MyADOLC_sparseNLP::mem_allocation(){
 	if (n_nodes) {
 		state_idx 			= new Index *[n_nodes];
 		states  			= new double*[n_nodes];
-		control_idx			= new Index *[n_nodes];
-		controls			= new double*[n_nodes];
+		if (n_controls && config.disc_method == Hermite_Simpson) {
+			control_idx			= new Index *[2*n_nodes-1];
+			controls			= new double*[2*n_nodes-1];
 
-		path_constraint_idx	= new Index *[n_nodes];
-		path_constraints	= new double*[n_nodes];
+			path_constraint_idx	= new Index *[2*n_nodes-1];
+			path_constraints	= new double*[2*n_nodes-1];
+		}
+		else {
+			control_idx			= new Index *[n_nodes];
+			controls			= new double*[n_nodes];
+
+			path_constraint_idx	= new Index *[n_nodes];
+			path_constraints	= new double*[n_nodes];
+		}
+
 		defect_idx			= new Index *[n_nodes - 1];
 		defects				= new double*[n_nodes - 1];
 	}
@@ -130,14 +140,31 @@ void MyADOLC_sparseNLP::mem_allocation(){
 				defects[i]			= new double [n_states];
 			}
 		}
-		if (n_controls) {
+		if (n_controls && config.disc_method == Hermite_Simpson) {
+			control_idx[2*i]				= new Index[n_controls];
+			controls[2*i]					= new double[n_controls];
+			if (n_path_constraints) {
+				path_constraint_idx[2*i]	= new Index [n_path_constraints];
+				path_constraints[2*i]		= new double [n_path_constraints];
+			}
+			if (i < n_nodes - 1) {
+				control_idx[2*i+1]			= new Index[n_controls];
+				controls[2*i+1]				= new double[n_controls];
+				if (n_path_constraints) {
+					path_constraint_idx[2*i+1]	= new Index [n_path_constraints];
+					path_constraints[2*i+1]		= new double [n_path_constraints];
+				}
+			}
+		}
+		else if (n_controls) {
 			control_idx[i]	= new Index[n_controls];
 			controls[i]		= new double[n_controls];
+			if (n_path_constraints) {
+				path_constraint_idx[i]	= new Index [n_path_constraints];
+				path_constraints[i]		= new double [n_path_constraints];
+			}
 		}
-		if (n_path_constraints) {
-			path_constraint_idx[i]	= new Index [n_path_constraints];
-			path_constraints[i]		= new double [n_path_constraints];
-		}
+
 	}
 #ifdef DCOPT_DEBUG
 	cout<<"end mem_alloc\n";
@@ -153,7 +180,7 @@ ApplicationReturnStatus MyADOLC_sparseNLP::initialization(){
 	this->set_bounces();
 	this->set_guess();
 
-	app->Options()->SetNumericValue("tol", 1e-6);
+	app->Options()->SetNumericValue("tol", config.NLP_tol);
 	app->Options()->SetStringValue("mu_strategy", "adaptive");
 //	app->Options()->SetStringValue("output_file", "ipopt.out");
 //	app->Options()->SetStringValue("nlp_scaling_method","gradient-based");
@@ -201,9 +228,21 @@ void MyADOLC_sparseNLP::set_indexes() {
 				state_idx[i][j] 		= idx_n;
 				idx_n++;
 			}
-			for (Index j = 0; j < n_controls; j++) {
-				control_idx[i][j] 		= idx_n;
-				idx_n++;
+			if (config.disc_method == Hermite_Simpson) {
+				for (Index j = 0; j < n_controls; j++) {
+					control_idx[2*i][j] 		= idx_n;
+					idx_n++;
+					if (i < n_nodes-1) {
+						control_idx[2*i+1][j] 		= idx_n;
+						idx_n++;
+					}
+				}
+			}
+			else {
+				for (Index j = 0; j < n_controls; j++) {
+					control_idx[i][j] 		= idx_n;
+					idx_n++;
+				}
 			}
 		}
 		for (Index i = 0; i < n_parameters; i++) {
@@ -229,10 +268,22 @@ void MyADOLC_sparseNLP::set_indexes() {
 	}
 	else {
 		for (Index i = 0; i < n_nodes; i++) {
+		if ( config.disc_method == Hermite_Simpson) {
 			for (Index j = 0; j < n_path_constraints; j++) {
-				path_constraint_idx[i][j]	= idx_m;
+				path_constraint_idx[2*i][j]		= idx_m;
 				idx_m++;
+				if (i < n_nodes - 1) {
+					path_constraint_idx[2*i+1][j]	= idx_m;
+					idx_m++;
+				}
 			}
+		}
+		else {
+			for (Index j = 0; j < n_path_constraints; j++) {
+					path_constraint_idx[i][j]	= idx_m;
+					idx_m++;
+			}
+		}
 			if ( i < n_nodes - 1) {
 				for (Index j = 0; j < n_states; j++) {
 					defect_idx[i][j] 			= idx_m;
@@ -247,6 +298,8 @@ void MyADOLC_sparseNLP::set_indexes() {
 		if (idx_m != nlp_m)
 			printf("something went wrong in NLP_g_2_OCP_var\n");
 	}
+
+
 #ifdef DCOPT_DEBUG
 	cout<<"end indexing\n";
 #endif
@@ -266,18 +319,36 @@ void MyADOLC_sparseNLP::set_sf(){
 				nlp_sf_x[state_idx[i][j-1]] 	= 1;
 		}
 	}
-	for (Index j = 1; j <= n_controls; j++) {
-		if(lb_controls(j) != 0 || ub_controls(j) != 0) {
-			for (Index i = 0; i < n_nodes; i++) {
-				nlp_sf_x[control_idx[i][j-1]] = max(fabs(lb_controls(j)), fabs(ub_controls(j)));
+
+	if (config.disc_method == Hermite_Simpson) {
+		for (Index j = 1; j <= n_controls; j++) {
+			if(lb_controls(j) != 0 || ub_controls(j) != 0) {
+				for (Index i = 0; i < 2*n_nodes - 1; i++) {
+					nlp_sf_x[control_idx[i][j-1]] = max(fabs(lb_controls(j)), fabs(ub_controls(j)));
+				}
 			}
-		}
-		else {
-			for (Index i = 0; i < n_nodes; i++) {
-				nlp_sf_x[control_idx[i][j-1]] = 1;
+			else {
+				for (Index i = 0; i < n_nodes; i++) {
+					nlp_sf_x[control_idx[i][j-1]] = 1;
+				}
 			}
 		}
 	}
+	else {
+		for (Index j = 1; j <= n_controls; j++) {
+			if(lb_controls(j) != 0 || ub_controls(j) != 0) {
+				for (Index i = 0; i < n_nodes; i++) {
+					nlp_sf_x[control_idx[i][j-1]] = max(fabs(lb_controls(j)), fabs(ub_controls(j)));
+				}
+			}
+			else {
+				for (Index i = 0; i < n_nodes; i++) {
+					nlp_sf_x[control_idx[i][j-1]] = 1;
+				}
+			}
+		}
+	}
+
 	for (Index i = 1; i <= n_parameters; i++) {
 		if(lb_parameters(i) != 0 || ub_parameters(i) != 0) {
 			nlp_sf_x[parameter_idx[i-1]] = max(fabs(lb_parameters(i)), fabs(ub_parameters(i)));
@@ -297,17 +368,30 @@ void MyADOLC_sparseNLP::set_sf(){
 		}
 	}
 
-	for (Index j = 1; j <= n_path_constraints; j++) {
-		if(lb_path(j) != 0 || ub_path(j) != 0) {
-			for (Index i = 0; i < n_nodes; i++)
-				nlp_sf_g[path_constraint_idx[i][j-1]] 	= max(fabs(lb_path(j)), fabs(ub_path(j)));
-		}
-		else {
-			for (Index i = 0; i < n_nodes; i++)
-				nlp_sf_g[path_constraint_idx[i][j-1]] 	= 1;
+	if (config.disc_method == Hermite_Simpson) {
+		for (Index j = 1; j <= n_path_constraints; j++) {
+			if(lb_path(j) != 0 || ub_path(j) != 0) {
+				for (Index i = 0; i < 2*n_nodes-1; i++)
+					nlp_sf_g[path_constraint_idx[i][j-1]] 	= max(fabs(lb_path(j)), fabs(ub_path(j)));
+			}
+			else {
+				for (Index i = 0; i < n_nodes; i++)
+					nlp_sf_g[path_constraint_idx[i][j-1]] 	= 1;
+			}
 		}
 	}
-
+	else {
+		for (Index j = 1; j <= n_path_constraints; j++) {
+			if(lb_path(j) != 0 || ub_path(j) != 0) {
+				for (Index i = 0; i < n_nodes; i++)
+					nlp_sf_g[path_constraint_idx[i][j-1]] 	= max(fabs(lb_path(j)), fabs(ub_path(j)));
+			}
+			else {
+				for (Index i = 0; i < n_nodes; i++)
+					nlp_sf_g[path_constraint_idx[i][j-1]] 	= 1;
+			}
+		}
+	}
 	for (Index i = 0; i < n_nodes-1; i++)
 		for (Index j = 0; j < n_states; j++)
 			nlp_sf_g[defect_idx[i][j]]	= 1;
@@ -320,7 +404,7 @@ void MyADOLC_sparseNLP::set_sf(){
 			nlp_sf_g[event_idx[j-1]] = 1;
 		}
 	}
-/*
+/*s
 	for (Index i = 0; i < nlp_n; i++) {
 		nlp_sf_x[i] 	= 1;
 	}
@@ -389,6 +473,7 @@ void MyADOLC_sparseNLP::set_bounces() {
 				nlp_ub_g[path_constraint_idx[i][j]] = ub_path(j+1)/nlp_sf_g[path_constraint_idx[i][j]];
 			}
 		}
+
 		if ( i < n_nodes - 1) {
 			for (Index j = 0; j < n_states; j++) {
 				nlp_lb_g[defect_idx[i][j]] = 0.0;
@@ -443,13 +528,20 @@ void MyADOLC_sparseNLP::set_guess() {
 			for (Index j = 0; j < n_states; j++) {
 				nlp_guess_x[state_idx[i][j]] = guess.x(i+1,j+1)/nlp_sf_x[state_idx[i][j]];
 			}
-			if (config.disc_method == Hermite_Simpson) {
+			if (config.disc_method == Hermite_Simpson && guess.u_full.getColDim() == (2*n_nodes - 1)) {
 				for (Index j = 0; j < n_controls; j++) {
 					nlp_guess_x[control_idx[2*i][j]] = guess.u_full(2*i+1,j+1)/nlp_sf_x[control_idx[2*i][j]];
 					if (i < n_nodes - 1) {
 						nlp_guess_x[control_idx[2*i][j]] = guess.u_full(2*i+2,j+1)/nlp_sf_x[control_idx[2*i+1][j]];
 					}
 					nlp_guess_x[control_idx[2*i][j]] = guess.u(i+1,j+1)/nlp_sf_x[control_idx[2*i][j]];
+				}
+			}
+			else if (config.disc_method == Hermite_Simpson){
+				for (Index j = 0; j < n_controls; j++) {
+					nlp_guess_x[control_idx[2*i][j]] 	= guess.u(i+1,j+1)/nlp_sf_x[control_idx[2*i][j]];
+					if (i < n_nodes - 1)
+						nlp_guess_x[control_idx[2*i+1][j]] 	= (guess.u(i+1,j+1)+guess.u(i+2,j+1))/(2*nlp_sf_x[control_idx[2*i+1][j]]);
 				}
 			}
 			else {
@@ -459,7 +551,12 @@ void MyADOLC_sparseNLP::set_guess() {
 			}
 		}
 	}
-
+	nlp_guess_x[t0_idx]		= guess.nodes(1,1)/nlp_sf_x[t0_idx];
+	nlp_guess_x[tf_idx]		= guess.nodes(n_nodes,1)/nlp_sf_x[tf_idx];
+	cout<<endl;
+	for( Index i = 0; i < nlp_n; i++) {
+	//	cout<<nlp_guess_x[i]<<endl;
+	}
 }
 
 void MyADOLC_sparseNLP::guess_gen() {
@@ -480,13 +577,18 @@ void MyADOLC_sparseNLP::guess_gen() {
 
 		guess.x.resize(n_nodes, n_states);
 		for (Index i = 1; i <= n_states; i++) {
-				guess.x.setCol(i,linspace<double>(lb_states(i), ub_states(i),n_nodes));
-			}
-
-		if (n_controls > 0) {
+			guess.x.setCol(i,linspace<double>(lb_states(i), ub_states(i),n_nodes));
+		}
+		if (n_controls) {
 			guess.u.resize(n_nodes,n_controls);
 			for (Index i = 1; i <= n_controls; i++) {
 				guess.u.setCol(i,linspace<double>(lb_controls(i), ub_controls(i),n_nodes));
+			}
+			if (config.disc_method == Hermite_Simpson) {
+				guess.u_full.resize(2*n_nodes-1,n_controls);
+				for (Index i = 1; i <= n_controls; i++) {
+					guess.u_full.setCol(i,linspace<double>(lb_controls(i), ub_controls(i),2*n_nodes-1));
+				}
 			}
 		}
 		else {
@@ -644,8 +746,8 @@ bool  MyADOLC_sparseNLP::ad_eval_constraints(Index n, const adouble *z, Index m,
 		adouble *e			= new adouble [n_events];
 		adouble **defects	= new adouble *[n_nodes-1];
 
-		adouble *y_m		= new adouble [n_states-1];
-		adouble *f_m		= new adouble [n_states-1];
+		adouble *y_m		= new adouble [n_states];
+		adouble *f_m		= new adouble [n_states];
 
 		adouble *delta	 	= new adouble [n_nodes - 1];
 		adouble *t	 		= new adouble [n_nodes];
@@ -688,17 +790,21 @@ bool  MyADOLC_sparseNLP::ad_eval_constraints(Index n, const adouble *z, Index m,
 
 
 		ad_events(e, y[0], y[n_nodes-1], param, t0, tf, 1, constants);
-
 		if (config.disc_method == Hermite_Simpson) {
 			ad_derv(f[0], path[0], y[0], u[0], param, t[0], 1, constants);
 			for (Index i = 0; i < n_nodes - 1; i += 1)	{
+				cout<<"i = "<<i<<"\n";
 				ad_derv(f[i+1], path[2*(i+1)], y[i+1], u[2*(i+1)], param, t[i+1], 1, constants);
+
 				for (Index j = 0; j < n_states; j += 1){
 					y_m[j] 	= (y[i][j]+y[i+1][j])/2. + delta[i]/8.*(f[i][j]-f[i+1][j]);
 				}
+
 				ad_derv(f_m, path[2*i+1], y_m, u[2*i+1], param, (t[i] + t[i+1])/2., 1, constants);
+
 				for (Index j = 0; j < n_states; j++)
 					defects[i][j]	= (y[i+1][j] - y[i][j] - delta[i]/6.*(f[i][j]+4.*f_m[j]+f[i+1][j]));
+
 			}
 		}
 		else if (config.disc_method == trapezoidal) {
@@ -867,12 +973,14 @@ bool MyADOLC_sparseNLP::get_bounds_info(Index n, Number* x_l, Number* x_u,
 	for (Index i = 0; i < nlp_n; i += 1) {
 		x_l[i] = nlp_lb_x[i];
 		x_u[i] = nlp_ub_x[i];
+//		cout<<x_l[i]<<"\t"<<x_u[i]<<endl;
 	}
 	cout<<"\n";
 
 	for (Index i = 0; i < nlp_m; i += 1) {
 		g_l[i] = nlp_lb_g[i]+1;
 		g_u[i] = nlp_ub_g[i]+1;
+//		cout<<g_l[i]<<"\t"<<g_u[i]<<endl;
 	}
 
 	return true;
@@ -1050,6 +1158,9 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 	results.z.resize(nlp_n,1);
 	results.x.resize(n_nodes, n_states);
 	results.u.resize(n_nodes, n_controls);
+	if (config.disc_method == Hermite_Simpson)
+		results.u_full.resize(2*n_nodes-1, n_controls);
+
 	results.parameters.resize(n_parameters,1);
 	results.nodes.resize(n_nodes, 1);
 
@@ -1066,10 +1177,10 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 	for (Index i = 0; i < n_nodes; i++)
 		for (Index j = 0; j < n_controls; j++){
 			if (config.disc_method == Hermite_Simpson){
+				results.u(i+1,j+1) 		= controls[2*i][j];
 				results.u_full	(2*i+1,j+1) 		= controls[2*i][j];
 				if (i < n_nodes - 1)
 					results.u_full(2*i+2,j+1) 		= controls[2*i+1][j];
-				results.u(2*i+1,j+1) 		= controls[2*i][j];
 			}
 			else
 				results.u(i+1,j+1) 		= controls[i][j];

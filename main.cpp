@@ -68,12 +68,13 @@ int main(int argv, char* argc[])
 	problem->set_events(&events, &events);
 	problem->set_derivatives(&derivatives, &derivatives);
 
-	problem->config.max_iter 	= 5000;
-	problem->config.NLP_solver 	= ma27;
-	problem->config.warmstart 	= false;
-	problem->config.NLP_tol		= 1e-8;
-	problem->config.with_mgl	= false;
-	problem->config.disc_method	= trapezoidal;
+	problem->config.max_iter 		= 5000;
+	problem->config.NLP_solver 		= ma27;
+	problem->config.warmstart 		= false;
+	problem->config.NLP_tol			= 1e-8;
+	problem->config.with_mgl		= false;
+	problem->config.disc_method		= Hermite_Simpson;
+	problem->config.H_approximation = false;
 
 	problem->mem_allocation();
 

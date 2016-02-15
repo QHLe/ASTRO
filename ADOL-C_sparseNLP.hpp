@@ -226,7 +226,7 @@ private:
 	//	double *y0, *yf, **y, **u, *param, tf, t0, **f, **path, **defects, *e, *t, *delta;
 	//	double  *NLP_x_lb, *NLP_x_ub, *NLP_x_sf, *NLP_x_guess, *NLP_g_lb, *NLP_g_ub, *NLP_g_sf;
 };
-
+/*
 template<class T>
 void 	MyADOLC_sparseNLP::OCP_var_2_NLP_x(T*const* states, T*const* controls, const T* param, const T& t0, const T& tf, T* x, const T* sf) {
 	if (n_nodes != 0 && n_states != 0) { // no nodes or states => static optimization problem
@@ -261,7 +261,7 @@ void 	MyADOLC_sparseNLP::OCP_var_2_NLP_x(T*const* states, T*const* controls, con
 		}
 	}
 }
-
+*/
 template<class T>
 void 	MyADOLC_sparseNLP::OCP_var_2_NLP_g(T*const* path, T*const* defects, const T* events, T* g) {
 
@@ -299,7 +299,7 @@ void 	MyADOLC_sparseNLP::OCP_var_2_NLP_g(T*const* path, T*const* defects, const 
 
 template<class T>
 void 	MyADOLC_sparseNLP::NLP_x_2_OCP_var(const T* x, T** states, T** controls, T* param, T& t0, T& tf) {
-	if (n_nodes != 0 && n_states != 0) { // no nodes or states => static optimization problem
+	if (n_nodes  && n_states ) { // no nodes or states => static optimization problem
 		t0 		= x[t0_idx]*nlp_sf_x[t0_idx];
 		tf 		= x[tf_idx]*nlp_sf_x[tf_idx];
 	}
