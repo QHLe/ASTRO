@@ -1,7 +1,7 @@
 #define SPARSE_HESS
 //#define RETAPE
 
-#define DCOPT_DEBUG
+//#define DCOPT_DEBUG
 
 #include <cassert>
 #include "ADOL-C_sparseNLP.hpp"
@@ -502,6 +502,9 @@ void MyADOLC_sparseNLP::set_bounces() {
 }
 
 void MyADOLC_sparseNLP::set_guess() {
+#ifdef DCOPT_DEBUG
+	cout<<"set_guess\n";
+#endif
 	if (n_nodes == 0 || n_states == 0) {
 		if (guess.parameters.getRowDim() != (uint)n_parameters)  {
 
@@ -563,13 +566,18 @@ void MyADOLC_sparseNLP::set_guess() {
 				}
 			}
 		}
+
+		nlp_guess_x[t0_idx]		= guess.nodes(1,1)/nlp_sf_x[t0_idx];
+		nlp_guess_x[tf_idx]		= guess.nodes(n_nodes,1)/nlp_sf_x[tf_idx];
 	}
-	nlp_guess_x[t0_idx]		= guess.nodes(1,1)/nlp_sf_x[t0_idx];
-	nlp_guess_x[tf_idx]		= guess.nodes(n_nodes,1)/nlp_sf_x[tf_idx];
 	cout<<endl;
 	for( Index i = 0; i < nlp_n; i++) {
 	//	cout<<nlp_guess_x[i]<<endl;
 	}
+
+#ifdef DCOPT_DEBUG
+	cout<<"end set_guess\n";
+#endif
 }
 
 void MyADOLC_sparseNLP::guess_gen() {
