@@ -156,8 +156,8 @@ public:
 	void 	NLP_g_2_OCP_var(const T* g, T** path, T** defects, T* events);
 
 	void 	mem_allocation();
-	ApplicationReturnStatus 	initialization();
-	ApplicationReturnStatus 	solve();
+	ApplicationReturnStatus 	initialization(SmartPtr<IpoptApplication> app);
+	ApplicationReturnStatus 	solve(SmartPtr<IpoptApplication> app);
 
 	void set_endpoint_cost(double (*)	(const  double* ini_states, const  double* fin_states, const double* param, const double& t0, const double& tf, Index phase, const double* constants),
 						  adouble (*)	(const adouble* ini_states, const adouble* fin_states, const adouble* param, const adouble& t0, const adouble& tf, Index phase, const double* constants));
@@ -181,8 +181,6 @@ private:
 	MyADOLC_sparseNLP(const MyADOLC_sparseNLP&);
 	MyADOLC_sparseNLP& operator=(const MyADOLC_sparseNLP&);
 
-	SmartPtr<IpoptApplication> app;
-	ApplicationReturnStatus status;
 
 	double  (*d_e_cost) (const  double* ini_states, const  double* fin_states, const  double* param, const  double& t0, const  double& tf, Index phase, const double* constants);
 	adouble (*ad_e_cost)(const adouble* ini_states, const adouble* fin_states, const adouble* param, const adouble& t0, const adouble& tf, Index phase, const double* constants);
@@ -223,8 +221,7 @@ private:
 	void 	set_bounces();
 	void 	set_guess();
 	void 	guess_gen();
-	//	double *y0, *yf, **y, **u, *param, tf, t0, **f, **path, **defects, *e, *t, *delta;
-	//	double  *NLP_x_lb, *NLP_x_ub, *NLP_x_sf, *NLP_x_guess, *NLP_g_lb, *NLP_g_ub, *NLP_g_sf;
+
 };
 /*
 template<class T>

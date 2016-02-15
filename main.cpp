@@ -56,6 +56,7 @@ int main(int argv, char* argc[])
 {
 	ApplicationReturnStatus status;
 	SmartPtr<MyADOLC_sparseNLP> problem = new MyADOLC_sparseNLP();
+	SmartPtr<IpoptApplication>app 		= new IpoptApplication();
 
 	problem->n_nodes 			= N_NODES;
 	problem->n_states 			= 3;
@@ -110,37 +111,14 @@ int main(int argv, char* argc[])
 	problem->lb_events(5)	= -0.0;
 	problem->ub_events(5)	= -0.0;
 
-	status = problem->initialization();
 
-//	status = problem->solve();
-	/**/
-		SmartPtr<IpoptApplication>app 				= new IpoptApplication();
+	status = problem->initialization(app);
+	status = problem->solve(app);
 
-		app->Options()->SetStringValue("mu_strategy", "adaptive");
-	//	app->Options()->SetStringValue("output_file", "ipopt.out");
-	//	app->Options()->SetStringValue("nlp_scaling_method","gradient-based");
-		app->Options()->SetStringValue("linear_solver", "mumps");//	ma86 & ma57 with memmory leakage
-		app->Options()->SetIntegerValue("max_iter", problem->config.max_iter);
-		app->Options()->SetIntegerValue("print_level", problem->config.print_level);
-
-
-		if (problem->config.H_approximation){
-			app->Options()->SetStringValue("hessian_approximation", "limited-memory");
-		}
-		else {
-			app->Options()->SetStringValue("hessian_approximation", "exact");
-		}
-
-		status = app->Initialize();
-		app->OptimizeTNLP(problem);
-		problem->results.x.save("x.dat");
-		problem->results.u.save("u.dat");
-		problem->results.nodes.save("nodes.dat");
-	//*/
 	problem->results.x.save("x.dat");
 	problem->results.u.save("u.dat");
 	problem->results.nodes.save("nodes.dat");
 
-	return 0;
+	return status;
 
 }

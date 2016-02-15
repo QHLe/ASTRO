@@ -88,8 +88,6 @@ void MyADOLC_sparseNLP::mem_allocation(){
 	lb_path.resize(n_path_constraints,1);
 	ub_path.resize(n_path_constraints,1);
 
-	app 				= new IpoptApplication();
-
 	nlp_guess_x 		= new double [nlp_n];
 	nlp_sf_x 			= new double [nlp_n];
 	nlp_sf_g	 		= new double [nlp_m];
@@ -184,7 +182,7 @@ void MyADOLC_sparseNLP::mem_allocation(){
 #endif
 }
 
-ApplicationReturnStatus MyADOLC_sparseNLP::initialization(){
+ApplicationReturnStatus MyADOLC_sparseNLP::initialization(SmartPtr<IpoptApplication> app){
 #ifdef DCOPT_DEBUG
 	cout<<"start ini\n";
 #endif
@@ -192,6 +190,8 @@ ApplicationReturnStatus MyADOLC_sparseNLP::initialization(){
 	this->set_sf();
 	this->set_bounces();
 	this->set_guess();
+
+	ApplicationReturnStatus status;
 
 	app->Options()->SetNumericValue("tol", config.NLP_tol);
 	app->Options()->SetStringValue("mu_strategy", "adaptive");
@@ -417,15 +417,6 @@ void MyADOLC_sparseNLP::set_sf(){
 			nlp_sf_g[event_idx[j-1]] = 1;
 		}
 	}
-/*s
-	for (Index i = 0; i < nlp_n; i++) {
-		nlp_sf_x[i] 	= 1;
-	}
-
-	for (Index i = 0; i < nlp_m; i++) {
-		nlp_sf_g[i] 	= 1;
-	}
-	//*/
 
 #ifdef DCOPT_DEBUG
 	cout<<"end set_sf\n";
@@ -570,10 +561,6 @@ void MyADOLC_sparseNLP::set_guess() {
 		nlp_guess_x[t0_idx]		= guess.nodes(1,1)/nlp_sf_x[t0_idx];
 		nlp_guess_x[tf_idx]		= guess.nodes(n_nodes,1)/nlp_sf_x[tf_idx];
 	}
-	cout<<endl;
-	for( Index i = 0; i < nlp_n; i++) {
-	//	cout<<nlp_guess_x[i]<<endl;
-	}
 
 #ifdef DCOPT_DEBUG
 	cout<<"end set_guess\n";
@@ -629,7 +616,10 @@ void MyADOLC_sparseNLP::guess_gen() {
 #endif
 }
 
-ApplicationReturnStatus MyADOLC_sparseNLP::solve(){
+ApplicationReturnStatus MyADOLC_sparseNLP::solve(SmartPtr<IpoptApplication> app){
+
+
+	ApplicationReturnStatus status;
 
 	status = app->OptimizeTNLP(this);
 
@@ -1214,9 +1204,6 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 		}
 		results.nodes(n_nodes,1) = tf;
 	}
-//	cout<<"memory deallocation\n";
-
-
 
 	if (n_nodes && n_states) {
 
@@ -1291,7 +1278,6 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 	delete[] nlp_lb_g;
 	delete[] nlp_ub_g;
 
-//	cout<<"memory deallocation done \n";
 }
 
 void MyADOLC_sparseNLP::generate_tapes(Index n, Index m, Index& nnz_jac_g, Index& nnz_h_lag)
