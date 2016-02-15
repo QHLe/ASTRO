@@ -73,7 +73,7 @@ int main(int argv, char* argc[])
 	problem->config.warmstart 		= false;
 	problem->config.NLP_tol			= 1e-8;
 	problem->config.with_mgl		= false;
-	problem->config.disc_method		= Hermite_Simpson;
+	problem->config.disc_method		= trapezoidal;
 	problem->config.H_approximation = false;
 
 	problem->mem_allocation();
@@ -112,11 +112,35 @@ int main(int argv, char* argc[])
 
 	status = problem->initialization();
 
-	status = problem->solve();
+//	status = problem->solve();
+	/**/
+		SmartPtr<IpoptApplication>app 				= new IpoptApplication();
 
+		app->Options()->SetStringValue("mu_strategy", "adaptive");
+	//	app->Options()->SetStringValue("output_file", "ipopt.out");
+	//	app->Options()->SetStringValue("nlp_scaling_method","gradient-based");
+		app->Options()->SetStringValue("linear_solver", "mumps");//	ma86 & ma57 with memmory leakage
+		app->Options()->SetIntegerValue("max_iter", problem->config.max_iter);
+		app->Options()->SetIntegerValue("print_level", problem->config.print_level);
+
+
+		if (problem->config.H_approximation){
+			app->Options()->SetStringValue("hessian_approximation", "limited-memory");
+		}
+		else {
+			app->Options()->SetStringValue("hessian_approximation", "exact");
+		}
+
+		status = app->Initialize();
+		app->OptimizeTNLP(problem);
+		problem->results.x.save("x.dat");
+		problem->results.u.save("u.dat");
+		problem->results.nodes.save("nodes.dat");
+	//*/
 	problem->results.x.save("x.dat");
 	problem->results.u.save("u.dat");
 	problem->results.nodes.save("nodes.dat");
+
 	return 0;
 
 }

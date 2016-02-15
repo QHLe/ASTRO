@@ -193,9 +193,9 @@ private:
 
 	Index				nlp_n, nlp_m;
 	double 				*nlp_sf_x, *nlp_sf_g, *nlp_lb_x, *nlp_ub_x, *nlp_lb_g, *nlp_ub_g, *nlp_guess_x;
+
 	Index 				**state_idx, **control_idx, *parameter_idx, t0_idx, tf_idx,
 						**defect_idx, **path_constraint_idx, *event_idx;
-
 	double 				**states, **controls, *parameters, t0, tf,
 						**defects, **path_constraints, *events;
 
