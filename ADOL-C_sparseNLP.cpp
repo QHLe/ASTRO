@@ -750,9 +750,11 @@ bool  MyADOLC_sparseNLP::eval_constraints(Index n, const dcomp *x, Index m, dcom
 
 		}
 		else if (config.disc_method == trapezoidal) {
+#pragma omp parallel for
 			for (Index i = 0; i < n_nodes; i += 1)	{
 				d_derv(f[i], path_constraints[i], states[i], controls[i], parameters, t[i], 1, constants);
 			}
+
 			for (Index i = 0; i < n_nodes - 1; i++)
 				for (Index j = 0; j < n_states; j++)
 					defects[i][j] 	= states[i+1][j] - states[i][j] - delta[i]/2.0*(f[i][j] + f[i+1][j]);
