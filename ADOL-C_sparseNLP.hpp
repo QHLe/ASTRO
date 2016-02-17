@@ -9,13 +9,15 @@ enum APPROX			{Hermite_Simpson=0, trapezoidal};
 #include "IpTNLP.hpp"
 #include "IpIpoptApplication.hpp"
 #include "IpSolveStatistics.hpp"
-#include <adolc/adolc.h>
-#include <adolc/adolc_sparse.h>
 #ifdef _OPENMP
 #include <omp.h>
-#include <adolc/adolc_openmp.h>
 #endif
 #include "SMatrix.hpp"
+#include <complex>
+#include <limits>
+#include <time.h>
+
+typedef std::complex<double> dcomp;
 
 using namespace Ipopt;
 
@@ -77,13 +79,11 @@ public:
 		  	  	  	  	  	  		Number* lambda);
 
 	/** Template to return the objective value */
-	bool eval_obj(Index n, const double *x, double& obj_value);
-	bool ad_eval_obj(Index n, const adouble *x, adouble& obj_value);
+	bool eval_obj(Index n, const dcomp *x, dcomp& obj_value);
 
   
 	/** Template to compute contraints */
-	bool eval_constraints(Index n, const double *x, Index m, double *g);
-	bool ad_eval_constraints(Index n, const adouble *x, Index m, adouble *g);
+	bool eval_constraints(Index n, const dcomp *x, Index m, dcomp *g);
 	/** Original method from Ipopt to return the objective value */
 	/** remains unchanged */
 	virtual bool eval_f(Index n, const Number* x, bool new_x, Number& obj_value);
@@ -131,25 +131,25 @@ public:
 //***************    start ADOL-C part ***********************************
 
 	/** Method to generate the required tapes */
-	virtual void generate_tapes(Index n, Index m, Index& nnz_jac_g, Index& nnz_h_lag);
+//	virtual void generate_tapes(Index n, Index m, Index& nnz_jac_g, Index& nnz_h_lag);
 
-//	template<class T>	void euler(const T *states_0, const T *states_dot, const double delta, T *states_1);
-//	template<class T>	void trapezoidal(const T *states_0, const T *states_dot_0, const T *states_dot_1, const double delta, T *states_1);
+	virtual void pattern_gen(Index n, Index m, Index& nnz_jac_g, Index& nnz_h_lag);
 
 	//***************    end   ADOL-C part ***********************************
 
 	Index n_nodes, n_states, n_controls, n_parameters, n_events, n_path_constraints, n_phases, n_linkages;
-	SMatrix<double> lb_states, ub_states, lb_controls, ub_controls, lb_parameters, ub_parameters, lb_path, ub_path, lb_events, ub_events, lb_t0, ub_t0, lb_tf, ub_tf;
+	SMatrix<double> lb_states, ub_states, lb_controls, ub_controls, lb_parameters, ub_parameters, lb_path, ub_path, lb_events, ub_events;
+	double	lb_t0, ub_t0, lb_tf, ub_tf;
 
 	Guess 	guess;
 	Guess 	results;
 	Config 	config;
 	double 	*constants;
 
+//	template<class T>
+//	void 	OCP_var_2_NLP_x(const T** states, const T** controls, const T* param, const T& t0, const T& tf, T* x, const T* sf);
 	template<class T>
-	void 	OCP_var_2_NLP_x(T*const* states, T*const* controls, const T* param, const T& t0, const T& tf, T* x, const T* sf);
-	template<class T>
-	void 	OCP_var_2_NLP_g( T*const* path, T*const* defects, const T* events, T* g);
+	void 	OCP_var_2_NLP_g(T const *const* path, T const *const* defects, const T* events, T* g);
 	template<class T>
 	void 	NLP_x_2_OCP_var(const T* x, T** states, T** controls, T* param, T& t0, T& tf);
 	template<class T>
@@ -159,12 +159,28 @@ public:
 	ApplicationReturnStatus 	initialization(SmartPtr<IpoptApplication> app);
 	ApplicationReturnStatus 	solve(SmartPtr<IpoptApplication> app);
 
-	void set_endpoint_cost(double (*)	(const  double* ini_states, const  double* fin_states, const double* param, const double& t0, const double& tf, Index phase, const double* constants),
-						  adouble (*)	(const adouble* ini_states, const adouble* fin_states, const adouble* param, const adouble& t0, const adouble& tf, Index phase, const double* constants));
-	void set_derivatives(void (*)( double *states_dot,  double *path, const  double *states, const  double *controls, const  double *param, const  double &time, Index phase, const double* constants),
-						 void (*)(adouble *states_dot, adouble *path, const adouble *states, const adouble *controls, const adouble *param, const adouble &time, Index phase, const double* constants));
-	void set_events(void (*)( double *events, const  double *ini_states, const  double *fin_states, const  double *param, const  double &t0, const  double &tf, Index phase, const double* constants),
-						 void (*)(adouble *events, const adouble *ini_states, const adouble *fin_states, const adouble *param, const adouble &t0, const adouble &tf, Index phase, const double* constants));
+	void set_endpoint_cost(dcomp (*)(	const dcomp* ini_states,
+										const dcomp* fin_states,
+										const dcomp* param,
+										const dcomp& t0,
+										const dcomp& tf,
+										Index phase, const double* constants));
+
+	void set_derivatives(void (*)(		dcomp *states_dot,
+										dcomp *path,
+										const  dcomp *states,
+										const  dcomp *controls,
+										const  dcomp *param,
+										const  dcomp &time,
+										Index phase, const double* constants));
+
+	void set_events(void (*)( 			dcomp *events,
+										const  dcomp *ini_states,
+										const  dcomp *fin_states,
+										const  dcomp *param,
+										const  dcomp &t0,
+										const  dcomp &tf,
+										Index phase, const double* constants));
 private:
 	/**@name Methods to block default compiler methods.
 	* The compiler automatically generates the following three methods.
@@ -182,19 +198,33 @@ private:
 	MyADOLC_sparseNLP& operator=(const MyADOLC_sparseNLP&);
 
 
-	double  (*d_e_cost) (const  double* ini_states, const  double* fin_states, const  double* param, const  double& t0, const  double& tf, Index phase, const double* constants);
-	adouble (*ad_e_cost)(const adouble* ini_states, const adouble* fin_states, const adouble* param, const adouble& t0, const adouble& tf, Index phase, const double* constants);
-	void 	(*d_derv)	( double *states_dot,  double *path, const  double *states, const  double *controls, const  double *param, const  double &time, Index phase, const double* constants);
-	void 	(*ad_derv)	(adouble *states_dot, adouble *path, const adouble *states, const adouble *controls, const adouble *param, const adouble &time, Index phase, const double* constants);
-	void 	(*d_events)	( double *events, const  double *ini_states, const  double *fin_states, const  double *param, const  double &t0, const  double &tf, Index phase, const double* constants);
-	void 	(*ad_events)(adouble *events, const adouble *ini_states, const adouble *fin_states, const adouble *param, const adouble &t0, const adouble &tf, Index phase, const double* constants);
+	dcomp  (*d_e_cost)(	const  dcomp* ini_states,
+						const  dcomp* fin_states,
+						const  dcomp* param,
+						const  dcomp& t0,
+						const  dcomp& tf,
+						Index phase, const double* constants);
+	void 	(*d_derv)(	dcomp *states_dot,
+						dcomp *path,
+						const  dcomp *states,
+						const  dcomp *controls,
+						const  dcomp *param,
+						const  dcomp &time,
+						Index phase, const double* constants);
+	void 	(*d_events)(dcomp *events,
+						const  dcomp *ini_states,
+						const  dcomp *fin_states,
+						const  dcomp *param,
+						const  dcomp &t0,
+						const  dcomp &tf,
+						Index phase, const double* constants);
 
 	Index				nlp_n, nlp_m;
 	double 				*nlp_sf_x, *nlp_sf_g, *nlp_lb_x, *nlp_ub_x, *nlp_lb_g, *nlp_ub_g, *nlp_guess_x;
 
 	Index 				**state_idx, **control_idx, *parameter_idx, t0_idx, tf_idx,
 						**defect_idx, **path_constraint_idx, *event_idx;
-	double 				**states, **controls, *parameters, t0, tf,
+	dcomp 				**states, **controls, *parameters, t0, tf,
 						**defects, **path_constraints, *events;
 
 	SMatrix<double> 	node_str;
@@ -259,8 +289,9 @@ void 	MyADOLC_sparseNLP::OCP_var_2_NLP_x(T*const* states, T*const* controls, con
 	}
 }
 */
+
 template<class T>
-void 	MyADOLC_sparseNLP::OCP_var_2_NLP_g(T*const* path, T*const* defects, const T* events, T* g) {
+void 	MyADOLC_sparseNLP::OCP_var_2_NLP_g( T const*const* path, T const*const* defects, const T* events, T* g) {
 
 	if (config.disc_method == Hermite_Simpson){
 			for (Index i = 0; i < n_nodes; i += 1) {
@@ -330,6 +361,9 @@ void 	MyADOLC_sparseNLP::NLP_x_2_OCP_var(const T* x, T** states, T** controls, T
 }
 
 
+
+/*
+
 template<class T>
 void 	MyADOLC_sparseNLP::NLP_g_2_OCP_var(const T* g, T** path, T** defects, T* events) {
 	cout<<"nlp2ocp\n";
@@ -365,7 +399,7 @@ void 	MyADOLC_sparseNLP::NLP_g_2_OCP_var(const T* g, T** path, T** defects, T* e
 		}
 	}
 	cout<<"end nlp2ocp\n";
-}
+}*/
 
 template<class T>
 SMatrix<T>	lin_interpol(const SMatrix<T> x, const SMatrix<T> y, const SMatrix<T> x_new) {
