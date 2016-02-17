@@ -430,7 +430,6 @@ public:
 	SMatrix<adouble> operator- 	(const SMatrix<adouble>& rhs)		const;
 	SMatrix<adouble> operator* 	(const SMatrix<adouble>& rhs)		const;
 	SMatrix<adouble> operator/ 	(const SMatrix<adouble>& rhs)		const;
-	double 			enorm		();
 
 private:
 	uint n_col;
@@ -498,7 +497,6 @@ public:
 	SMatrix<adouble> 			operator* 	(const SMatrix<double>& rhs)	const;
 	SMatrix<adouble> 			operator/ 	(const SMatrix<double>& rhs)	const;
 
-	adouble 		enorm		();
 
 private:
 	uint n_col;
@@ -827,18 +825,6 @@ inline SMatrix<double> SMatrix<double>::truncate_row	(uint l_limit, uint u_limit
 	return temp;
 }
 
-inline double SMatrix<double>::enorm() {
-	if (n_row > 1 && n_col > 1) {
-		cout<<"=====			  !!! WARNING !!!			   =====\n"
-			  "=====  matrix is neither column nor row vector  =====\n"
-			  "===== enorm of a matrix does not make any sense =====\n";
-	}
-	double temp = 0;
-	for(uint i = 0; i < n_row; i++)
-		for (uint j = 0; j < n_col; j++)
-			temp += data[i][j]*data[i][j];
-	return sqrt(temp);
-}
 
 inline SMatrix<double> SMatrix<double>::operator+ (double sum) const{
 	SMatrix<double> temp(*this);
@@ -1563,19 +1549,6 @@ inline SMatrix<adouble> SMatrix<adouble>::truncate_row	(uint l_limit, uint u_lim
 	return temp;
 }
 
-inline adouble SMatrix<adouble>::enorm() {
-	if (n_row > 1 && n_col > 1) {
-		cout<<"=====			  !!! WARNING !!!			   =====\n"
-			  "=====  matrix is neither column nor row vector  =====\n"
-			  "===== enorm of a matrix does not make any sense =====\n";
-	}
-	adouble temp = 0;
-	for(uint i = 0; i < n_row; i++)
-		for (uint j = 0; j < n_col; j++)
-			temp += data[i][j]*data[i][j];
-	return sqrt(temp);
-}
-
 inline SMatrix<adouble> SMatrix<adouble>::operator+ (adouble sum) const{
 	SMatrix<adouble> temp(*this);
 	for(uint i = 1; i <= n_row; i++)
@@ -1904,6 +1877,20 @@ inline SMatrix<adouble> SMatrix<adouble>::getRow(uint num) const{
 /*
  * friends operators
  */
+
+template<class T>
+T enorm(SMatrix<T> vec) {
+	if (vec.getRowDim() > 1 && vec.getColDim() > 1) {
+		cout<<"=====			  !!! WARNING !!!			   =====\n"
+			  "=====  matrix is neither column nor row vector  =====\n"
+			  "===== enorm of a matrix does not make any sense =====\n";
+	}
+	T temp = 0;
+	for(uint i = 1; i <= vec.getRowDim(); i++)
+		for (uint j = 1; j <= vec.getColDim(); j++)
+			temp += vec(i,j)*vec(i,j);
+	return sqrt(temp);
+}
 
 template<class T>
 T min(const SMatrix<T>& matrix) {
