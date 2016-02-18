@@ -16,6 +16,11 @@ enum APPROX			{Hermite_Simpson=0, trapezoidal};
 #include <adolc/adolc_openmp.h>
 #endif
 #include "SMatrix.hpp"
+#include <complex>
+#include <limits>
+#include <time.h>
+
+typedef std::complex<double> dcomp;
 
 using namespace Ipopt;
 
@@ -182,6 +187,8 @@ private:
 	MyADOLC_sparseNLP& operator=(const MyADOLC_sparseNLP&);
 
 
+	unsigned int **HP_t;         /* compressed block row storage */
+
 	double  (*d_e_cost) (const  double* ini_states, const  double* fin_states, const  double* param, const  double& t0, const  double& tf, Index phase, const double* constants);
 	adouble (*ad_e_cost)(const adouble* ini_states, const adouble* fin_states, const adouble* param, const adouble& t0, const adouble& tf, Index phase, const double* constants);
 	void 	(*d_derv)	( double *states_dot,  double *path, const  double *states, const  double *controls, const  double *param, const  double &time, Index phase, const double* constants);
@@ -194,8 +201,6 @@ private:
 
 	Index 				**state_idx, **control_idx, *parameter_idx, t0_idx, tf_idx,
 						**defect_idx, **path_constraint_idx, *event_idx;
-	double 				**states, **controls, *parameters, t0, tf,
-						**defects, **path_constraints, *events;
 
 	SMatrix<double> 	node_str;
 
