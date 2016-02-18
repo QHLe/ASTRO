@@ -1,13 +1,12 @@
-
 EXE = lttopt
 
 OBJS =  main.o ADOL-C_sparseNLP.o
 
 
-#ADPATH = $(HOME)/adolc_base/include
-#ADLIBDIR = $(HOME)/adolc_base/lib64
+ADPATH = $(HOME)/adolc_base/include
+ADLIBDIR = $(HOME)/adolc_base/lib64
 
-#ADDLIBS = $(HOME)/adolc_base/lib64/libadolc.a $(HOME)/ColPack/lib/libColPack.a -lmgl
+ADDLIBS = $(HOME)/adolc_base/lib64/libadolc.a $(HOME)/ColPack/lib/libColPack.a -lmgl
 
 ADDINCFLAGS = -I$(ADPATH)  
 
@@ -26,7 +25,7 @@ CXXFLAGS = -O3 -pipe -DNDEBUG -pedantic-errors -Wparentheses -Wreturn-type -Wcas
 CXXLINKFLAGS =  -Wl,--rpath -Wl,$(HOME)/Ipopt-3.12.1/lib
 
 # Include directories (we use the CYGPATH_W variables to allow compilation with Windows compilers)
-INCL = -I$(HOME)/Ipopt-3.12.1/include/coin -I$(HOME)/Ipopt-3.12.1/include/coin/ThirdParty
+INCL = -I$(HOME)/adolc_base/include -I$(HOME)/Ipopt-3.12.1/include/coin -I$(HOME)/Ipopt-3.12.1/include/coin/ThirdParty
 
 #INCL = -I`$(CYGPATH_W) $(HOME)/packages/Ipopt-3.12.1/build/Ipopt/include/coin`  $(ADDINCFLAGS)
 

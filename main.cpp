@@ -1,14 +1,14 @@
 #include "ADOL-C_sparseNLP.hpp"
 
 
-#define N_NODES		3
+#define N_NODES		11
 
-dcomp endpoint_cost (	const dcomp* ini_states,
-						const dcomp* fin_states,
-						const dcomp* param,
-						const dcomp& t0,
-						const dcomp& tf,
-						Index phase, const double* constants) {
+template<class T> T endpoint_cost (	const T* ini_states,
+									const T* fin_states,
+									const T* param,
+									const T& t0,
+									const T& tf,
+									Index phase, const double* constants) {
 
 
 	return tf;//fin_states[2];
@@ -16,30 +16,30 @@ dcomp endpoint_cost (	const dcomp* ini_states,
 }
 
 
-void derivatives(		dcomp *states_dot,
-						dcomp *path,
-						const dcomp *states,
-						const dcomp *controls,
-						const dcomp *param,
-						const dcomp &time,
-						Index phase, const double* constants) {
-	dcomp x2 = states[1];
+template<class T> void derivatives(	T *states_dot,
+									T *path,
+							 	 	const T *states,
+							 	 	const T *controls,
+							 	 	const T *param,
+							 	 	const T &time,
+							 	 	Index phase, const double* constants) {
+	T x2 = states[1];
 //	T x3 = states[2];
 
-	dcomp u = controls[0];
+	T u = controls[0];
 
 	states_dot[0] 	= x2;
 	states_dot[1]	= u;
-	states_dot[2]	= u*u/2.;
+	states_dot[2]	= u*u/2;
 }
 
-void events(	dcomp *events,
-				const dcomp *ini_states,
-				const dcomp *fin_states,
-				const dcomp *param,
-				const dcomp &t0,
-				const dcomp &tf,
-				Index phase, const double* constants) {
+template<class T> void events(	T *events,
+								const T *ini_states,
+								const T *fin_states,
+								const T *param,
+								const T &t0,
+								const T &tf,
+								Index phase, const double* constants) {
 
 	events [0]	= ini_states[0];
 	events [1]	= ini_states[1];
@@ -65,17 +65,17 @@ int main(int argv, char* argc[])
 	problem->n_events 			= 5;
 	problem->n_path_constraints	= 0;
 
-	problem->set_endpoint_cost(&endpoint_cost);
-	problem->set_events(&events);
-	problem->set_derivatives(&derivatives);
+	problem->set_endpoint_cost(&endpoint_cost, &endpoint_cost);
+	problem->set_events(&events, &events);
+	problem->set_derivatives(&derivatives, &derivatives);
 
 	problem->config.max_iter 		= 5000;
-	problem->config.NLP_solver 		= ma27;
+	problem->config.NLP_solver 		= ma57;
 	problem->config.warmstart 		= false;
 	problem->config.NLP_tol			= 1e-8;
 	problem->config.with_mgl		= false;
 	problem->config.disc_method		= Hermite_Simpson;
-//	problem->config.H_approximation = false;
+	problem->config.H_approximation = false;
 
 	problem->mem_allocation();
 
