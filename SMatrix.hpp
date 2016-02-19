@@ -2090,14 +2090,5 @@ SMatrix<T> transpose (const SMatrix<T>& mat) {
 			temp(j,i) 	= mat(i,j);
 	return temp;
 }
-template<class T>
-SMatrix<T> abs (const SMatrix<T>& mat) {
-	SMatrix<T> temp(mat.getColDim(),mat.getRowDim());
-	for (uint i = 1; i <= mat.getRowDim(); i++)
-		for (uint j = 1; j <= mat.getColDim(); j++)
-			temp(j,i) 	= fabs(mat(i,j));
-	return temp;
-}
-
 
 #endif /* SMATRIX_H_ */

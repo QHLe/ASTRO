@@ -24,16 +24,16 @@ const char* nlp_solver(int enumval) {
 /* Constructor. */
 MyADOLC_sparseNLP::MyADOLC_sparseNLP() {
 
-	x_lam				= NULL;
 	cind_g 				= NULL;
 	rind_g				= NULL;
 	jacval 				= NULL;
 
 	rind_L				= NULL;
 	cind_L				= NULL;
-	rind_L_total		= NULL;
-	cind_L_total		= NULL;
 	hessval				= NULL;
+
+	nnz_jac				= 0;
+	nnz_L				= 0;
 
 
 }
@@ -1224,26 +1224,16 @@ bool MyADOLC_sparseNLP::eval_h(Index n, const Number* x, bool new_x,
 		else {
 			// return the values. This is a symmetric matrix, fill the lower left
 			// triangle only
+			obj_lam[0] = obj_factor;
+				for(Index idx = 0; idx<m ; idx++)
+					obj_lam[1+idx] = lambda[idx];
 
-			for(Index idx = 0; idx<n ; idx++)
-				x_lam[idx] = x[idx];
-			for(Index idx = 0; idx<m ; idx++)
-				x_lam[n+idx] = lambda[idx];
-			x_lam[n+m] = obj_factor;
+			set_param_vec(tag_L,m+1,obj_lam);
 
-			sparse_hess(tag_L, n+m+1, 1, x_lam, &nnz_L_total, &rind_L_total, &cind_L_total, &hessval, options_L);
-
-			Index idx = 0;
-			for(Index idx_total = 0; idx_total <nnz_L_total; idx_total++) {
-				if((rind_L_total[idx_total] < (unsigned int) n) && (cind_L_total[idx_total] < (unsigned int) n)) {
-					values[idx] = hessval[idx_total];
-					idx++;
-		//			cout<<"rind_L_total["<<rind_L_total[idx_total]<<"]\t";
-		//			cout<<"cind_L_total["<<cind_L_total[idx_total]<<"]\t";
-		//			cout<<hessval[idx_total]<<endl;
-				}
+		    sparse_hess(tag_L, n, 1, const_cast<double*>(x), &nnz_L, &rind_L, &cind_L, &hessval, options_L);
+		    for(Index idx = 0; idx <nnz_L ; idx++) {
+		    	values[idx] = hessval[idx];
 			}
-	//		cout<<"nnz_h_lag = "<<idx<<"\n";
 
 
 		}
@@ -1340,17 +1330,15 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 		delete[] event_idx;
 	}
 
-	delete[] x_lam;
+	delete[] obj_lam;
 	free(rind_g);
 	free(cind_g);
 	free(jacval);
 
 
 		if (!config.H_approximation) {
-			delete[] (rind_L);
-			delete[] (cind_L);
-			free(cind_L_total);
-			free(rind_L_total);
+			free(rind_L);
+			free(cind_L);
 			free(hessval);
 		}
 
@@ -1369,28 +1357,32 @@ void MyADOLC_sparseNLP::generate_tapes(Index n, Index m, Index& nnz_jac_g, Index
 #ifdef DCOPT_DEBUG
 	printf("generate_tapes()\n");
 #endif
-	Number *xp    = new double[n];
-	Number *lamp  = new double[m];
-	Number *zl    = new double[m];
-	Number *zu    = new double[m];
+	Number *xp   	= new double[n];
+	Number *lamp 	= new double[m];
+	Number *zl   	= new double[m];
+	Number *zu   	= new double[m];
 
-	adouble *xa   = new adouble[n];
-	adouble *g    = new adouble[m];
-	adouble *lam  = new adouble[m];
-	adouble sig;
+	adouble *xf  	= new adouble[n];
+	adouble *xg  	= new adouble[n];
+	adouble *xL   	= new adouble[n];
+
+	adouble *g   	= new adouble[m];
+	double *lam  	= new double[m];
+	double sig;
 	adouble obj_value;
 
+	obj_lam   = new double[m+1];
+
 	double dummy;
-	x_lam   = new double[n+m+1];
 
 	get_starting_point(n, 1, xp, 0, zl, zu, m, 0, lamp);
 
 	trace_on(tag_f + omp_get_thread_num()*10);
     
     for(Index idx=0;idx<n;idx++)
-      xa[idx] <<= xp[idx];
+      xf[idx] <<= xp[idx];
 
-    ad_eval_obj(n,xa,obj_value);
+    ad_eval_obj(n,xf,obj_value);
 
     obj_value >>= dummy;
 
@@ -1399,32 +1391,52 @@ void MyADOLC_sparseNLP::generate_tapes(Index n, Index m, Index& nnz_jac_g, Index
     trace_on(tag_g + omp_get_thread_num()*10);
 
     for(Index idx=0;idx<n;idx++)
-    	xa[idx] <<= xp[idx];
+    	xg[idx] <<= xp[idx];
 
-    ad_eval_constraints(n,xa,m,g);
+    ad_eval_constraints(n,xg,m,g);
 
     for(Index idx=0;idx<m;idx++)
 		g[idx] >>= dummy;
     trace_off();
-    
+
+	if (!config.H_approximation) {
+		trace_on(tag_L);
+
+		for(Index idx=0;idx<n;idx++)
+			xL[idx] <<= xp[idx];
+		for(Index idx=0;idx<m;idx++)
+			lam[idx] = 1.0;
+
+		sig = 1.0;
+
+		ad_eval_obj(n,xL,obj_value);
+
+		obj_value *= mkparam(sig);
+		ad_eval_constraints(n,xL,m,g);
+
+		for(Index idx=0;idx<m;idx++)
+			obj_value += g[idx]*mkparam(lam[idx]);
+
+		obj_value >>= dummy;
+
+		trace_off();
+	}
     rind_g = NULL;
 	cind_g = NULL;
 
 	options_g[0] = 0;          /* sparsity pattern by index domains (default) */
 	options_g[1] = 0;          /*                         safe mode (default) */
-	options_g[2] = -1;         /*                     &jacval is not computed */
+	options_g[2] = 0;         /*                     &jacval is not computed */
 	options_g[3] = 0;          /*                column compression (default) */
 
 
 	this->jacval=NULL;
 
 	sparse_jac(tag_g + omp_get_thread_num()*10, m, n, 0, xp, &nnz_jac, &rind_g, &cind_g, &jacval, options_g);
-
-	options_g[2] = 0;
 	nnz_jac_g = nnz_jac;
 
 
-/**/
+/*
 	sparse_jac(tag_g, m, n, 1, xp, &nnz_jac, &rind_g, &cind_g, &jacval, options_g);
 
 	double* NLP_constraint_sf = new double[m];
@@ -1485,58 +1497,21 @@ void MyADOLC_sparseNLP::generate_tapes(Index n, Index m, Index& nnz_jac_g, Index
 	delete[] grad_f;
 */
 	if (!config.H_approximation) {
-		trace_on(tag_L);
-
-		for(Index idx=0;idx<n;idx++)
-			xa[idx] <<= xp[idx];
-		for(Index idx=0;idx<m;idx++)
-			lam[idx] <<= 1.0;
-
-		sig <<= 1.0;
-
-		ad_eval_obj(n,xa,obj_value);
-
-		obj_value = obj_value*sig;
-		ad_eval_constraints(n,xa,m,g);
-
-		for(Index idx=0;idx<m;idx++)
-			obj_value = obj_value + g[idx]*lam[idx];
-
-		obj_value >>= dummy;
-
-		trace_off();
-
 		hessval			= NULL;
-		cind_L_total	= NULL;
-		rind_L_total	= NULL;
+		cind_L			= NULL;
+		rind_L			= NULL;
 		options_L[0]= 0;
-		options_L[1]= 0;
-		sparse_hess(tag_L, n+m+1, 0, x_lam, &nnz_L_total, &rind_L_total, &cind_L_total, &hessval, options_L);
-		nnz_L = 0;
-
-		for(Index idx_total = 0; idx_total < nnz_L_total ; idx_total++) {
-			if((rind_L_total[idx_total] < (unsigned int) n) && (cind_L_total[idx_total] < (unsigned int) n)) {
-				nnz_L++;
-			}
-		}
-
-		nnz_h_lag = nnz_L;
-		cout<<"nnz_h_lag = "<<nnz_h_lag<<"\n";
-		rind_L 		= new unsigned int [nnz_L];
-		cind_L 		= new unsigned int [nnz_L];
-		Index idx 	= 0;
-		for(Index idx_total = 0; idx_total <nnz_L_total ; idx_total++) {
-			if((rind_L_total[idx_total] < (unsigned int) n) && (cind_L_total[idx_total] < (unsigned int) n)) {
-				rind_L[idx]		= rind_L_total[idx_total];
-				cind_L[idx]		= cind_L_total[idx_total];
-				idx++;
-			}
-		}
+		options_L[1]= 1;
+		sparse_hess(tag_L, n, 0, xp, &nnz_L, &rind_L, &cind_L, &hessval, options_L);
 	}
+	nnz_h_lag = nnz_L;
+	cout<<"nnz_h_lag = "<<nnz_h_lag<<"\n";
 
 	delete[] lam;
 	delete[] g;
-	delete[] xa;
+	delete[] xf;
+	delete[] xg;
+	delete[] xL;
 	delete[] zu;
 	delete[] zl;
 	delete[] lamp;

@@ -70,7 +70,7 @@ int main(int argv, char* argc[])
 	problem->set_derivatives(&derivatives, &derivatives);
 
 	problem->config.max_iter 		= 5000;
-	problem->config.NLP_solver 		= ma57;
+	problem->config.NLP_solver 		= ma27;
 	problem->config.warmstart 		= false;
 	problem->config.NLP_tol			= 1e-8;
 	problem->config.with_mgl		= false;

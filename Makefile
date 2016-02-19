@@ -19,7 +19,7 @@ CXX = g++ -pg
 SRC = main.cpp ADOL-C_sparseNLP.cpp 
 
 # C++ Compiler options
-CXXFLAGS = -O3 -pipe -DNDEBUG -pedantic-errors -Wparentheses -Wreturn-type -Wcast-qual -Wall -Wpointer-arith -Wwrite-strings -Wconversion -Wno-unknown-pragmas -Wno-long-long -fopenmp -DIPOPT_BUILD 
+CXXFLAGS = -std=c++11 -O3 -pipe -DNDEBUG -pedantic-errors -Wparentheses -Wreturn-type -Wcast-qual -Wall -Wpointer-arith -Wwrite-strings -Wconversion -Wno-unknown-pragmas -Wno-long-long -fopenmp -DIPOPT_BUILD 
 
 # additional C++ Compiler options for linking
 CXXLINKFLAGS =  -Wl,--rpath -Wl,$(HOME)/Ipopt-3.12.1/lib

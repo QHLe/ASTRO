@@ -16,11 +16,11 @@ enum APPROX			{Hermite_Simpson=0, trapezoidal};
 #include <adolc/adolc_openmp.h>
 #endif
 #include "SMatrix.hpp"
-#include <complex>
-#include <limits>
+//#include <complex>
+//#include <limits>
 #include <time.h>
 
-typedef std::complex<double> dcomp;
+//typedef std::complex<double> dcomp;
 
 using namespace Ipopt;
 
@@ -204,20 +204,17 @@ private:
 
 	SMatrix<double> 	node_str;
 
-	double 				*x_lam;
+	double *obj_lam;
 
 	unsigned int 		*rind_g;        /* row indices    */
 	unsigned int 		*cind_g;        /* column indices */
 	double 				*jacval;              /* values         */
 	unsigned int	 	*rind_L;        /* row indices    */
 	unsigned int	 	*cind_L;        /* column indices */
-	unsigned int	 	*rind_L_total;  /* row indices    */
-	unsigned int	 	*cind_L_total;  /* column indices */
 	double 				*hessval;             /* values */
 
 	int nnz_jac;
 	int nnz_L;//
-	int nnz_L_total;
 	int options_g[4];
 	int options_L[2];
 
