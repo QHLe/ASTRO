@@ -177,7 +177,7 @@ ApplicationReturnStatus MyADOLC_sparseNLP::initialization(SmartPtr<IpoptApplicat
 	ApplicationReturnStatus status;
 
 	app->Options()->SetNumericValue("tol", config.NLP_tol);
-	app->Options()->SetStringValue("mu_strategy", "adaptive");
+	app->Options()->SetStringValue("mu_strategy", "monotone");
 //	app->Options()->SetStringValue("output_file", "ipopt.out");
 //	app->Options()->SetStringValue("nlp_scaling_method","gradient-based");
 	app->Options()->SetStringValue("linear_solver", nlp_solver(config.NLP_solver));//	ma86 & ma57 with memmory leakage
