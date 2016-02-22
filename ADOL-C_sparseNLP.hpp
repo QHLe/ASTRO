@@ -11,7 +11,7 @@ enum APPROX			{Hermite_Simpson=0, trapezoidal};
 #include <adolc/adolc_sparse.h>
 #ifdef _OPENMP
 #include <omp.h>
-#include <adolc/adolc_openmp.h>
+//#include <adolc/adolc_openmp.h>
 #endif
 #include "SMatrix.hpp"
 
