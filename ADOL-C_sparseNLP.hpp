@@ -31,29 +31,35 @@ public:
 	~Guess();
 	SMatrix <double> nodes;
 	SMatrix <double> z;
+	SMatrix <double> z_L;
+	SMatrix	<double> z_U;
 	SMatrix <double> x;
 	SMatrix <double> u;
 	SMatrix <double> u_full;
 	SMatrix <double> parameters;
-	SMatrix <double> lam_z;
-	SMatrix <double> lam_x;
+	SMatrix <double> lam_g;
 	SMatrix <double> lam_path;
 	SMatrix <double> lam_events;
 	SMatrix <double> lam_defects;
+	SMatrix <double> Hamiltonian;
 };
 
 class Config {
 public:
 	Config();
 	~Config();
-	Index max_iter;
-	NLP_SOLVER NLP_solver;
-	bool warmstart;
-	bool with_mgl;
-	double NLP_tol;
-	APPROX disc_method;
-	Index print_level;
-	bool H_approximation;
+	Index 			max_iter;
+	NLP_SOLVER 		NLP_solver;
+	bool 			warmstart;
+	bool 			with_mgl;
+	double 			NLP_tol;
+	double 			constr_viol_tol;
+	APPROX 			disc_method;
+	Index 			print_level;
+	Index 			print_freq;
+	bool 			H_approximation;
+	double 			ipopt_mu_ini;
+	double 			mu_max;
 
 };
 class MyADOLC_sparseNLP : public TNLP
@@ -163,6 +169,7 @@ public:
 	void 	mem_allocation();
 	ApplicationReturnStatus 	initialization(SmartPtr<IpoptApplication> app);
 	ApplicationReturnStatus 	solve(SmartPtr<IpoptApplication> app);
+	void 	setHamiltonian(const double *z, const double *lam_g);
 
 	void set_endpoint_cost(double (*)	(const  double* ini_states, const  double* fin_states, const double* param, const double& t0, const double& tf, Index phase, const double* constants),
 						  adouble (*)	(const adouble* ini_states, const adouble* fin_states, const adouble* param, const adouble& t0, const adouble& tf, Index phase, const double* constants));
@@ -197,7 +204,7 @@ private:
 	void 	(*ad_events)(adouble *events, const adouble *ini_states, const adouble *fin_states, const adouble *param, const adouble &t0, const adouble &tf, Index phase, const double* constants);
 
 	Index				nlp_n, nlp_m;
-	double 				*nlp_sf_x, *nlp_sf_g, *nlp_lb_x, *nlp_ub_x, *nlp_lb_g, *nlp_ub_g, *nlp_guess_x;
+	double 				*nlp_sf_x, *nlp_sf_g, *nlp_lb_x, *nlp_ub_x, *nlp_lb_g, *nlp_ub_g, *nlp_guess_x, *nlp_guess_lam, *nlp_guess_z_L, *nlp_guess_z_U;
 
 	Index 				**state_idx, **control_idx, *parameter_idx, t0_idx, tf_idx,
 						**defect_idx, **path_constraint_idx, *event_idx;

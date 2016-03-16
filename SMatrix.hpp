@@ -1956,6 +1956,39 @@ SMatrix<T> tan		 		 (const SMatrix<T>& mat) {
 }
 
 template<class T>
+SMatrix<T> atan		 		 (const SMatrix<T>& mat) {
+	SMatrix<T> temp(mat);
+	for( uint i = 1 ; i <= mat.getRowDim();i++) {
+		for (uint j = 1; j <= mat.getColDim(); j++)
+			temp(i,j) 	= atan(mat(i,j));
+	}
+	return temp;
+}
+
+template<class T>
+SMatrix<T> atan2		 		 (const SMatrix<T>& mat,const SMatrix<T>& mat2) {
+
+	if (mat.getRowDim() != mat2.getRowDim() || mat.getColDim() != mat2.getColDim()) {
+		cout<<"=====  Element-wise multiplication   =====\n"
+			  "===== SMatrix dimensions do not match =====\n";
+		exit(1);
+	}
+	if (mat.getColDim() > 1 && mat.getColDim() > 1) {
+		cout<<"=====             !!! WARNING !!!             =====\n"
+			  "===== matrix is neither column nor row vector =====\n"
+			  "===== Element-wise multiplication of a matrix =====\n"
+			  "=====    Do you know what you are doing???    =====\n";
+	}
+	SMatrix<T> temp(mat);
+	for( uint i = 1 ; i <= mat.getRowDim();i++) {
+		for (uint j = 1; j <= mat.getColDim(); j++)
+			temp(i,j) 	= atan2(mat(i,j),mat2(i,j));
+	}
+	return temp;
+}
+
+
+template<class T>
 SMatrix<T> sqrt		 		 (const SMatrix<T>& mat) {
 	SMatrix<T> temp(mat);
 	for( uint i = 1 ; i <= mat.getRowDim();i++) {

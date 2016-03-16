@@ -177,21 +177,29 @@ ApplicationReturnStatus MyADOLC_sparseNLP::initialization(SmartPtr<IpoptApplicat
 	ApplicationReturnStatus status;
 
 	app->Options()->SetNumericValue("tol", config.NLP_tol);
-	app->Options()->SetStringValue("mu_strategy", "monotone");
+	app->Options()->SetNumericValue("constr_viol_tol",config.constr_viol_tol);
+	app->Options()->SetStringValue("mu_strategy", "adaptive");
 //	app->Options()->SetStringValue("output_file", "ipopt.out");
 //	app->Options()->SetStringValue("nlp_scaling_method","gradient-based");
 	app->Options()->SetStringValue("linear_solver", nlp_solver(config.NLP_solver));//	ma86 & ma57 with memmory leakage
 	app->Options()->SetIntegerValue("max_iter", config.max_iter);
 	app->Options()->SetIntegerValue("print_level", config.print_level);
+	app->Options()->SetIntegerValue("print_frequency_iter", config.print_freq);
 	if (config.warmstart) {
 		app->Options()->SetStringValue("warm_start_init_point", "yes");
 	}
-
+	app->Options()->SetNumericValue("mu_max",config.mu_max);
 	if (config.H_approximation){
 		app->Options()->SetStringValue("hessian_approximation", "limited-memory");
 	}
 	else {
 		app->Options()->SetStringValue("hessian_approximation", "exact");
+	}
+	if (config.warmstart) {
+		app->Options()->SetStringValue("warm_start_init_point","yes");
+		app->Options()->SetNumericValue("warm_start_bound_push",1e-4);
+		app->Options()->SetNumericValue("warm_start_mult_bound_push",1e-4);
+		app->Options()->SetNumericValue("mu_init",config.ipopt_mu_ini);
 	}
 
 	status = app->Initialize();
@@ -480,72 +488,108 @@ void MyADOLC_sparseNLP::set_guess() {
 #ifdef DCOPT_DEBUG
 	cout<<"set_guess\n";
 #endif
-	if (n_nodes == 0 || n_states == 0) {
-		if (guess.parameters.getRowDim() != (uint)n_parameters)  {
+	if (config.warmstart) {
+		if (guess.z.getRowDim() == nlp_n && guess.lam_g.getRowDim() == nlp_m && guess.nodes.getRowDim() == n_nodes) {
 
-			cout<<"===== No guess provided or invalid guess =====\n"
-				  "=====  Generating guess based on Bounds  =====\n\n";
-			guess_gen();
+			double delta_t 	= guess.nodes(n_nodes,1) - guess.nodes(1,1);
+			node_str.resize(n_nodes-1,1);
+			for (Index i = 1; i <= n_nodes - 1; i++) {
+				node_str(i)	= (guess.nodes(i+1,1) - guess.nodes(i,1))/delta_t;
+			}
+
+			nlp_guess_z_L 	= new double [nlp_n];
+			nlp_guess_z_U 	= new double [nlp_n];
+			nlp_guess_lam	= new double [nlp_m];
+
+			for (Index i = 0; i < nlp_n; i++) {
+				nlp_guess_x[i]		= guess.z(i+1,1);
+				nlp_guess_z_L[i]	= guess.z_L(i+1,1);
+				nlp_guess_z_U[i]	= guess.z_U(i+1,1);
+			}
+			for (Index i = 0; i < nlp_m; i++){
+				nlp_guess_lam[i]	= guess.lam_g(i+1,1);
+			}
 		}
-		for (Index i = 0; i < n_parameters; i++) {
-			nlp_guess_x[parameter_idx[i]] = guess.parameters(i+1)/nlp_sf_x[parameter_idx[i]];
+		else{
+			cout<< "\n\nNo lambda provided\n\n";
+			exit(1);
 		}
+
 	}
 	else {
-		if ((guess.nodes.getRowDim() != (uint)n_nodes) 	||
-			(guess.parameters.getRowDim() != (uint)n_parameters) 	||
-			(guess.u.getColDim() != (uint)n_controls)	||
-			(guess.x.getColDim() != (uint)n_states)	||
-			(guess.u.getRowDim() != (uint)n_nodes)	||
-			(guess.x.getRowDim() != (uint)n_nodes)	) {
+		if (n_nodes == 0 || n_states == 0) {
+			if (guess.parameters.getRowDim() != (uint)n_parameters)  {
 
-			cout<<"===== No guess provided or invalid guess =====\n"
-					"=====  Generating guess based on Bounds  =====\n\n";
-			guess_gen();
-		}
-
-		double delta_t 	= guess.nodes(n_nodes,1) - guess.nodes(1,1);
-
-		node_str.resize(n_nodes-1,1);
-		for (Index i = 1; i <= n_nodes - 1; i++) {
-			node_str(i)	= (guess.nodes(i+1,1) - guess.nodes(i,1))/delta_t;
-		}
-
-		for (Index i = 0; i < n_parameters; i++) {
-			nlp_guess_x[parameter_idx[i]] = guess.parameters(i+1)/nlp_sf_x[parameter_idx[i]];
-		}
-
-		for (Index i = 0; i < n_nodes; i++) {
-			for (Index j = 0; j < n_states; j++) {
-				nlp_guess_x[state_idx[i][j]] = guess.x(i+1,j+1)/nlp_sf_x[state_idx[i][j]];
+				cout<<"===== No guess provided or invalid guess =====\n"
+					  "=====  Generating guess based on Bounds  =====\n\n";
+				guess_gen();
 			}
-			if (config.disc_method == Hermite_Simpson && guess.u_full.getColDim() == (2*n_nodes - 1)) {
-				for (Index j = 0; j < n_controls; j++) {
-					nlp_guess_x[control_idx[2*i][j]] = guess.u_full(2*i+1,j+1)/nlp_sf_x[control_idx[2*i][j]];
-					if (i < n_nodes - 1) {
-						nlp_guess_x[control_idx[2*i][j]] = guess.u_full(2*i+2,j+1)/nlp_sf_x[control_idx[2*i+1][j]];
+			for (Index i = 0; i < n_parameters; i++) {
+				nlp_guess_x[parameter_idx[i]] = guess.parameters(i+1)/nlp_sf_x[parameter_idx[i]];
+			}
+		}
+		else {
+			if ((guess.nodes.getRowDim() != (uint)n_nodes) 	||
+				(guess.parameters.getRowDim() != (uint)n_parameters) 	||
+				((guess.u.getColDim() != (uint)n_controls)	&&	guess.u_full.getColDim() != (uint)n_controls) ||
+				(guess.x.getColDim() != (uint)n_states)	||
+				((guess.u.getRowDim() != (uint)n_nodes)	&&	guess.u_full.getRowDim() != (uint)(n_nodes*2-1)) ||
+				(guess.x.getRowDim() != (uint)n_nodes)	) {
+
+				cout<<"===== No guess provided or invalid guess =====\n"
+						"=====  Generating guess based on Bounds  =====\n\n";
+				guess_gen();
+			}
+
+			double delta_t 	= guess.nodes(n_nodes,1) - guess.nodes(1,1);
+
+			node_str.resize(n_nodes-1,1);
+			for (Index i = 1; i <= n_nodes - 1; i++) {
+				node_str(i)	= (guess.nodes(i+1,1) - guess.nodes(i,1))/delta_t;
+			}
+
+			for (Index i = 0; i < n_parameters; i++) {
+				nlp_guess_x[parameter_idx[i]] = guess.parameters(i+1)/nlp_sf_x[parameter_idx[i]];
+			}
+
+			for (Index i = 0; i < n_nodes; i++) {
+				for (Index j = 0; j < n_states; j++) {
+					nlp_guess_x[state_idx[i][j]] = guess.x(i+1,j+1)/nlp_sf_x[state_idx[i][j]];
+				}
+				if (config.disc_method == Hermite_Simpson && guess.u_full.getColDim() == (2*n_nodes - 1)) {
+					for (Index j = 0; j < n_controls; j++) {
+						nlp_guess_x[control_idx[2*i][j]] = guess.u_full(2*i+1,j+1)/nlp_sf_x[control_idx[2*i][j]];
+						if (i < n_nodes - 1) {
+							nlp_guess_x[control_idx[2*i][j]] = guess.u_full(2*i+2,j+1)/nlp_sf_x[control_idx[2*i+1][j]];
+						}
+						nlp_guess_x[control_idx[2*i][j]] = guess.u(i+1,j+1)/nlp_sf_x[control_idx[2*i][j]];
 					}
-					nlp_guess_x[control_idx[2*i][j]] = guess.u(i+1,j+1)/nlp_sf_x[control_idx[2*i][j]];
+				}
+				else if (config.disc_method == Hermite_Simpson){
+					for (Index j = 0; j < n_controls; j++) {
+						if (guess.u_full.getRowDim() == n_nodes && guess.u_full.getColDim() == n_controls) {
+							nlp_guess_x[control_idx[2*i][j]] 	= guess.u_full(2*i+1,j+1)/nlp_sf_x[control_idx[2*i][j]];
+							if (i < n_nodes - 1)
+								nlp_guess_x[control_idx[2*i+1][j]] 	= guess.u_full((i+1)*2,j+1)/(nlp_sf_x[control_idx[2*i+1][j]]);
+						}
+						else {
+						nlp_guess_x[control_idx[2*i][j]] 	= guess.u(i+1,j+1)/nlp_sf_x[control_idx[2*i][j]];
+						if (i < n_nodes - 1)
+							nlp_guess_x[control_idx[2*i+1][j]] 	= (guess.u(i+1,j+1)+guess.u(i+2,j+1))/(2*nlp_sf_x[control_idx[2*i+1][j]]);
+						}
+					}
+				}
+				else {
+					for (Index j = 0; j < n_controls; j++) {
+						nlp_guess_x[control_idx[i][j]] = guess.u(i+1,j+1)/nlp_sf_x[control_idx[i][j]];
+					}
 				}
 			}
-			else if (config.disc_method == Hermite_Simpson){
-				for (Index j = 0; j < n_controls; j++) {
-					nlp_guess_x[control_idx[2*i][j]] 	= guess.u(i+1,j+1)/nlp_sf_x[control_idx[2*i][j]];
-					if (i < n_nodes - 1)
-						nlp_guess_x[control_idx[2*i+1][j]] 	= (guess.u(i+1,j+1)+guess.u(i+2,j+1))/(2*nlp_sf_x[control_idx[2*i+1][j]]);
-				}
-			}
-			else {
-				for (Index j = 0; j < n_controls; j++) {
-					nlp_guess_x[control_idx[i][j]] = guess.u(i+1,j+1)/nlp_sf_x[control_idx[i][j]];
-				}
-			}
+
+			nlp_guess_x[t0_idx]		= guess.nodes(1,1)/nlp_sf_x[t0_idx];
+			nlp_guess_x[tf_idx]		= guess.nodes(n_nodes,1)/nlp_sf_x[tf_idx];
 		}
-
-		nlp_guess_x[t0_idx]		= guess.nodes(1,1)/nlp_sf_x[t0_idx];
-		nlp_guess_x[tf_idx]		= guess.nodes(n_nodes,1)/nlp_sf_x[tf_idx];
 	}
-
 #ifdef DCOPT_DEBUG
 	cout<<"end set_guess\n";
 #endif
@@ -564,9 +608,7 @@ void MyADOLC_sparseNLP::guess_gen() {
 		}
 	}
 	else {
-
 		guess.nodes = linspace<double>((lb_t0+ub_t0)/2.0,(lb_tf+ub_tf)/2.0,n_nodes);
-
 		guess.x.resize(n_nodes, n_states);
 		for (Index i = 1; i <= n_states; i++) {
 			guess.x.setCol(i,linspace<double>(lb_states(i), ub_states(i),n_nodes));
@@ -1003,14 +1045,30 @@ bool MyADOLC_sparseNLP::get_starting_point(Index n, bool init_x, Number* x,
                                Index m, bool init_lambda,
                                Number* lambda)
 {
-	assert(init_x == true);
-	assert(init_z == false);
-	assert(init_lambda == false);
+//	assert(init_x == true);
+//	assert(init_z == false);
+//	assert(init_lambda == false);
+
+	if (init_z == true) {
+		for (Index i = 0; i < n; i++) {
+			z_L[i]	= nlp_guess_z_L[i];
+			z_U[i]	= nlp_guess_z_U[i];
+		}
+	}
+
+	if (init_lambda == true) {
+		for (Index i = 0; i < m; i++) {
+			lambda[i]	= nlp_guess_lam[i];
+		}
+	}
 
 	for (Index i = 0; i < n; i += 1) {
 		x[i]	= nlp_guess_x[i];
 	}
 	return true;
+
+
+
 }
 
 bool MyADOLC_sparseNLP::eval_f(Index n, const Number* x, bool new_x, Number& obj_value)
@@ -1251,8 +1309,11 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 			      const IpoptData* ip_data,
 			      IpoptCalculatedQuantities* ip_cq)
 {
-
+	setHamiltonian(x,lambda);
 	results.z.resize(nlp_n,1);
+	results.z_L.resize(nlp_n,1);
+	results.z_U.resize(nlp_n,1);
+	results.lam_g.resize(nlp_m,1);
 	results.x.resize(n_nodes, n_states);
 	results.u.resize(n_nodes, n_controls);
 	if (config.disc_method == Hermite_Simpson)
@@ -1262,17 +1323,22 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 	results.nodes.resize(n_nodes, 1);
 
 	for (Index i = 0; i < nlp_n; i++) {
-		results.z(i+1) 	= x[i];
+		results.z(i+1) 		= x[i];
+		results.z_L(i+1) 	= z_L[i];
+		results.z_U(i+1) 	= z_U[i];
+	}
+	for (Index i = 0; i < nlp_m; i++){
+		results.lam_g(i+1)	= lambda[i];
 	}
 
 	for (Index i = 0; i < n_nodes; i++)
 		for (Index j = 0; j < n_states; j++)
 			results.x(i+1,j+1) 		= x[state_idx[i][j]]*nlp_sf_x[state_idx[i][j]];
 
-	for (Index i = 0; i < n_nodes; i++)
+	for (Index i = 0; i < n_nodes; i++) {
 		for (Index j = 0; j < n_controls; j++){
 			if (config.disc_method == Hermite_Simpson){
-				results.u(i+1,j+1) 		= x[control_idx[2*i][j]];
+				results.u(i+1,j+1) 		= x[control_idx[2*i][j]]*nlp_sf_x[control_idx[2*i][j]];
 				results.u_full	(2*i+1,j+1) 		= x[control_idx[2*i][j]]*nlp_sf_x[control_idx[2*i][j]];
 				if (i < n_nodes - 1)
 					results.u_full(2*i+2,j+1) 		= x[control_idx[2*i+1][j]]*nlp_sf_x[control_idx[2*i+1][j]];
@@ -1280,6 +1346,8 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 			else
 				results.u(i+1,j+1) 		= x[control_idx[i][j]]*nlp_sf_x[control_idx[i][j]];
 		}
+	}
+
 
 	for (Index i = 0; i < n_parameters; i++)
 		results.parameters(i+1)		= x[parameter_idx[i]]*nlp_sf_x[parameter_idx[i]];
@@ -1291,7 +1359,21 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 		results.nodes(n_nodes,1) = x[tf_idx]*nlp_sf_x[tf_idx];
 	}
 
+	if(n_events) {
+		results.lam_events.resize(n_events,1);
+		for (Index i = 0; i < n_events; i++) {
+			results.lam_events(i+1)		= -lambda[event_idx[i]]	;
+		}
+	}
+
 	if (n_nodes && n_states) {
+
+		results.lam_defects.resize(n_nodes - 1, n_states);
+		for (Index i = 0; i < n_nodes-1; i++) {
+			for (Index j = 0; j < n_states; j++) {
+				results.lam_defects(i+1,j+1) 	= -lambda[defect_idx[i][j]];
+			}
+		}
 
 		for (Index i = 0; i < n_nodes; i++) {
 			delete[] state_idx[i];
@@ -1299,6 +1381,8 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 				delete[] defect_idx[i];
 			}
 		}
+
+
 
 		if (config.disc_method == Hermite_Simpson) {
 			for (Index i = 0; i < 2*n_nodes - 1; i++) {
@@ -1343,6 +1427,9 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 		}
 
 	delete[] nlp_sf_x;
+	delete[] nlp_guess_z_L;
+	delete[] nlp_guess_z_U;
+	delete[] nlp_guess_lam;
 	delete[] nlp_sf_g;
 	delete[] nlp_guess_x;
 	delete[] nlp_lb_x;
@@ -1350,6 +1437,63 @@ void MyADOLC_sparseNLP::finalize_solution(SolverReturn status,
 	delete[] nlp_lb_g;
 	delete[] nlp_ub_g;
 
+}
+
+void MyADOLC_sparseNLP::setHamiltonian(const double* x, const double* lam_g) {
+	double *d_z, *p_controls, *p_states, *p_parameters, *p_t0, *p_tf, *p_path;
+
+	d_z 			= new double [nlp_n];
+	for( Index i = 0; i < nlp_n; i++)
+		d_z[i]		= x[i]*nlp_sf_x[i];
+
+	if (n_parameters)
+		p_parameters 	= &d_z[parameter_idx[0]];
+	else
+		p_parameters	= NULL;
+
+	if (n_path_constraints)
+		p_path 			= new double [n_path_constraints];
+	else
+		p_path			= NULL;
+
+	if(n_states != 0 && n_nodes != 0) {
+		double *f		 	= new double [n_states];
+
+		double *t	 		= new double [n_nodes];
+		double *delta		= new double [n_nodes - 1];
+
+		p_t0 				= &d_z[t0_idx];
+		p_tf 				= &d_z[tf_idx];
+
+		t[0]				= *p_t0;
+		for (Index i = 0; i < n_nodes - 1; i++) {
+			delta[i] 		= (*p_tf-*p_t0)*node_str(i+1);
+			t[i+1]			= t[i] + (*p_tf-*p_t0)*node_str(i+1);
+		}
+		t[n_nodes - 1]	= *p_tf;
+
+
+		results.Hamiltonian.resize(n_nodes - 1,1);
+
+		for (Index i = 0; i < n_nodes - 1; i += 1)	{
+			p_states 			= &d_z[state_idx[i+1][0]];
+			p_controls 			= &d_z[control_idx[i+1][0]];
+
+			d_derv(f, p_path, p_states, p_controls, p_parameters, t[i+1], 1, constants);
+
+			for (Index j = 0; j < n_states; j++) {
+				results.Hamiltonian(i+1) += f[j]*(-lam_g[defect_idx[i][j]]);
+			}
+		}
+		delete[] f;
+		delete[] t;
+		delete[] delta;
+		if (n_path_constraints)
+			delete[] p_path;
+	}
+
+
+	delete[] d_z;
 }
 
 void MyADOLC_sparseNLP::generate_tapes(Index n, Index m, Index& nnz_jac_g, Index& nnz_h_lag)
@@ -1505,7 +1649,6 @@ void MyADOLC_sparseNLP::generate_tapes(Index n, Index m, Index& nnz_jac_g, Index
 		sparse_hess(tag_L, n, 0, xp, &nnz_L, &rind_L, &cind_L, &hessval, options_L);
 	}
 	nnz_h_lag = nnz_L;
-	cout<<"nnz_h_lag = "<<nnz_h_lag<<"\n";
 
 	delete[] lam;
 	delete[] g;
@@ -1535,10 +1678,14 @@ Config::Config() {
 	NLP_solver	 	= mumps;
 	warmstart 		= false;
 	NLP_tol			= 1e-6;
+	constr_viol_tol = 1e-4;
 	with_mgl		= false;
 	disc_method		= trapezoidal;
 	print_level		= 5;
+	print_freq		= 1;
 	H_approximation = true;
+	ipopt_mu_ini	= 0.1;
+	mu_max			= 1e5;
 }
 
 Config::~Config() {
