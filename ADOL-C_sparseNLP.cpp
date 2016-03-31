@@ -333,7 +333,7 @@ void MyADOLC_sparseNLP::set_sf(){
 				}
 			}
 			else {
-				for (Index i = 0; i < n_nodes; i++) {
+				for (Index i = 0; i < 2*n_nodes - 1; i++) {
 					nlp_sf_x[control_idx[i][j-1]] = 1;
 				}
 			}
@@ -556,7 +556,8 @@ void MyADOLC_sparseNLP::set_guess() {
 				for (Index j = 0; j < n_states; j++) {
 					nlp_guess_x[state_idx[i][j]] = guess.x(i+1,j+1)/nlp_sf_x[state_idx[i][j]];
 				}
-				if (config.disc_method == Hermite_Simpson && guess.u_full.getColDim() == (2*n_nodes - 1)) {
+
+				if (config.disc_method == Hermite_Simpson && guess.u_full.getColDim() == n_controls && guess.u_full.getRowDim() == (2*n_nodes - 1)) {
 					for (Index j = 0; j < n_controls; j++) {
 						nlp_guess_x[control_idx[2*i][j]] = guess.u_full(2*i+1,j+1)/nlp_sf_x[control_idx[2*i][j]];
 						if (i < n_nodes - 1) {
@@ -567,16 +568,9 @@ void MyADOLC_sparseNLP::set_guess() {
 				}
 				else if (config.disc_method == Hermite_Simpson){
 					for (Index j = 0; j < n_controls; j++) {
-						if (guess.u_full.getRowDim() == n_nodes && guess.u_full.getColDim() == n_controls) {
-							nlp_guess_x[control_idx[2*i][j]] 	= guess.u_full(2*i+1,j+1)/nlp_sf_x[control_idx[2*i][j]];
-							if (i < n_nodes - 1)
-								nlp_guess_x[control_idx[2*i+1][j]] 	= guess.u_full((i+1)*2,j+1)/(nlp_sf_x[control_idx[2*i+1][j]]);
-						}
-						else {
 						nlp_guess_x[control_idx[2*i][j]] 	= guess.u(i+1,j+1)/nlp_sf_x[control_idx[2*i][j]];
 						if (i < n_nodes - 1)
 							nlp_guess_x[control_idx[2*i+1][j]] 	= (guess.u(i+1,j+1)+guess.u(i+2,j+1))/(2*nlp_sf_x[control_idx[2*i+1][j]]);
-						}
 					}
 				}
 				else {
@@ -643,6 +637,10 @@ void MyADOLC_sparseNLP::guess_gen() {
 }
 
 ApplicationReturnStatus MyADOLC_sparseNLP::solve(SmartPtr<IpoptApplication> app){
+
+	for(uint i = 0; i < nlp_n; i++){
+		cout<<i<<"\t"<<nlp_sf_x[i]<<"\t"<<nlp_guess_x[i]<<endl;
+	}
 
 
 	ApplicationReturnStatus status;
@@ -1578,8 +1576,11 @@ void MyADOLC_sparseNLP::generate_tapes(Index n, Index m, Index& nnz_jac_g, Index
 
 	sparse_jac(tag_g + omp_get_thread_num()*10, m, n, 0, xp, &nnz_jac, &rind_g, &cind_g, &jacval, options_g);
 	nnz_jac_g = nnz_jac;
-
-
+/*
+	for (int i = 0; i < nnz_jac; i++){
+		cout<<i<<"\t"<<jacval[i]<<endl;
+	}
+*/
 /*
 	sparse_jac(tag_g, m, n, 1, xp, &nnz_jac, &rind_g, &cind_g, &jacval, options_g);
 
