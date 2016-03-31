@@ -638,11 +638,6 @@ void MyADOLC_sparseNLP::guess_gen() {
 
 ApplicationReturnStatus MyADOLC_sparseNLP::solve(SmartPtr<IpoptApplication> app){
 
-	for(uint i = 0; i < nlp_n; i++){
-		cout<<i<<"\t"<<nlp_sf_x[i]<<"\t"<<nlp_guess_x[i]<<endl;
-	}
-
-
 	ApplicationReturnStatus status;
 
 	status = app->OptimizeTNLP(this);
