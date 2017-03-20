@@ -16,8 +16,8 @@ enum APPROX			{Hermite_Simpson=0, trapezoidal};
 #include <adolc/adolc_openmp.h>
 #endif
 #include "SMatrix.hpp"
-//#include <complex>
-//#include <limits>
+#include <complex>
+#include <limits>
 #include <time.h>
 
 //typedef std::complex<double> dcomp;
@@ -52,6 +52,7 @@ public:
 	NLP_SOLVER 		NLP_solver;
 	bool 			warmstart;
 	bool 			with_mgl;
+	bool			no_nlp_scaling;
 	double 			NLP_tol;
 	double 			constr_viol_tol;
 	APPROX 			disc_method;

@@ -179,7 +179,7 @@ ApplicationReturnStatus MyADOLC_sparseNLP::initialization(SmartPtr<IpoptApplicat
 	app->Options()->SetNumericValue("tol", config.NLP_tol);
 	app->Options()->SetNumericValue("constr_viol_tol",config.constr_viol_tol);
 	app->Options()->SetStringValue("mu_strategy", "adaptive");
-//	app->Options()->SetStringValue("output_file", "ipopt.out");
+	app->Options()->SetStringValue("output_file", "ipopt.out");
 //	app->Options()->SetStringValue("nlp_scaling_method","gradient-based");
 	app->Options()->SetStringValue("linear_solver", nlp_solver(config.NLP_solver));//	ma86 & ma57 with memmory leakage
 	app->Options()->SetIntegerValue("max_iter", config.max_iter);
@@ -201,6 +201,8 @@ ApplicationReturnStatus MyADOLC_sparseNLP::initialization(SmartPtr<IpoptApplicat
 		app->Options()->SetNumericValue("warm_start_mult_bound_push",1e-4);
 		app->Options()->SetNumericValue("mu_init",config.ipopt_mu_ini);
 	}
+	if (config.no_nlp_scaling)
+		app->Options()->SetStringValue("nlp_scaling_method","none");
 
 	status = app->Initialize();
   	if (status != Solve_Succeeded) {
@@ -772,7 +774,6 @@ bool  MyADOLC_sparseNLP::ad_eval_constraints(Index n, const adouble *x, Index m,
 		p_parameters 	= &d_z[parameter_idx[0]];
 	else
 		p_parameters	= NULL;
-
 
 	ad_events(p_events, p_states_ini, p_states_fin, p_parameters, *p_t0, *p_tf, 1, constants);
 
@@ -1673,6 +1674,7 @@ Config::Config() {
 	max_iter 		= 5000;
 	NLP_solver	 	= mumps;
 	warmstart 		= false;
+	no_nlp_scaling	= false;
 	NLP_tol			= 1e-6;
 	constr_viol_tol = 1e-4;
 	with_mgl		= false;
