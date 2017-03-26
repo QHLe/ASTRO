@@ -1,22 +1,26 @@
-EXE = lttopt
 
-OBJS =  main.o ADOL-C_sparseNLP.o
+NAME = lowthr
 
+EXE = $(NAME)
+
+OBJS =  $(EXE).o $(LTTOpt_DIR)/ADOL-C_sparseNLP.o 
+
+LTTOpt_DIR = $(HOME)/Dropbox/Eclipse_workspace/LTTOpt
 
 ADPATH = $(HOME)/adolc_base/include
 ADLIBDIR = $(HOME)/adolc_base/lib64
 
-ADDLIBS = $(HOME)/adolc_base/lib64/libadolc.a $(HOME)/ColPack/lib/libColPack.a -lmgl
+ADDLIBS = $(HOME)/adolc_base/lib64/libadolc.a $(HOME)/ColPack/lib/libColPack.a
 
 ADDINCFLAGS = -I$(ADPATH)  
 
 IPOPTLIBDIR = $(HOME)/Ipopt-3.12.1/lib
 
 # C++ Compiler command
-CXX = g++ -pg
+CXX = g++ -pg #-DSPARSE_HESS
 
 # Source files
-SRC = main.cpp ADOL-C_sparseNLP.cpp 
+SRC = main.cpp $(LTTOpt_DIR)/ADOL-C_sparseNLP.cpp $(LTTOpt_DIR)/OCP.cpp
 
 # C++ Compiler options
 CXXFLAGS = -std=c++11 -O3 -pipe -DNDEBUG -pedantic-errors -Wparentheses -Wreturn-type -Wcast-qual -Wall -Wpointer-arith -Wwrite-strings -Wconversion -Wno-unknown-pragmas -Wno-long-long -fopenmp -DIPOPT_BUILD 
@@ -25,13 +29,13 @@ CXXFLAGS = -std=c++11 -O3 -pipe -DNDEBUG -pedantic-errors -Wparentheses -Wreturn
 CXXLINKFLAGS =  -Wl,--rpath -Wl,$(HOME)/Ipopt-3.12.1/lib
 
 # Include directories (we use the CYGPATH_W variables to allow compilation with Windows compilers)
-INCL = -I$(HOME)/adolc_base/include -I$(HOME)/Ipopt-3.12.1/include/coin -I$(HOME)/Ipopt-3.12.1/include/coin/ThirdParty
+INCL = -I$(HOME)/adolc_base/include -I$(HOME)/Ipopt-3.12.1/include/coin -I$(HOME)/Ipopt-3.12.1/include/coin/ThirdParty -I$(LTTOpt_DIR)
 
-#INCL = -I`$(CYGPATH_W) $(HOME)/packages/Ipopt-3.12.1/build/Ipopt/include/coin`  $(ADDINCFLAGS)
+#INCL = -I`$(CYGPATH_W) /home/zineus/packages/Ipopt-3.12.1/build/Ipopt/include/coin`  $(ADDINCFLAGS)
 
 # Linker flags
-LIBS = -L${IPOPTLIBDIR} -lipopt -L$(HOME)/coinhsl/lib -lcoinhsl -lm  -ldl -lcoinmumps -lgfortran -lm -lgomp -lquadmath -lpthread -L/usr/lib/gcc/x86_64-linux-gnu/4.8 -L/usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/4.8/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/4.8/../../.. -lcoinmetis -llapack -lf77blas -lcblas -latlas
-#LIBS = `PKG_CONFIG_PATH=$(HOME)/Ipopt-3.12.1/lib/pkgconfig: pkg-config --libs ipopt`
+LIBS = -L${IPOPTLIBDIR} -lipopt -L$(HOME)/coinhsl/lib -lcoinhsl -llapack -lblas -lm  -ldl -lcoinmumps -lblas -lgfortran -lm -lgomp -lquadmath -lpthread -lcoinmetis
+#LIBS = `PKG_CONFIG_PATH=/home/zineus/Ipopt-3.12.1/lib/pkgconfig: pkg-config --libs ipopt`
 
 # The following is necessary under cygwin, if native compilers are used
 CYGPATH_W = echo
@@ -45,11 +49,11 @@ $(EXE): $(OBJS)
 	for file in $(OBJS); do bla="$$bla `$(CYGPATH_W) $$file`"; done; \
 	$(CXX) $(CXXLINKFLAGS) $(CXXFLAGS) -o $@ $$bla $(LIBS) $(ADDLIBS)
 
-#cpp_example:
-#	$(CXX) $(CXXLINKFLAGS) $(CXXFLAGS) $(INCL) $(SRC) -o cpp_example $(LIBS) $(ADDLIBS)
+#lttopt:
+#	$(CXX) $(CXXLINKFLAGS) $(CXXFLAGS) $(INCL) $(SRC) -o $(EXE) $(LIBS) $(ADDLIBS)
 
 clean:
-	rm -rf $(EXE) $(OBJS) *.eps results*.* 
+	rm -rf $(EXE) $(OBJS) results*.* *.eps
 
 .cpp.o:
 	$(CXX) $(CXXFLAGS) $(INCL) -c -o $@ $<
