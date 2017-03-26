@@ -51,7 +51,6 @@ public:
 	Index 			max_iter;
 	NLP_SOLVER 		NLP_solver;
 	bool 			warmstart;
-	bool 			with_mgl;
 	bool			no_nlp_scaling;
 	double 			NLP_tol;
 	double 			constr_viol_tol;

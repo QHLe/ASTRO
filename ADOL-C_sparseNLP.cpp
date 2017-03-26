@@ -1677,7 +1677,6 @@ Config::Config() {
 	no_nlp_scaling	= false;
 	NLP_tol			= 1e-6;
 	constr_viol_tol = 1e-4;
-	with_mgl		= false;
 	disc_method		= trapezoidal;
 	print_level		= 5;
 	print_freq		= 1;
